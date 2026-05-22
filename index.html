@@ -24,145 +24,248 @@ input,select,textarea,button{font-family:inherit}
    ============================================================ */
 .header{
   flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;background:#fff;border-bottom:1px solid #e7e5e4;
-  z-index:10;
+  padding:8px 16px;background:#fff;border-bottom:1px solid #e7e5e4;z-index:10;
 }
 .header-left{display:flex;align-items:center;gap:10px}
 .header-icon{
-  width:34px;height:34px;border-radius:9px;
+  width:32px;height:32px;border-radius:8px;
   background:linear-gradient(135deg,#f97316,#ea580c);
   display:flex;align-items:center;justify-content:center;
-  font-size:1rem;color:#fff;
+  font-size:.95rem;color:#fff;
 }
-.header-title{font-size:.95rem;font-weight:700;color:#1c1917}
-.header-right{display:flex;align-items:center;gap:8px}
-.header-ctx{
-  font-size:.7rem;color:#78716c;padding:4px 10px;
-  background:#f5f5f4;border-radius:6px;max-width:200px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
+.header-title{font-size:.9rem;font-weight:700;color:#1c1917}
 .btn-icon{
-  width:34px;height:34px;border:none;border-radius:8px;
+  width:32px;height:32px;border:none;border-radius:8px;
   background:#f5f5f4;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  font-size:1.1rem;transition:all .15s;color:#57534e;
+  font-size:1rem;transition:all .15s;color:#57534e;
 }
 .btn-icon:hover{background:#e7e5e4}
 .btn-icon.api-ok{background:#ecfdf5;color:#065f46}
 .btn-icon.api-nok{background:#fef2f2;color:#dc2626}
 
 /* ============================================================
-   CONTEXT BAR
+   MAIN LAYOUT
    ============================================================ */
-.ctx-bar{
-  flex-shrink:0;display:flex;align-items:center;gap:8px;
-  padding:8px 16px;background:#fff;border-bottom:1px solid #e7e5e4;
-  font-size:.72rem;color:#78716c;flex-wrap:wrap;
+.main-layout{flex:1;display:flex;overflow:hidden}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar{
+  width:260px;flex-shrink:0;overflow-y:auto;
+  background:#fff;border-right:1px solid #e7e5e4;
+  padding:14px;display:flex;flex-direction:column;gap:16px;
 }
-.ctx-tag{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 10px;border-radius:6px;background:#f5f5f4;
-  font-size:.68rem;color:#44403c;cursor:pointer;transition:all .15s;
+.sidebar-section{display:flex;flex-direction:column;gap:6px}
+.sidebar-label{
+  font-size:.68rem;font-weight:600;color:#78716c;
+  text-transform:uppercase;letter-spacing:.04em;
 }
-.ctx-tag:hover{background:#fff7ed;color:#c2410c}
+.sidebar-input{
+  width:100%;padding:8px 10px;border:1.5px solid #e7e5e4;border-radius:7px;
+  font-size:.78rem;color:#1c1917;background:#fafaf9;
+  outline:none;transition:border-color .2s;
+}
+.sidebar-input:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.08);background:#fff}
+.sidebar-select{
+  width:100%;padding:8px 10px;border:1.5px solid #e7e5e4;border-radius:7px;
+  font-size:.78rem;color:#1c1917;background:#fafaf9;
+  outline:none;transition:border-color .2s;
+}
+.sidebar-select:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.08)}
+
+.sidebar-chips{display:flex;flex-wrap:wrap;gap:5px}
+.sidebar-chip{
+  padding:5px 10px;border:1.5px solid #e7e5e4;border-radius:7px;
+  font-size:.72rem;color:#57534e;cursor:pointer;background:#fafaf9;
+  transition:all .15s;user-select:none;white-space:nowrap;
+}
+.sidebar-chip:hover{border-color:#d6d3d1;background:#fff}
+.sidebar-chip.active{border-color:#f97316;background:#fff7ed;color:#c2410c;font-weight:600}
+.sidebar-chip.small{font-size:.68rem;padding:4px 8px}
+
+.sidebar-generate-btn{
+  width:100%;padding:12px 0;margin-top:auto;
+  border:none;border-radius:10px;
+  background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;
+  font-size:.82rem;font-weight:700;cursor:pointer;
+  transition:all .15s;font-family:inherit;
+  box-shadow:0 2px 10px rgba(249,115,22,.25);
+}
+.sidebar-generate-btn:hover{box-shadow:0 4px 16px rgba(249,115,22,.4);transform:translateY(-1px)}
+.sidebar-generate-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Toggle switch */
+.sidebar-toggle-row{
+  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
+}
+.sidebar-toggle-row input{display:none}
+.sidebar-toggle-slider{
+  width:36px;height:20px;border-radius:10px;background:#d6d3d1;
+  position:relative;transition:background .2s;flex-shrink:0;
+}
+.sidebar-toggle-slider::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:16px;height:16px;border-radius:50%;background:#fff;
+  transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+.sidebar-toggle-row input:checked+.sidebar-toggle-slider{background:#f97316}
+.sidebar-toggle-row input:checked+.sidebar-toggle-slider::after{transform:translateX(16px)}
+.sidebar-toggle-text{font-size:.68rem;color:#78716c}
+
+/* ============================================================
+   CHAT COLUMN
+   ============================================================ */
+.chat-column{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+  min-width:0;
+}
 
 /* ============================================================
    CHAT AREA
    ============================================================ */
 .chat-area{
-  flex:1;overflow-y:auto;padding:16px;
-  display:flex;flex-direction:column;gap:12px;
+  flex:1;overflow-y:auto;padding:14px 16px;
+  display:flex;flex-direction:column;gap:10px;
   scroll-behavior:smooth;
 }
 .chat-empty{
   flex:1;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:12px;color:#a8a29e;
+  flex-direction:column;gap:10px;color:#a8a29e;
 }
-.chat-empty-icon{font-size:3rem;opacity:.5}
-.chat-empty-text{font-size:.85rem}
-.chat-empty-hints{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:420px}
-.chat-hint{
-  padding:8px 14px;border:1.5px solid #e7e5e4;border-radius:8px;
-  font-size:.75rem;color:#57534e;cursor:pointer;background:#fff;
-  transition:all .15s;text-align:left;
+.chat-empty-icon{font-size:2.5rem;opacity:.5}
+.chat-empty-text{font-size:.8rem;margin-bottom:4px}
+.chat-empty-cards{display:flex;flex-direction:column;gap:4px;max-width:600px;width:100%;align-items:stretch}
+
+/* Dynamic topic generation card */
+.topic-gen-card{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;border:2px dashed #f97316;border-radius:10px;
+  cursor:pointer;transition:all .15s;background:linear-gradient(135deg,#fff7ed,#fff);
+  margin-bottom:4px;
 }
-.chat-hint:hover{border-color:#f97316;color:#c2410c;background:#fff7ed}
+.topic-gen-card:hover{background:#fff7ed;box-shadow:0 2px 12px rgba(249,115,22,.12);transform:translateY(-1px)}
+.topic-gen-icon{font-size:1.4rem;flex-shrink:0}
+.topic-gen-body{flex:1;min-width:0}
+.topic-gen-title{font-size:.8rem;font-weight:600;color:#c2410c}
+.topic-gen-desc{font-size:.68rem;color:#78716c;margin-top:2px}
+.topic-gen-arrow{font-size:1rem;color:#f97316;flex-shrink:0}
+
+/* Topic type groups */
+.topic-group{margin-bottom:16px}
+.topic-group-header{
+  display:flex;align-items:center;gap:7px;margin-bottom:4px;padding:0 2px;
+}
+.topic-group-icon{
+  width:24px;height:24px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;flex-shrink:0;
+}
+.topic-group-name{font-size:.8rem;font-weight:700}
+.topic-group-tag{
+  font-size:.6rem;padding:2px 6px;border-radius:3px;
+  background:#f5f5f4;color:#78716c;
+}
+.topic-group-tip{
+  font-size:.64rem;color:#a8a29e;margin-bottom:6px;padding:0 2px;
+}
+.topic-group-cards{
+  display:flex;flex-wrap:wrap;gap:6px;
+}
 
 /* Scenario cards */
 .scenario-card{
-  padding:10px 14px;border:1.5px solid #e7e5e4;border-radius:10px;
+  padding:9px 12px;border:1.5px solid #e7e5e4;border-radius:8px;
   cursor:pointer;transition:all .15s;background:#fff;text-align:left;
-  display:flex;flex-direction:column;gap:6px;min-width:200px;
+  display:flex;flex-direction:column;gap:4px;width:calc(50% - 3px);min-width:180px;
 }
 .scenario-card:hover{border-color:#f97316;background:#fff7ed;transform:translateY(-1px);box-shadow:0 2px 8px rgba(249,115,22,.1)}
-.sc-card-top{display:flex;align-items:center;gap:6px}
-.sc-card-icon{font-size:1rem}
-.sc-card-name{font-size:.78rem;font-weight:600;color:#1c1917}
-.sc-card-label{font-size:.7rem;color:#f97316;font-weight:500}
-.sc-card-topic{
-  font-size:.62rem;padding:1px 6px;border-radius:4px;
-  background:#fef3c7;color:#92400e;margin-left:2px;
+.sc-card-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.sc-card-icon{font-size:.85rem}
+.sc-card-name{font-size:.74rem;font-weight:600;color:#1c1917}
+.sc-card-persona{
+  font-size:.6rem;padding:1px 5px;border-radius:3px;
+  background:#f5f5f4;color:#78716c;
 }
-.sc-card-desc{font-size:.7rem;color:#78716c;line-height:1.4}
+.sc-card-desc{font-size:.66rem;color:#78716c;line-height:1.35}
 
 /* Message bubble */
-.msg{display:flex;gap:10px;animation:fadeIn .2s ease-out}
+.msg{display:flex;gap:8px;animation:fadeIn .2s ease-out}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .msg-avatar{
-  width:30px;height:30px;border-radius:8px;flex-shrink:0;
+  width:28px;height:28px;border-radius:7px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  font-size:.8rem;
+  font-size:.75rem;
 }
 .msg.user .msg-avatar{background:#fff7ed}
 .msg.user{flex-direction:row-reverse}
-.msg-body{max-width:82%;display:flex;flex-direction:column;gap:4px}
+.msg-body{max-width:82%;display:flex;flex-direction:column;gap:3px}
 .msg.user .msg-body{align-items:flex-end}
 .msg-content{
-  padding:10px 14px;border-radius:12px;font-size:.85rem;line-height:1.6;
+  padding:9px 13px;border-radius:11px;font-size:.82rem;line-height:1.55;
   word-break:break-word;position:relative;
 }
-.msg.user .msg-content{background:#f97316;color:#fff;border-radius:12px 12px 2px 12px}
-.msg.assistant .msg-content{background:#fff;color:#1c1917;border:1px solid #e7e5e4;border-radius:12px 12px 12px 2px}
+.msg.user .msg-content{background:#f97316;color:#fff;border-radius:11px 11px 2px 11px}
+.msg.assistant .msg-content{background:#fff;color:#1c1917;border:1px solid #e7e5e4;border-radius:11px 11px 11px 2px}
 .msg-content pre{
-  background:#1c1917;color:#f5f5f4;padding:14px;border-radius:8px;
-  font-size:.78rem;line-height:1.5;overflow-x:auto;white-space:pre-wrap;
-  margin:8px 0;position:relative;
+  background:#1c1917;color:#f5f5f4;padding:12px;border-radius:7px;
+  font-size:.74rem;line-height:1.45;overflow-x:auto;white-space:pre-wrap;
+  margin:6px 0;position:relative;
 }
-.msg-content code{font-size:.78rem;font-family:"SF Mono","Fira Code","Cascadia Code",monospace}
+.msg-content code{font-size:.74rem;font-family:"SF Mono","Fira Code","Cascadia Code",monospace}
 .msg-content p code,.msg-content li code{
-  background:#f5f5f4;padding:1px 5px;border-radius:3px;color:#c2410c;
+  background:#f5f5f4;padding:1px 4px;border-radius:3px;color:#c2410c;
 }
 .msg.user .msg-content code{background:rgba(255,255,255,.25);color:#fff}
-.msg-content h1,.msg-content h2,.msg-content h3{
-  font-size:.9rem;font-weight:600;margin:8px 0 4px;color:#1c1917;
+.msg-content h1,.msg-content h2,.msg-content h3,.msg-content h4{
+  font-size:.85rem;font-weight:600;margin:8px 0 4px;color:#1c1917;
 }
-.msg-content h1{font-size:1rem}
-.msg-content ul,.msg-content ol{padding-left:18px}
-.msg-content li{margin:2px 0}
+.msg-content h1{font-size:.92rem}
+.msg-content h4{font-size:.78rem;color:#44403c}
+.msg-content p{margin:4px 0;line-height:1.55}
+.msg-content ul,.msg-content ol{margin:4px 0;padding-left:18px}
+.msg-content li{margin:3px 0;line-height:1.45}
 .msg-content strong{color:#c2410c;font-weight:600}
+.msg-content em{color:#78716c}
 .msg-content blockquote{
   border-left:3px solid #f97316;padding:4px 10px;margin:6px 0;
-  color:#78716c;font-size:.8rem;
+  color:#78716c;font-size:.76rem;line-height:1.45;
 }
+.msg-content hr{
+  border:none;border-top:1px solid #e7e5e4;margin:8px 0;
+}
+.msg-content .table-wrap{
+  overflow-x:auto;margin:6px 0;border-radius:7px;border:1px solid #e7e5e4;
+}
+.msg-content table{
+  width:100%;border-collapse:collapse;font-size:.76rem;
+}
+.msg-content th{
+  background:#fafaf9;padding:7px 10px;text-align:left;font-weight:600;
+  color:#44403c;border-bottom:1px solid #e7e5e4;
+}
+.msg-content td{
+  padding:6px 10px;border-bottom:1px solid #f0efed;color:#1c1917;
+}
+.msg-content tr:last-child td{border-bottom:none}
 
-/* Copy button on pre blocks */
+/* Copy button */
 .copy-btn{
-  position:absolute;top:6px;right:6px;
-  padding:4px 10px;font-size:.68rem;border:none;border-radius:5px;
+  position:absolute;top:5px;right:5px;
+  padding:3px 8px;font-size:.64rem;border:none;border-radius:5px;
   background:#44403c;color:#e7e5e4;cursor:pointer;opacity:0;
-  transition:all .15s;display:flex;align-items:center;gap:4px;
+  transition:all .15s;display:flex;align-items:center;gap:3px;
 }
 .msg-content pre:hover .copy-btn{opacity:1}
 .copy-btn:hover{background:#57534e;color:#fff}
 .copy-btn.copied{background:#10b981;color:#fff}
 
-.msg-time{
-  font-size:.65rem;color:#a8a29e;padding:0 4px;
-}
+.msg-time{font-size:.62rem;color:#a8a29e;padding:0 3px}
 
 /* Typing indicator */
-.typing-dots{display:flex;gap:4px;padding:4px 0}
+.typing-dots{display:flex;gap:3px;padding:3px 0}
 .typing-dots span{
-  width:7px;height:7px;border-radius:50%;background:#d6d3d1;
+  width:6px;height:6px;border-radius:50%;background:#d6d3d1;
   animation:bounce 1.4s infinite ease-in-out;
 }
 .typing-dots span:nth-child(1){animation-delay:0s}
@@ -174,101 +277,98 @@ input,select,textarea,button{font-family:inherit}
    INPUT AREA
    ============================================================ */
 .input-area{
-  flex-shrink:0;padding:10px 16px 14px;background:#fff;
-  border-top:1px solid #e7e5e4;display:flex;flex-direction:column;gap:8px;
+  flex-shrink:0;padding:8px 16px 12px;background:#fff;
+  border-top:1px solid #e7e5e4;display:flex;flex-direction:column;gap:6px;
 }
-.quick-actions{display:flex;gap:6px;flex-wrap:wrap}
+.quick-actions{display:flex;gap:5px;flex-wrap:wrap}
 .quick-btn{
-  padding:4px 10px;border:1px solid #e7e5e4;border-radius:14px;
-  background:#fafaf9;font-size:.68rem;color:#57534e;cursor:pointer;
+  padding:3px 9px;border:1px solid #e7e5e4;border-radius:13px;
+  background:#fafaf9;font-size:.66rem;color:#57534e;cursor:pointer;
   transition:all .15s;white-space:nowrap;
 }
 .quick-btn:hover{border-color:#f97316;background:#fff7ed;color:#c2410c}
-.input-row{display:flex;gap:8px;align-items:flex-end}
+.input-row{display:flex;gap:6px;align-items:flex-end}
 .input-box{
-  flex:1;padding:10px 14px;border:1.5px solid #e7e5e4;border-radius:10px;
-  font-size:.85rem;resize:none;outline:none;min-height:42px;max-height:120px;
+  flex:1;padding:9px 12px;border:1.5px solid #e7e5e4;border-radius:9px;
+  font-size:.82rem;resize:none;outline:none;min-height:40px;max-height:110px;
   background:#fafaf9;transition:border-color .2s;line-height:1.4;
 }
 .input-box:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.1);background:#fff}
 .btn-send{
-  width:42px;height:42px;border:none;border-radius:10px;
+  width:40px;height:40px;border:none;border-radius:9px;
   background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;
-  font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
   transition:all .15s;flex-shrink:0;
 }
 .btn-send:hover{box-shadow:0 4px 12px rgba(249,115,22,.3);transform:translateY(-1px)}
 .btn-send:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
 /* ============================================================
-   SETTINGS OVERLAY
+   STATUS BAR
+   ============================================================ */
+.status-bar{
+  font-size:.62rem;color:#a8a29e;text-align:center;padding:3px 0;
+  border-top:1px solid #f0efed;flex-shrink:0;
+}
+.status-bar.error{color:#dc2626}
+
+/* ============================================================
+   SETTINGS DIALOG
    ============================================================ */
 .settings-overlay{
   position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;
-  background:rgba(0,0,0,.4);display:flex;align-items:flex-start;justify-content:flex-end;
-  opacity:0;visibility:hidden;transition:all .25s;
+  background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transition:all .2s;
 }
 .settings-overlay.open{opacity:1;visibility:visible}
-.settings-panel{
-  width:400px;max-width:100vw;height:100%;background:#fff;
-  display:flex;flex-direction:column;overflow-y:auto;
-  box-shadow:-8px 0 30px rgba(0,0,0,.15);
+.settings-dialog{
+  width:480px;max-width:92vw;max-height:85vh;background:#fff;
+  border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.2);
+  display:flex;flex-direction:column;overflow:hidden;
 }
-.settings-header{
-  padding:16px;display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid #e7e5e4;flex-shrink:0;
+.settings-dialog-header{
+  padding:10px 18px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #e7e5e4;flex-shrink:0;gap:12px;
 }
-.settings-title{font-size:.95rem;font-weight:700}
-.settings-body{flex:1;overflow-y:auto;padding:16px}
-.settings-section{margin-bottom:20px}
-.settings-section-label{
-  font-size:.7rem;font-weight:600;color:#78716c;text-transform:uppercase;
-  letter-spacing:.05em;margin-bottom:10px;
-  display:flex;align-items:center;gap:6px;
-}
-.settings-section-label::after{content:'';flex:1;height:1px;background:#e7e5e4}
-.field{margin-bottom:12px}
-.field-label{font-size:.78rem;font-weight:500;color:#44403c;margin-bottom:4px;display:block}
-.field-hint{font-size:.68rem;color:#a8a29e;font-weight:400;margin-left:3px}
-.field input,.field select,.field textarea{
-  width:100%;padding:9px 12px;border:1.5px solid #e7e5e4;border-radius:8px;
-  font-size:.82rem;color:#1c1917;background:#fafaf9;
-  outline:none;transition:border-color .2s;
-}
-.field input:focus,.field select:focus,.field textarea:focus{
-  border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.1);background:#fff;
-}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{position:relative}
-.chip input{position:absolute;opacity:0;pointer-events:none}
-.chip label{
-  display:flex;align-items:center;justify-content:center;gap:4px;
-  padding:7px 10px;border:1.5px solid #e7e5e4;border-radius:8px;
-  font-size:.75rem;color:#57534e;cursor:pointer;
-  transition:all .15s;background:#fafaf9;user-select:none;white-space:nowrap;
-}
-.chip input:checked+label{border-color:#f97316;background:#fff7ed;color:#c2410c;font-weight:600}
-.chip label:hover{border-color:#d6d3d1;background:#fff}
-
+.settings-dialog-title{font-size:.9rem;font-weight:700;flex-shrink:0}
 .settings-tabs{
-  display:flex;flex-shrink:0;border-bottom:1px solid #e7e5e4;
+  display:flex;gap:2px;flex:1;justify-content:center;
 }
 .settings-tab{
-  flex:1;padding:11px 0;border:none;background:none;
-  font-size:.78rem;color:#78716c;cursor:pointer;
-  border-bottom:2px solid transparent;transition:all .15s;
-  font-family:inherit;font-weight:500;
+  padding:8px 16px;border:none;border-radius:7px;
+  font-size:.76rem;color:#78716c;cursor:pointer;
+  background:transparent;transition:all .15s;font-family:inherit;font-weight:500;
 }
-.settings-tab:hover{color:#44403c}
-.settings-tab.active{color:#c2410c;border-bottom-color:#f97316;font-weight:600}
-.settings-tab-panel{display:none;flex:1;overflow-y:auto;padding:16px}
-.settings-tab-panel.active{display:block}
-.settings-footer{
-  flex-shrink:0;padding:12px 16px;border-top:1px solid #e7e5e4;
+.settings-tab:hover{color:#44403c;background:#f5f5f4}
+.settings-tab.active{color:#c2410c;background:#fff7ed;font-weight:600}
+.settings-tab-panel{display:none}
+.settings-tab-panel.active{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.settings-dialog-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.settings-dialog-footer{
+  flex-shrink:0;padding:12px 18px;border-top:1px solid #e7e5e4;
   display:flex;gap:8px;
 }
+
+/* Profile card in settings */
+.profile-preview{margin-top:4px}
+.profile-card{
+  padding:12px 14px;border-radius:8px;background:#fafaf9;
+  border:1px solid #e7e5e4;font-size:.76rem;color:#44403c;line-height:1.6;
+  white-space:pre-wrap;
+}
+.field{display:flex;flex-direction:column;gap:4px}
+.field-label{font-size:.76rem;font-weight:500;color:#44403c}
+.field-hint{font-size:.64rem;color:#a8a29e;font-weight:400}
+.field input,.field select{
+  width:100%;padding:9px 11px;border:1.5px solid #e7e5e4;border-radius:7px;
+  font-size:.8rem;color:#1c1917;background:#fafaf9;
+  outline:none;transition:border-color .2s;
+}
+.field input:focus,.field select:focus{
+  border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.08);background:#fff;
+}
 .btn{
-  padding:10px 20px;border:none;border-radius:10px;font-size:.85rem;
+  padding:9px 18px;border:none;border-radius:9px;font-size:.82rem;
   font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;
 }
 .btn-primary{
@@ -276,31 +376,24 @@ input,select,textarea,button{font-family:inherit}
   color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.2);
 }
 .btn-primary:hover{box-shadow:0 4px 14px rgba(249,115,22,.35)}
-.btn-secondary{
-  background:#f5f5f4;color:#44403c;
-}
+.btn-secondary{background:#f5f5f4;color:#44403c}
 .btn-secondary:hover{background:#e7e5e4}
-
-/* ============================================================
-   STATUS BAR
-   ============================================================ */
-.status-bar{
-  font-size:.65rem;color:#a8a29e;text-align:center;padding:4px;
-  border-top:1px solid #f0efed;flex-shrink:0;
-}
-.status-bar.error{color:#dc2626}
 
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media(max-width:640px){
-  .header{padding:8px 12px}
-  .header-title{font-size:.85rem}
-  .header-ctx{display:none}
-  .settings-panel{width:100vw}
-  .msg-body{max-width:90%}
-  .chat-area{padding:12px}
-  .input-area{padding:8px 12px 12px}
+@media(max-width:700px){
+  .sidebar{width:220px;padding:10px}
+  .sidebar-chip{font-size:.68rem;padding:4px 8px}
+  .msg-body{max-width:92%}
+  .chat-area{padding:10px}
+  .input-area{padding:6px 10px 10px}
+  .scenario-card{width:100%}
+  .chat-empty-cards{max-width:100%}
+  .topic-group-cards{flex-direction:column}
+}
+@media(max-width:500px){
+  .sidebar{display:none}
 }
 </style>
 </head>
@@ -314,113 +407,151 @@ input,select,textarea,button{font-family:inherit}
     <div class="header-icon">✨</div>
     <span class="header-title">自媒体创作助手</span>
   </div>
-  <div class="header-right">
-    <span class="header-ctx" id="ctxBadge" title="当前业务配置">未配置</span>
-    <button class="btn-icon" id="btnSettings" title="设置">⚙</button>
-  </div>
+  <button class="btn-icon" id="btnSettings" title="设置">⚙</button>
 </div>
 
 <!-- ============================================================
-     CONTEXT BAR
+     MAIN LAYOUT
      ============================================================ -->
-<div class="ctx-bar" id="ctxBar">
-  <span style="font-size:.68rem;color:#a8a29e">当前配置:</span>
-  <span class="ctx-tag" id="ctxBiz" title="点击修改">📋 <span id="ctxBizText">未设置</span></span>
-  <span class="ctx-tag" id="ctxType">📹 短视频</span>
-  <span class="ctx-tag" id="ctxPersona">🤖 智能推荐</span>
-</div>
-
-<!-- ============================================================
-     CHAT AREA
-     ============================================================ -->
-<div class="chat-area" id="chatArea">
-  <div class="chat-empty" id="chatEmpty">
-    <div class="chat-empty-icon">💬</div>
-    <div class="chat-empty-text" id="chatEmptyText">选择一种创作方式开始</div>
-    <div class="chat-empty-hints" id="chatEmptyCards"></div>
-  </div>
-</div>
-
-<!-- ============================================================
-     INPUT AREA
-     ============================================================ -->
-<div class="input-area">
-  <div class="quick-actions" id="quickActions">
-    <button class="quick-btn" data-action="换个角度重新生成">🔄 换个角度</button>
-    <button class="quick-btn" data-action="写详细一些，加上具体的画面描述">🔍 更详细</button>
-    <button class="quick-btn" data-action="精简一下，只要核心提示词">✂ 精简</button>
-    <button class="quick-btn" data-action="加上爆款标题建议">🔥 加标题</button>
-    <button class="quick-btn" data-action="清空对话，重新开始">🗑 重新开始</button>
-  </div>
-  <div class="input-row">
-    <textarea class="input-box" id="inputBox" rows="1" placeholder="描述你的自媒体内容需求…（Enter 发送，Shift+Enter 换行）"></textarea>
-    <button class="btn-send" id="btnSend" disabled>➤</button>
-  </div>
-</div>
-
-<!-- ============================================================
-     STATUS BAR
-     ============================================================ -->
-<div class="status-bar" id="statusBar">就绪 — 请先在设置中配置 API Key</div>
-
-<!-- ============================================================
-     SETTINGS OVERLAY
-     ============================================================ -->
-<div class="settings-overlay" id="settingsOverlay">
-  <div class="settings-panel" id="settingsPanel">
-    <div class="settings-header">
-      <span class="settings-title">⚙ 设置</span>
-      <button class="btn-icon" id="btnSettingsClose">✕</button>
+<div class="main-layout">
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">📋 业务名称</div>
+      <input class="sidebar-input" id="sbBizName" placeholder="例如：XX健身、YY美食探店" maxlength="30">
     </div>
-    <div class="settings-tabs">
-      <button class="settings-tab active" data-tab="tabBiz">📋 业务信息</button>
-      <button class="settings-tab" data-tab="tabApi">🔑 API 配置</button>
-    </div>
-    <div class="settings-tab-panel active" id="tabBiz">
-      <div class="settings-section">
-        <div class="settings-section-label">📋 基本信息</div>
-        <div class="field">
-          <label class="field-label">业务/账号名称</label>
-          <input type="text" id="setBizName" placeholder="例如：XX健身、YY美食探店">
-        </div>
-        <div class="field">
-          <label class="field-label">默认内容类型</label>
-          <div class="chips" id="setContentType">
-            <span class="chip"><input type="radio" name="setCt" value="short-video" checked><label>🎬 短视频</label></span>
-            <span class="chip"><input type="radio" name="setCt" value="image-text"><label>🖼 图文</label></span>
-            <span class="chip"><input type="radio" name="setCt" value="long-article"><label>📝 长文</label></span>
-          </div>
-        </div>
-        <div class="field">
-          <label class="field-label">人设风格</label>
-          <div class="chips" id="setPersona">
-            <span class="chip"><input type="radio" name="setPersona" value="auto" checked><label>🤖 智能推荐</label></span>
-            <span class="chip"><input type="radio" name="setPersona" value="teacher"><label>🎓 教导者</label></span>
-            <span class="chip"><input type="radio" name="setPersona" value="companion"><label>🤝 陪伴者</label></span>
-            <span class="chip"><input type="radio" name="setPersona" value="foil"><label>🌱 陪衬者</label></span>
-            <span class="chip"><input type="radio" name="setPersona" value="admirer"><label>🔍 崇拜者</label></span>
-            <span class="chip"><input type="radio" name="setPersona" value="comedian"><label>😄 搞笑者</label></span>
-          </div>
-        </div>
-        <div class="field">
-          <label class="field-label">语言风格</label>
-          <select id="setLanguage">
-            <option value="普通话">普通话</option>
-            <option value="粤语">粤语</option>
-            <option value="英语">英语</option>
-            <option value="日语">日语</option>
-            <option value="custom">自定义方言/语言…</option>
-          </select>
-        </div>
-        <div class="field" id="customLanguageField" style="display:none">
-          <label class="field-label">自定义语言</label>
-          <input type="text" id="setCustomLanguage" placeholder="例如：重庆话、客家话、闽南话…">
-        </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">📹 内容类型</div>
+      <div class="sidebar-chips" id="sbContentType">
+        <div class="sidebar-chip active" data-value="short-video">🎬 短视频</div>
+        <div class="sidebar-chip" data-value="image-text">🖼 图文</div>
+        <div class="sidebar-chip" data-value="long-article">📝 长文</div>
       </div>
     </div>
-    <div class="settings-tab-panel" id="tabApi">
-      <div class="settings-section">
-        <div class="settings-section-label">🔑 API 配置</div>
+
+    <div class="sidebar-section" id="sbVideoLengthGroup">
+      <div class="sidebar-label">⏱ 视频时长</div>
+      <div class="sidebar-chips" id="sbVideoLength">
+        <div class="sidebar-chip" data-value="15">15秒</div>
+        <div class="sidebar-chip active" data-value="30">30秒</div>
+        <div class="sidebar-chip" data-value="60">60秒</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" id="sbImageStyleGroup" style="display:none">
+      <div class="sidebar-label">🎨 图片风格</div>
+      <div class="sidebar-chips" id="sbImageStyle">
+        <div class="sidebar-chip active" data-value="摄影写实">📷 摄影写实</div>
+        <div class="sidebar-chip" data-value="简约插画">✏ 简约插画</div>
+        <div class="sidebar-chip" data-value="3D渲染">🎯 3D渲染</div>
+        <div class="sidebar-chip" data-value="扁平设计">📐 扁平设计</div>
+        <div class="sidebar-chip" data-value="二次元">🎨 二次元</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" id="sbImageRatioGroup" style="display:none">
+      <div class="sidebar-label">📐 图片比例</div>
+      <div class="sidebar-chips" id="sbImageRatio">
+        <div class="sidebar-chip" data-value="9:16">9:16 竖屏</div>
+        <div class="sidebar-chip active" data-value="1:1">1:1 方形</div>
+        <div class="sidebar-chip" data-value="3:4">3:4 竖版</div>
+        <div class="sidebar-chip" data-value="4:3">4:3 横版</div>
+        <div class="sidebar-chip" data-value="16:9">16:9 横屏</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" id="sbArticleLengthGroup" style="display:none">
+      <div class="sidebar-label">📏 文章篇幅</div>
+      <div class="sidebar-chips" id="sbArticleLength">
+        <div class="sidebar-chip" data-value="短文~800字">短文 ~800字</div>
+        <div class="sidebar-chip active" data-value="中篇~2000字">中篇 ~2000字</div>
+        <div class="sidebar-chip" data-value="长文~5000字">长文 ~5000字+</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">🎭 人设风格</div>
+      <div class="sidebar-chips" id="sbPersona">
+        <div class="sidebar-chip active" data-value="auto">🤖 智能推荐</div>
+        <div class="sidebar-chip" data-value="teacher">🎓 教导者</div>
+        <div class="sidebar-chip" data-value="companion">🤝 陪伴者</div>
+        <div class="sidebar-chip" data-value="foil">🌱 陪衬者</div>
+        <div class="sidebar-chip" data-value="admirer">🔍 崇拜者</div>
+        <div class="sidebar-chip" data-value="comedian">😄 搞笑者</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">🌐 语言风格</div>
+      <select class="sidebar-select" id="sbLanguage">
+        <option value="普通话">普通话</option>
+        <option value="重庆话">重庆话</option>
+        <option value="东北话">东北话</option>
+        <option value="粤语">粤语</option>
+        <option value="英语">英语</option>
+        <option value="日语">日语</option>
+        <option value="custom">自定义方言/语言…</option>
+      </select>
+      <input class="sidebar-input" id="sbCustomLanguage" placeholder="例如：重庆话、客家话…" style="display:none;margin-top:4px">
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">🌐 联网搜索增强</div>
+      <label class="sidebar-toggle-row" id="sbWebSearchRow">
+        <input type="checkbox" id="sbWebSearch">
+        <span class="sidebar-toggle-slider"></span>
+        <span class="sidebar-toggle-text">搜索真实搜索趋势和SEO数据</span>
+      </label>
+    </div>
+
+    <button class="sidebar-generate-btn" id="sbGenerateBtn">✨ 开始生成</button>
+  </div>
+
+  <!-- Chat Column -->
+  <div class="chat-column">
+    <div class="chat-area" id="chatArea">
+      <div class="chat-empty" id="chatEmpty">
+        <div class="chat-empty-icon">💬</div>
+        <div class="chat-empty-text">选择一种创作场景开始，或在下方输入你的需求</div>
+        <div class="chat-empty-cards" id="chatEmptyCards"></div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="quick-actions" id="quickActions">
+        <button class="quick-btn" data-action="换个角度重新生成">🔄 换个角度</button>
+        <button class="quick-btn" data-action="写详细一些，加上具体的画面描述">🔍 更详细</button>
+        <button class="quick-btn" data-action="精简一下，只要核心提示词">✂ 精简</button>
+        <button class="quick-btn" data-action="加上爆款标题建议">🔥 加标题</button>
+      </div>
+      <div class="input-row">
+        <textarea class="input-box" id="inputBox" rows="1" placeholder="描述你的自媒体内容需求…（Enter 发送，Shift+Enter 换行）"></textarea>
+        <button class="btn-send" id="btnSend" disabled>➤</button>
+      </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">就绪 — 请先在设置中配置 API Key</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SETTINGS DIALOG
+     ============================================================ -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-dialog">
+    <div class="settings-dialog-header">
+      <span class="settings-dialog-title">⚙ 设置</span>
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="tabApi">🔑 API 配置</button>
+        <button class="settings-tab" data-tab="tabProfile">👤 个人资料</button>
+      </div>
+      <button class="btn-icon" id="btnSettingsClose">✕</button>
+    </div>
+
+    <!-- Tab: API -->
+    <div class="settings-tab-panel active" id="tabApi">
+      <div class="settings-dialog-body">
         <div class="field">
           <label class="field-label">API Key</label>
           <input type="password" id="setApiKey" placeholder="sk-...">
@@ -447,7 +578,23 @@ input,select,textarea,button{font-family:inherit}
         </div>
       </div>
     </div>
-    <div class="settings-footer">
+
+    <!-- Tab: Personal Profile -->
+    <div class="settings-tab-panel" id="tabProfile">
+      <div class="settings-dialog-body">
+        <div class="field">
+          <label class="field-label">用一段话介绍你自己</label>
+          <span class="field-hint">随意写：你的身份、年龄、经历、特点……AI 会根据这些信息个性化生成内容。越具体越好。</span>
+          <textarea id="setUserProfile" rows="6" placeholder="例如：我叫小王，35岁，重庆人，做了8年桶装水生意，两个孩子的爸爸。平时说话直接接地气，喜欢用重庆话讲身边的真实故事……" style="width:100%;padding:10px 12px;border:1.5px solid #e7e5e4;border-radius:8px;font-size:.82rem;resize:vertical;outline:none;background:#fafaf9;font-family:inherit;line-height:1.5;margin-top:6px;transition:border-color .2s"></textarea>
+        </div>
+        <div class="profile-preview" id="profilePreview" style="display:none">
+          <div class="field-label" style="margin-bottom:6px">📋 已保存的个人信息摘要</div>
+          <div class="profile-card" id="profileCard"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-dialog-footer">
       <button class="btn btn-secondary" id="btnResetSettings">恢复默认</button>
       <button class="btn btn-primary" id="btnSaveSettings">保存设置</button>
     </div>
@@ -467,34 +614,63 @@ var PERSONAS = {
   comedian:  { name:'搞笑者',   icon:'😄', desc:'幽默/娱乐方式呈现内容' },
 };
 
-var PERSONA_SCENARIOS = {
-  'short-video': {
-    teacher:   { label:'专家教学', topicType:'科普知识', desc:'以专家身份分享{biz}的专业知识，建立权威感，吸引精准粉丝' },
-    companion: { label:'朋友分享', topicType:'讲故事', desc:'以朋友口吻记录{biz}的真实日常和心路历程，拉近距离' },
-    foil:      { label:'成长记录', topicType:'成长记录', desc:'以学习者的视角，展示{biz}从零开始的试错和成长' },
-    admirer:   { label:'测评推荐', topicType:'好物推荐', desc:'以鉴赏者角度，评测和推荐{biz}相关的优质好物' },
-    comedian:  { label:'轻松娱乐', topicType:'搞笑娱乐', desc:'用幽默有趣的方式，呈现{biz}的花式玩法和搞笑内容' },
-  },
-  'image-text': {
-    teacher:   { label:'知识卡片', topicType:'科普知识', desc:'以专家身份，制作{biz}的知识卡片和教程步骤图' },
-    companion: { label:'生活分享', topicType:'讲故事', desc:'以生活分享的方式，记录{biz}的实用小贴士和日常' },
-    foil:      { label:'避坑指南', topicType:'避坑指南', desc:'以亲历者视角，总结{biz}的常见误区和避坑经验' },
-    admirer:   { label:'好物合集', topicType:'对比测评', desc:'以推荐者角度，整理{biz}的精选合集和对比评测' },
-    comedian:  { label:'趣味图解', topicType:'搞笑娱乐', desc:'用轻松幽默的方式，图解{biz}的有趣冷知识和热梗' },
-  },
-  'long-article': {
-    teacher:   { label:'深度教程', topicType:'痛点解决', desc:'以行业专家视角，撰写{biz}的深度分析和系统教程' },
-    companion: { label:'经验复盘', topicType:'讲故事', desc:'以亲身经历，复盘{biz}的真实案例和心路历程' },
-    foil:      { label:'踩坑纪实', topicType:'避坑指南', desc:'以学习者口吻，记录{biz}的探索过程和关键教训' },
-    admirer:   { label:'行业观察', topicType:'行业分析', desc:'以观察者身份，分析{biz}的行业趋势和精选案例' },
-    comedian:  { label:'风趣杂谈', topicType:'搞笑娱乐', desc:'以幽默犀利的风格，写{biz}的趣闻轶事和吐槽杂谈' },
-  },
+// 选题类型 → 具体场景列表。每个场景有推荐的人设角度。
+// 按选题类型组织，选题类型决定流量方向，人设决定表达风格。
+var TOPIC_SCENARIOS = {
+  'short-video': [
+    { topicType:'痛点解决', topicIcon:'💡', persona:'teacher', label:'专家支招', desc:'针对{biz}领域的常见痛点，用专业视角给出解决方案，让观众觉得"终于有人说明白了"' },
+    { topicType:'痛点解决', topicIcon:'💡', persona:'companion', label:'亲身踩坑', desc:'分享{biz}实践中踩过的坑和真实教训，用共鸣感拉流量' },
+    { topicType:'科普知识', topicIcon:'📚', persona:'teacher', label:'硬核科普', desc:'把{biz}的复杂知识讲得通俗易懂，建立专业权威，吸引高质量粉丝' },
+    { topicType:'科普知识', topicIcon:'📚', persona:'comedian', label:'趣味冷知识', desc:'用轻松有趣的方式科普{biz}的冷知识和热梗，传播力强' },
+    { topicType:'讲故事', topicIcon:'📖', persona:'companion', label:'真实经历', desc:'以第一人称讲述{biz}的真实故事和心路历程，用情感连接观众' },
+    { topicType:'讲故事', topicIcon:'📖', persona:'comedian', label:'趣闻轶事', desc:'讲述{biz}领域的有趣人物和事件，娱乐性强，完播率高' },
+    { topicType:'好物推荐', topicIcon:'⭐', persona:'admirer', label:'精选推荐', desc:'推荐{biz}相关的优质好物和必备工具，带货潜力大' },
+    { topicType:'对比测评', topicIcon:'⚖', persona:'admirer', label:'横向对比', desc:'多维度对比{biz}领域的热门选择，帮观众快速决策，收藏率高' },
+    { topicType:'避坑指南', topicIcon:'🛡', persona:'foil', label:'新手避坑', desc:'总结{biz}新手最容易犯的错误，帮观众少花冤枉钱，实用性强' },
+    { topicType:'避坑指南', topicIcon:'🛡', persona:'companion', label:'经验之谈', desc:'用过来人的身份分享{biz}的实战经验和教训，真实可信' },
+    { topicType:'成长记录', topicIcon:'🌱', persona:'foil', label:'从零开始', desc:'记录{biz}从零起步的完整过程，展示真实进步，养成系吸粉' },
+    { topicType:'搞笑娱乐', topicIcon:'😂', persona:'comedian', label:'花式整活', desc:'用幽默有趣的方式呈现{biz}的花式玩法，容易出爆款' },
+    { topicType:'行业分析', topicIcon:'📊', persona:'teacher', label:'趋势解读', desc:'分析{biz}行业的最新趋势和机会，吸引同行和从业者关注' },
+  ],
+  'image-text': [
+    { topicType:'痛点解决', topicIcon:'💡', persona:'teacher', label:'步骤拆解', desc:'用图解方式拆解{biz}的常见问题，一步步展示解决方案' },
+    { topicType:'科普知识', topicIcon:'📚', persona:'teacher', label:'知识卡片', desc:'制作{biz}的知识卡片和教程图，适合收藏和转发' },
+    { topicType:'科普知识', topicIcon:'📚', persona:'comedian', label:'图解冷知识', desc:'用有趣的图解方式科普{biz}的冷知识，视觉冲击力强' },
+    { topicType:'讲故事', topicIcon:'📖', persona:'companion', label:'生活记录', desc:'用图文记录{biz}的真实日常和实用小贴士，接地气' },
+    { topicType:'好物推荐', topicIcon:'⭐', persona:'admirer', label:'宝藏清单', desc:'整理{biz}领域的精选好物清单，一目了然，种草力强' },
+    { topicType:'对比测评', topicIcon:'⚖', persona:'admirer', label:'对比合集', desc:'图文对比{biz}相关的热门产品/方案，直观展示差异' },
+    { topicType:'避坑指南', topicIcon:'🛡', persona:'foil', label:'误区盘点', desc:'用图解盘点{biz}的常见误区和错误做法，帮粉丝避雷' },
+    { topicType:'成长记录', topicIcon:'🌱', persona:'foil', label:'前后对比', desc:'用对比图展示{biz}的进步和变化，视觉冲击力强' },
+    { topicType:'搞笑娱乐', topicIcon:'😂', persona:'comedian', label:'趣味图解', desc:'用幽默漫画/图解呈现{biz}的有趣内容，传播性强' },
+  ],
+  'long-article': [
+    { topicType:'痛点解决', topicIcon:'💡', persona:'teacher', label:'深度教程', desc:'系统性解决{biz}的核心问题，打造标杆长文，SEO长尾流量' },
+    { topicType:'痛点解决', topicIcon:'💡', persona:'foil', label:'实战复盘', desc:'详细记录{biz}的实践过程和关键决策，干货密度高' },
+    { topicType:'科普知识', topicIcon:'📚', persona:'teacher', label:'体系科普', desc:'从底层逻辑出发，系统性地科普{biz}的完整知识体系' },
+    { topicType:'讲故事', topicIcon:'📖', persona:'companion', label:'人物故事', desc:'深挖{biz}领域的人物故事和经历，用叙事驱动阅读' },
+    { topicType:'讲故事', topicIcon:'📖', persona:'comedian', label:'行业趣谈', desc:'用幽默笔触讲述{biz}行业的趣闻轶事，轻松好读' },
+    { topicType:'行业分析', topicIcon:'📊', persona:'admirer', label:'趋势洞察', desc:'深度分析{biz}行业的发展趋势和机会，吸引行业读者' },
+    { topicType:'行业分析', topicIcon:'📊', persona:'teacher', label:'格局解读', desc:'拆解{biz}领域的竞争格局和商业模式，展现思考深度' },
+    { topicType:'对比测评', topicIcon:'⚖', persona:'admirer', label:'深度对比', desc:'多维度深度对比{biz}领域的主流方案，给选型建议' },
+    { topicType:'避坑指南', topicIcon:'🛡', persona:'foil', label:'踩坑全记录', desc:'完整记录{biz}从入门到进阶的踩坑经历和关键教训' },
+    { topicType:'避坑指南', topicIcon:'🛡', persona:'companion', label:'过来人建议', desc:'以过来人身份，分享{biz}的实战经验和避坑心得' },
+    { topicType:'成长记录', topicIcon:'🌱', persona:'companion', label:'年度复盘', desc:'复盘{biz}的阶段性成长和收获，用真实数据说话' },
+    { topicType:'搞笑娱乐', topicIcon:'😂', persona:'comedian', label:'吐槽杂谈', desc:'用幽默犀利的风格吐槽{biz}的槽点和荒诞现象' },
+  ],
 };
 
-function getLanguageDisplay() {
-  if (settings.language === 'custom') return settings.customLanguage || '自定义语言';
-  return settings.language;
-}
+// 选题类型颜色和元信息
+var TOPIC_TYPE_META = {
+  '痛点解决': { color:'#dc2626', bg:'#fef2f2', tag:'高流量 · 强共鸣', tip:'解决具体问题，观众"终于懂了"的感觉' },
+  '科普知识': { color:'#2563eb', bg:'#eff6ff', tag:'涨粉利器 · 建权威', tip:'把复杂讲简单，建立专业信任感' },
+  '讲故事':   { color:'#7c3aed', bg:'#f5f3ff', tag:'情感连接 · 高完播', tip:'用故事打动人心，观众愿意看到最后' },
+  '好物推荐': { color:'#ea580c', bg:'#fff7ed', tag:'带货潜力 · 高转化', tip:'推荐好东西，观众信任你的品味' },
+  '对比测评': { color:'#0891b2', bg:'#ecfeff', tag:'收藏率高 · 决策参考', tip:'帮观众做选择，收藏起来慢慢看' },
+  '避坑指南': { color:'#d97706', bg:'#fffbeb', tag:'实用性强 · 高收藏', tip:'帮观众省钱省时间，实用价值拉满' },
+  '成长记录': { color:'#059669', bg:'#ecfdf5', tag:'养成系 · 高互动', tip:'展示真实进步，观众有参与感和陪伴感' },
+  '搞笑娱乐': { color:'#db2777', bg:'#fdf2f8', tag:'传播力强 · 易爆款', tip:'轻松有趣，最容易出圈的类型' },
+  '行业分析': { color:'#4f46e5', bg:'#eef2ff', tag:'深度内容 · 精准粉', tip:'展现专业深度，吸引同行和高端读者' },
+};
 
 function getSeasonContext() {
   var m = new Date().getMonth() + 1;
@@ -504,14 +680,18 @@ function getSeasonContext() {
   return { season:'冬季', themes:'保暖、年货、寒假、年终总结、春节、春运' };
 }
 
-function recommendPersona(name) {
-  var n = name || '';
-  if (/教育|培训|课程|学|考|辅导|教练|导师/.test(n)) return 'teacher';
-  if (/搞笑|娱乐|段子|吐槽|幽默|整蛊/.test(n)) return 'comedian';
-  if (/测评|推荐|排行|精选|探店|种草|评测/.test(n)) return 'admirer';
-  if (/记录|日常|vlog|日记|生活|成长|学习/.test(n)) return 'companion';
-  if (/新手|小白|入门|从零|学渣|菜鸟/.test(n)) return 'foil';
-  return 'companion';
+function getImageRatioInfo(ratio) {
+  if (ratio === '9:16') return { label:'9:16 竖屏', width:1080, height:1920, orientation:'竖版' };
+  if (ratio === '16:9') return { label:'16:9 横屏', width:1920, height:1080, orientation:'横版' };
+  if (ratio === '3:4') return { label:'3:4 竖版', width:1080, height:1440, orientation:'竖版' };
+  if (ratio === '4:3') return { label:'4:3 横版', width:1440, height:1080, orientation:'横版' };
+  return { label:'1:1 方形', width:1080, height:1080, orientation:'方形' };
+}
+
+function getVideoLengthInfo(len) {
+  if (len === '15') return { label:'15秒', shots:'1-2个镜头', tip:'一个核心信息点，快节奏开场，适合短视频平台的极短内容' };
+  if (len === '60') return { label:'60秒', shots:'5-8个镜头', tip:'多层次叙事，完整的故事结构，适合深度内容输出' };
+  return { label:'30秒', shots:'3-5个镜头', tip:'标准短视频长度，完整的叙事弧线（开场-发展-收尾）' };
 }
 
 // ============================================================
@@ -524,9 +704,15 @@ var DEFAULT_SETTINGS = {
   customModel: '',
   bizName: '',
   contentType: 'short-video',
+  videoLength: '30',
+  imageStyle: '摄影写实',
+  imageRatio: '1:1',
+  articleLength: '中篇~2000字',
   persona: 'auto',
   language: '普通话',
   customLanguage: '',
+  searchEnabled: true,
+  userProfile: '',
 };
 var settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 var messages = [];
@@ -537,15 +723,17 @@ var isGenerating = false;
 // ============================================================
 function init() {
   loadSettings();
-  applySettings();
+  applyAllSettings();
   bindEvents();
   renderScenarioCards();
+  updateGenerateBtn();
   updateStatusBar();
+  if (!settings.apiKey) setTimeout(openSettings, 600);
 }
 
 function loadSettings() {
   try {
-    var saved = localStorage.getItem('zimeiti-settings');
+    var saved = localStorage.getItem('zimeiti-v2-settings');
     if (saved) {
       var parsed = JSON.parse(saved);
       Object.keys(parsed).forEach(function(k) { settings[k] = parsed[k]; });
@@ -553,76 +741,171 @@ function loadSettings() {
   } catch (e) {}
 }
 
-function saveSettings() {
-  localStorage.setItem('zimeiti-settings', JSON.stringify(settings));
+function saveSettingsToStorage() {
+  localStorage.setItem('zimeiti-v2-settings', JSON.stringify(settings));
 }
 
-function applySettings() {
+// ============================================================
+// SYNC: Sidebar → Settings
+// ============================================================
+function syncSidebarToSettings() {
+  settings.bizName = document.getElementById('sbBizName').value.trim();
+
+  var ctEl = document.querySelector('#sbContentType .sidebar-chip.active');
+  if (ctEl) settings.contentType = ctEl.dataset.value;
+
+  var vlEl = document.querySelector('#sbVideoLength .sidebar-chip.active');
+  if (vlEl) settings.videoLength = vlEl.dataset.value;
+
+  var isEl = document.querySelector('#sbImageStyle .sidebar-chip.active');
+  if (isEl) settings.imageStyle = isEl.dataset.value;
+
+  var irEl = document.querySelector('#sbImageRatio .sidebar-chip.active');
+  if (irEl) settings.imageRatio = irEl.dataset.value;
+
+  var alEl = document.querySelector('#sbArticleLength .sidebar-chip.active');
+  if (alEl) settings.articleLength = alEl.dataset.value;
+
+  var pEl = document.querySelector('#sbPersona .sidebar-chip.active');
+  if (pEl) settings.persona = pEl.dataset.value;
+
+  settings.language = document.getElementById('sbLanguage').value;
+  settings.customLanguage = document.getElementById('sbCustomLanguage').value.trim();
+  settings.searchEnabled = document.getElementById('sbWebSearch').checked;
+
+  saveSettingsToStorage();
+  updateConditionalFields();
+  updateSendButton();
+  updateStatusBar();
+}
+
+// Apply settings to all UI elements
+function applyAllSettings() {
+  document.getElementById('sbBizName').value = settings.bizName;
+
+  setActiveChip('#sbContentType', settings.contentType);
+  setActiveChip('#sbVideoLength', settings.videoLength);
+  setActiveChip('#sbImageStyle', settings.imageStyle);
+  setActiveChip('#sbImageRatio', settings.imageRatio);
+  setActiveChip('#sbArticleLength', settings.articleLength);
+  setActiveChip('#sbPersona', settings.persona);
+
+  document.getElementById('sbLanguage').value = settings.language;
+  document.getElementById('sbCustomLanguage').value = settings.customLanguage || '';
+  document.getElementById('sbCustomLanguage').style.display = settings.language === 'custom' ? 'block' : 'none';
+
   document.getElementById('setApiKey').value = settings.apiKey;
   document.getElementById('setEndpoint').value = settings.endpoint;
   document.getElementById('setModel').value = settings.model;
   document.getElementById('setCustomModel').value = settings.customModel || '';
-  document.getElementById('setBizName').value = settings.bizName;
-  var ctEl = document.querySelector('input[name="setCt"][value="' + settings.contentType + '"]');
-  if (ctEl) ctEl.checked = true;
-  var pEl = document.querySelector('input[name="setPersona"][value="' + settings.persona + '"]');
-  if (pEl) pEl.checked = true;
-  document.getElementById('setLanguage').value = settings.language;
-  document.getElementById('setCustomLanguage').value = settings.customLanguage || '';
-  if (settings.model === 'custom') {
-    document.getElementById('customModelField').style.display = 'block';
-  } else {
-    document.getElementById('customModelField').style.display = 'none';
-  }
-  if (settings.language === 'custom') {
-    document.getElementById('customLanguageField').style.display = 'block';
-  } else {
-    document.getElementById('customLanguageField').style.display = 'none';
-  }
-  updateCtxBar();
+  document.getElementById('customModelField').style.display = settings.model === 'custom' ? 'block' : 'none';
+  document.getElementById('sbWebSearch').checked = settings.searchEnabled;
+  document.getElementById('setUserProfile').value = settings.userProfile || '';
+  updateProfilePreview();
+
+  updateConditionalFields();
   updateSendButton();
 }
 
-function updateCtxBar() {
-  var biz = settings.bizName || '未设置';
-  document.getElementById('ctxBizText').textContent = biz;
-  var ctMap = { 'short-video':'📹 短视频', 'image-text':'🖼 图文', 'long-article':'📝 长文' };
-  var p = settings.persona === 'auto' ? 'auto' : settings.persona;
-  document.getElementById('ctxType').textContent = ctMap[settings.contentType] || '📹 短视频';
-  document.getElementById('ctxPersona').textContent = (PERSONAS[p]||PERSONAS.auto).icon + ' ' + (PERSONAS[p]||PERSONAS.auto).name;
-  document.getElementById('ctxBadge').textContent = biz;
+function setActiveChip(groupSelector, value) {
+  var chips = document.querySelectorAll(groupSelector + ' .sidebar-chip');
+  chips.forEach(function(c) { c.classList.toggle('active', c.dataset.value === value); });
+}
+
+function updateConditionalFields() {
+  var ct = settings.contentType;
+  document.getElementById('sbVideoLengthGroup').style.display = ct === 'short-video' ? 'flex' : 'none';
+  document.getElementById('sbImageStyleGroup').style.display = ct === 'image-text' ? 'flex' : 'none';
+  document.getElementById('sbImageRatioGroup').style.display = ct === 'image-text' ? 'flex' : 'none';
+  document.getElementById('sbArticleLengthGroup').style.display = ct === 'long-article' ? 'flex' : 'none';
 }
 
 function updateSendButton() {
   document.getElementById('btnSend').disabled = !settings.apiKey || isGenerating;
 }
 
+function updateGenerateBtn() {
+  var btn = document.getElementById('sbGenerateBtn');
+  if (messages.length > 0) {
+    btn.textContent = '🔄 重新生成';
+  } else {
+    btn.textContent = '✨ 开始生成';
+  }
+}
+
 // ============================================================
 // EVENTS
 // ============================================================
 function bindEvents() {
+  // Sidebar chip clicks
+  document.querySelectorAll('.sidebar-chips').forEach(function(group) {
+    group.addEventListener('click', function(e) {
+      var chip = e.target.closest('.sidebar-chip');
+      if (!chip) return;
+      group.querySelectorAll('.sidebar-chip').forEach(function(c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      syncSidebarToSettings();
+      renderScenarioCards();
+    });
+  });
+
+  // Sidebar input changes
+  document.getElementById('sbBizName').addEventListener('input', function() {
+    syncSidebarToSettings();
+    renderScenarioCards();
+  });
+
+  document.getElementById('sbLanguage').addEventListener('change', function() {
+    document.getElementById('sbCustomLanguage').style.display = this.value === 'custom' ? 'block' : 'none';
+    syncSidebarToSettings();
+    renderScenarioCards();
+  });
+
+  document.getElementById('sbCustomLanguage').addEventListener('input', function() {
+    syncSidebarToSettings();
+  });
+
+  // Web search toggle
+  document.getElementById('sbWebSearch').addEventListener('change', function() {
+    syncSidebarToSettings();
+  });
+
+  // Sidebar generate button
+  document.getElementById('sbGenerateBtn').addEventListener('click', function() {
+    if (!settings.apiKey) { openSettings(); return; }
+    if (messages.length > 0) { clearChat(); }
+    var biz = settings.bizName || '这个领域';
+    var ct = settings.contentType;
+    var typeDetail = ct === 'short-video' ? getVideoLengthInfo(settings.videoLength).label + '短视频' : ct === 'image-text' ? '图文' : '长文';
+    document.getElementById('inputBox').value = '请帮我分析「' + biz + '」这个领域的' + typeDetail + '内容，推荐5个具体的爆款选题。每个选题要说明：选题类型（痛点解决/科普知识/讲故事等）、推荐理由、适合用什么人设来做。让我先选感兴趣的选题，再生成具体的提示词。';
+    sendMessage();
+  });
+
+  // Settings dialog
   document.getElementById('btnSettings').addEventListener('click', openSettings);
   document.getElementById('btnSettingsClose').addEventListener('click', closeSettings);
   document.getElementById('settingsOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeSettings();
   });
-  document.getElementById('btnSaveSettings').addEventListener('click', saveSettingsFromUI);
+  document.getElementById('btnSaveSettings').addEventListener('click', saveSettingsFromDialog);
   document.getElementById('btnResetSettings').addEventListener('click', resetSettings);
   document.getElementById('setModel').addEventListener('change', function() {
     document.getElementById('customModelField').style.display = this.value === 'custom' ? 'block' : 'none';
   });
-  document.getElementById('setLanguage').addEventListener('change', function() {
-    document.getElementById('customLanguageField').style.display = this.value === 'custom' ? 'block' : 'none';
-  });
 
-  // Settings tabs
-  document.querySelectorAll('.settings-tab').forEach(function(tab) {
+  // Settings dialog tabs
+  document.querySelectorAll('#settingsOverlay .settings-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
-      document.querySelectorAll('.settings-tab').forEach(function(t) { t.classList.remove('active'); });
-      document.querySelectorAll('.settings-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      document.querySelectorAll('#settingsOverlay .settings-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('#settingsOverlay .settings-tab-panel').forEach(function(p) { p.classList.remove('active'); });
       this.classList.add('active');
       document.getElementById(this.dataset.tab).classList.add('active');
     });
+  });
+
+  // Profile textarea live preview
+  document.getElementById('setUserProfile').addEventListener('input', function() {
+    updateProfilePreview();
   });
 
   document.addEventListener('keydown', function(e) {
@@ -631,6 +914,7 @@ function bindEvents() {
     }
   });
 
+  // Chat input
   document.getElementById('btnSend').addEventListener('click', sendMessage);
   document.getElementById('inputBox').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -640,83 +924,80 @@ function bindEvents() {
   });
   document.getElementById('inputBox').addEventListener('input', function() {
     this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    this.style.height = Math.min(this.scrollHeight, 110) + 'px';
   });
 
+  // Quick actions
   document.getElementById('quickActions').addEventListener('click', function(e) {
     var btn = e.target.closest('.quick-btn');
     if (!btn) return;
-    var action = btn.dataset.action;
-    if (action === '清空对话，重新开始') {
-      clearChat();
-      return;
-    }
-    document.getElementById('inputBox').value = action;
+    document.getElementById('inputBox').value = btn.dataset.action;
     sendMessage();
   });
 
-  document.getElementById('chatEmpty').addEventListener('click', function(e) {
-    var card = e.target.closest('.scenario-card');
-    if (!card) return;
-    settings.persona = card.dataset.persona;
-    document.getElementById('inputBox').value = card.dataset.firstMsg;
-    updateCtxBar();
-    sendMessage();
-  });
-
-  document.getElementById('ctxBiz').addEventListener('click', function() {
-    openSettings();
-  });
-
-  // Delegation for dynamically re-created cards
+  // Scenario card clicks (both empty state and chat area)
   document.getElementById('chatArea').addEventListener('click', function(e) {
     var card = e.target.closest('.scenario-card');
-    if (card) {
-      settings.persona = card.dataset.persona;
-      document.getElementById('inputBox').value = card.dataset.firstMsg;
-      updateCtxBar();
-      sendMessage();
+    if (!card) return;
+    if (!settings.apiKey) {
+      openSettings();
+      return;
     }
+    settings.persona = card.dataset.persona;
+    saveSettingsToStorage();
+    setActiveChip('#sbPersona', settings.persona);
+    document.getElementById('inputBox').value = card.dataset.firstMsg;
+    sendMessage();
   });
 }
 
 // ============================================================
-// SETTINGS PANEL
+// SETTINGS DIALOG
 // ============================================================
 function openSettings() {
-  applySettings();
+  document.getElementById('setApiKey').value = settings.apiKey;
+  document.getElementById('setEndpoint').value = settings.endpoint;
+  document.getElementById('setModel').value = settings.model;
+  document.getElementById('setCustomModel').value = settings.customModel || '';
+  document.getElementById('customModelField').style.display = settings.model === 'custom' ? 'block' : 'none';
   document.getElementById('settingsOverlay').classList.add('open');
-  document.getElementById('setBizName').focus();
+  setTimeout(function() { document.getElementById('setApiKey').focus(); }, 100);
 }
 
 function closeSettings() {
   document.getElementById('settingsOverlay').classList.remove('open');
-  applySettings();
 }
 
-function saveSettingsFromUI() {
+function saveSettingsFromDialog() {
   settings.apiKey = document.getElementById('setApiKey').value.trim();
   settings.endpoint = document.getElementById('setEndpoint').value.trim() || DEFAULT_SETTINGS.endpoint;
   settings.model = document.getElementById('setModel').value;
   settings.customModel = document.getElementById('setCustomModel').value.trim();
-  settings.bizName = document.getElementById('setBizName').value.trim();
-  var ctChecked = document.querySelector('input[name="setCt"]:checked');
-  if (ctChecked) settings.contentType = ctChecked.value;
-  var pChecked = document.querySelector('input[name="setPersona"]:checked');
-  if (pChecked) settings.persona = pChecked.value;
-  settings.language = document.getElementById('setLanguage').value;
-  settings.customLanguage = document.getElementById('setCustomLanguage').value.trim();
-  saveSettings();
-  applySettings();
+  settings.userProfile = document.getElementById('setUserProfile').value.trim();
+  saveSettingsToStorage();
+  updateProfilePreview();
+  applyAllSettings();
   updateSendButton();
   updateStatusBar();
   closeSettings();
 }
 
+function updateProfilePreview() {
+  var text = document.getElementById('setUserProfile').value.trim();
+  var preview = document.getElementById('profilePreview');
+  var card = document.getElementById('profileCard');
+  if (text) {
+    preview.style.display = 'block';
+    card.textContent = text;
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
 function resetSettings() {
   settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-  saveSettings();
-  applySettings();
+  saveSettingsToStorage();
+  applyAllSettings();
   updateSendButton();
   updateStatusBar();
 }
@@ -726,46 +1007,224 @@ function resetSettings() {
 // ============================================================
 function buildSystemPrompt() {
   var sc = getSeasonContext();
-  // 如果用户选了具体人设就用，否则 LLM 自主判断
+  var ctMap = { 'short-video':'短视频脚本提示词', 'image-text':'图文生图提示词', 'long-article':'长文写作提示词' };
+
   var personaInfo = '';
   if (settings.persona !== 'auto') {
     var p = PERSONAS[settings.persona];
     if (p) personaInfo = '- 用户指定人设：' + p.name + '（' + p.desc + '）\n';
   }
-  var ctMap = { 'short-video':'短视频脚本提示词', 'image-text':'图文生图提示词', 'long-article':'长文写作提示词' };
 
+  var lang = settings.language === 'custom' ? (settings.customLanguage || '自定义语言') : settings.language;
+
+  var contentTypeInfo = '';
   var platformGuide = '';
   if (settings.contentType === 'short-video') {
+    var vl = getVideoLengthInfo(settings.videoLength);
+    contentTypeInfo = '- 视频时长：' + vl.label + '（' + vl.shots + '，' + vl.tip + '）\n';
+
     platformGuide =
-      '目标AI工具：即梦（Jimeng）/ 可灵（Keling）/ Sora — AI视频生成平台\n' +
-      '生成格式：分镜脚本 + 画面提示词 + 口播文案 + 标题标签\n' +
-      '每个镜头的提示词要包含：主体描述 + 场景 + 风格 + 光影 + 画质关键词';
+      '## 短视频脚本格式要求（必须严格遵守）\n\n' +
+      '目标AI工具：即梦（Jimeng）/ 可灵（Keling）\n\n' +
+      '### 输出结构\n' +
+      '1. **脚本标题** + 选题类型标注 + 总时长\n' +
+      '2. **分镜表**：每个镜头标注时间段、景别、画面描述、旁白台词\n' +
+      '3. **话题标签**：5-8个 hashtag\n' +
+      '4. **统一生成参数**：比例、时长、景别、语速、光线、机位、人脸参考\n\n' +
+      '### 每个镜头的格式模板\n' +
+      '【X-Y秒】景别。画面描述（演员动作、表情、走位、道具）。\n' +
+      '旁白（' + lang + '）："台词内容"\n\n' +
+      '### 画面描述要求\n' +
+      '- 每句话都写清楚：演员怎么站/坐/走、手在做什么、眼睛看哪里、脸上什么表情\n' +
+      '- 如果涉及道具，写清楚道具怎么出现、怎么拿、怎么展示\n' +
+      '- 镜头变化写清楚：切近景/切中景/切特写，为什么切\n' +
+      '- 画面要有节奏感，不要平铺直叙\n\n' +
+      '### 旁白要求\n' +
+      '- 必须使用' + lang + '\n' +
+      '- 口语化、有语气词、有情绪起伏\n' +
+      '- 每句旁白和画面动作配合，不要两张皮\n' +
+      '- 关键词要加重，有停顿感\n\n' +
+      '### 参考示例格式\n' +
+      '```\n脚本：饮水机冷水口的细菌是热水口的6倍（约14秒）\n选题类型：科普知识\n\n' +
+      '【0-3秒】中景。女主角站在饮水机旁弯腰，手指在冷水口和热水口之间来回点，抬头看镜头，表情狡黠像在出题考人。\n' +
+      '旁白（重庆话）："饮水机哪边最脏？你猜是哪个口？"\n\n' +
+      '【3-6秒】切近景。女主角按住热水口对着镜头摇手指，然后食指重重指向冷水口，眼睛瞪大，头往后缩一下做出"没想到吧"的表情。\n' +
+      '旁白（重庆话）："不是热水口哈！是冷水口！"\n\n' +
+      '【6-9秒】切中景。女主角双手对着镜头比划——左手比个"6"、右手比个"1"，把"6"怼到镜头前，表情夸张惊悚。\n' +
+      '旁白（重庆话）："热水高温杀菌的嘛，冷水口细菌是热水口的——6倍多！"\n\n' +
+      '【9-11秒】切近景。女主角双手捂嘴眼睛瞪圆装出吓到的样子，然后放下手换成严肃表情，身体前倾靠近镜头。\n' +
+      '旁白（重庆话）："楞个恐怖啊？我跟你说嘛——"\n\n' +
+      '【11-14秒】切中景。女主角从身后变出一块清洁抹布搭在肩上，拍了拍旁边的桶装水，对镜头竖起大拇指，笑容灿烂。\n' +
+      '旁白（重庆话）："XX品牌不光送水，还免费帮顾客洗饮水机。今天下单，明天到！"\n\n' +
+      '画面定格，左下角弹出品牌信息\n\n' +
+      '话题标签：#饮水机清洗 #冷水口细菌 #桶装水配送 #饮水安全 #家庭健康科普\n\n' +
+      '---\n## 即梦/可灵 统一生成参数\n' +
+      '- 比例：9:16 竖屏\n- 时长：' + vl.label + '\n- 景别：中近景为主，特写切细节\n' +
+      '- 语速：中快，关键词加重\n- 光线：自然暖光\n' +
+      '- 机位：固定机位，靠演员前倾/后退变景别\n- 人脸参考：上传主角照片\n```\n\n' +
+      '**重要**：不要写成"一镜到底"的单镜头描述。必须拆分成带时间戳的多个镜头，每个镜头都要有具体的人物动作和旁白台词。';
   } else if (settings.contentType === 'image-text') {
+    var ri = getImageRatioInfo(settings.imageRatio);
+    contentTypeInfo = '- 图片风格倾向：' + settings.imageStyle + '\n- 图片比例：' + ri.label + '（' + ri.width + '×' + ri.height + 'px）\n';
     platformGuide =
-      '目标AI工具：豆包（Doubao）/ Midjourney / DALL·E — AI图像生成平台\n' +
-      '生成格式：3张图的提示词（封面图+内容图+CTA图）+ 配套文案 + 排版建议\n' +
-      '每张图的提示词要包含：主体+场景+风格+构图+光影+画质关键词';
+      '## 图文内容格式要求（必须严格遵守）\n\n' +
+      '目标平台：小红书 / 公众号 / 图文自媒体\n' +
+      'AI生图工具：豆包（Doubao）/ Midjourney / DALL·E\n\n' +
+      '**核心原则：输出的是一个完整的图文内容生产包，包含标题设计、逐张图的内容+排版+AI生图约束、评论区运营、标签策略、制作规范。**\n\n' +
+      '### 输出结构（按顺序）\n' +
+      '1. **标题设计**：主标题 + 副标题 + 封面要素分析（H-V-F标注）\n' +
+      '2. **内容规划**：3张图，每张图包含：情绪/版式/色调标注 → 内容功能 → 画面描述 → AI生图约束（画面结构+文字内容+技术要求）\n' +
+      '3. **制作规范**：设计规格 + 色彩方案 + 字体规范\n' +
+      '4. **评论区运营**：首评文案 + 底部标签（带策略说明）\n' +
+      '5. **延伸话题推荐**：5个可以继续做的选题（表格形式）\n\n' +
+      '### 每张图的结构模板\n' +
+      '**图片X：用途【情绪：XX | 版式：XX | 色调：XX】**\n' +
+      '- **【内容功能】** 这张图要达成什么目的\n' +
+      '- **【画面描述】** 背景+布局+元素+禁止事项\n' +
+      '- **【文字内容】** 实际显示的文字，用缩进代码块展示\n' +
+      '- **【AI生图约束】** 完整的一段AI生图指令（可直接复制到豆包使用），包含：\n' +
+      '  画面结构（背景+布局）、文字内容（字号+位置）、技术要求（光线+色调+字体+禁止项）\n\n' +
+      '### 标签策略要求\n' +
+      '输出5个标签，每个标签标注类型：区域+行业关键词 / IP品牌词 / 蓝海长尾词问句 / 目标客户行业问题 / 搜后搜词\n\n' +
+      '### 参考示例格式\n' +
+      '```\n图文选题：高考前一个月，家长请记牢这三件事\n选题类型：避坑指南\n目标平台：小红书 + 公众号\n\n' +
+      '---\n## 一、标题设计\n' +
+      '### 主标题\n【高考前一个月，家长请记牢这三件事】\n' +
+      '### 副标题\n【过来人的忠告】\n' +
+      '### 封面建议\n' +
+      '| 要素 | 说明 |\n|------|------|\n' +
+      '| H-V-F 标注 | 过来人身份 + 具体数字 + 行动引导 |\n' +
+      '| 开头词 | 高考前一个月、家长请记牢、过来人 |\n' +
+      '| 情绪词 | 忠告、必看 |\n' +
+      '| 行动引导 | 转发给需要的家长 |\n\n' +
+      '---\n## 二、内容规划（3张图片）\n' +
+      '> 【强制要求】所有图片必须为' + ri.label + '比例' + ri.width + '×' + ri.height + 'px\n' +
+      '> 【AI生图必须遵守】每张图必须有适配的场景图，禁止纯色背景\n\n' +
+      '### 图片1：封面【情绪：期待/共鸣 | 版式：billboard | 色调：暖调】\n' +
+      '**【内容功能】** 吸引点击，抛出悬念，引发共鸣\n' +
+      '**【画面描述】**\n- 背景：温馨书房/学生书桌场景图，虚化背景\n- 布局：' + ri.label + '，中央大字，下方副标题\n- 禁止：纯色背景、手机外框\n' +
+      '**【文字内容】**\n```\n画面：学生书桌，书本堆叠，旁边放着一杯水，温馨家庭氛围\n主标题：高考前一个月\n副标题：家长最该做和最不该做的三件事\n底部大字：过来人忠告\n```\n' +
+      '**【AI生图约束】**\n```\n请生成一张图文笔记，尺寸' + ri.width + 'x' + ri.height + 'px（' + ri.label + '）\n画面结构：\n- 背景：温馨书房/学生书桌场景图，虚化背景\n- 布局：' + ri.label + '，中央大字区域\n- 整体氛围：温馨、期待、引发共鸣\n文字内容：\n- 主标题（最大字号）：高考前一个月\n- 副标题（中等字号）：家长最该做和最不该做的三件事\n- 底部大字（醒目）：过来人忠告\n要求：\n1. 柔和自然光，High-key lighting\n2. 暖调，家庭温馨感\n3. 标题字体思源黑体Bold，标题占画面≥25%\n4. 金句块带背景色块（色块占画面5-10%）\n5. 禁止：手机Mockup、emoji、特殊符号\n6. 禁止：纯色背景、渐变背景\n```\n\n' +
+      '### 图片2：内容页【情绪：戳心/共鸣 | 版式：problem-solver | 色调：冷灰】**\n' +
+      '**【内容功能】** 揭示问题，引发共鸣\n' +
+      '**【画面描述】**\n- 背景：相关场景图，虚化背景\n- 布局：' + ri.label + '，上方大字+中间多个卡片+底部情绪语\n- 元素：警示图标、序号\n- 禁止：纯色背景、手机外框\n' +
+      '**【文字内容】**\n```\n画面：相关生活场景\n主标题：具体的问题或痛点标题\n卡片1：【问题1】具体描述\n卡片2：【问题2】具体描述\n卡片3：【问题3】具体描述\n底部大字：情绪化的总结语\n```\n' +
+      '**【AI生图约束】**\n```\n请生成一张图文笔记，尺寸' + ri.width + 'x' + ri.height + 'px（' + ri.label + '）\n画面结构：\n- 背景：相关场景图，虚化背景\n- 布局：' + ri.label + '，上方大字+中间卡片竖向排列\n- 风格：戳心、引发共鸣\n文字内容：\n- 主标题（较大字号）：具体标题\n- 卡片内容（带标记）：标题+说明\n- 底部大字（醒目）：情绪总结果\n要求：\n1. 柔和自然光，High-key lighting\n2. 低饱和灰调\n3. UI组件：图标 + 卡片 + 金句块\n4. 禁止：手机Mockup、emoji、特殊符号\n5. 禁止：纯色背景、渐变背景\n```\n\n' +
+      '### 图片3：方案/引导【情绪：温暖/希望 | 版式：solution | 色调：暖色饱和】**\n' +
+      '**【内容功能】** 给出建议方案，引导互动/关注\n' +
+      '**【画面描述】**\n- 背景：温暖/成长/阳光场景图\n- 布局：' + ri.label + '，上方大字+中间清单+底部行动引导\n- 元素：勾选标记、序号、温馨图标\n- 禁止：纯色背景、手机外框\n' +
+      '**【文字内容】**\n```\n画面：温暖阳光/成长场景\n主标题：解决方案或建议标题\n清单1：【建议1】具体内容\n清单2：【建议2】具体内容\n清单3：【建议3】具体内容\n底部大字：行动号召语\n```\n' +
+      '**【AI生图约束】**\n```\n请生成一张图文笔记，尺寸' + ri.width + 'x' + ri.height + 'px（' + ri.label + '）\n画面结构：\n- 背景：温暖阳光/成长场景图，虚化背景\n- 布局：' + ri.label + '，上方大字+中间清单+底部行动引导\n- 风格：温暖、希望、行动引导\n文字内容：\n- 主标题（较大字号）：具体标题\n- 清单内容（带勾选标记）：标题+说明\n- 底部大字（醒目）：行动号召\n要求：\n1. 柔和自然光，High-key lighting\n2. 暖色饱和，温暖阳光感\n3. UI组件：勾选图标 + 清单 + 金句块\n4. 禁止：手机Mockup、emoji、特殊符号\n5. 禁止：纯色背景、渐变背景\n```\n\n' +
+      '---\n## 三、制作规范\n' +
+      '### 设计规格\n- 图片数量：3张（' + ri.label + '）\n- 尺寸：' + ri.width + '×' + ri.height + 'px\n- 主标题：7字以内\n- 副标题：10字以内\n- 每张必须有场景图（禁止纯色/渐变背景）\n- 禁止出现手机外框/手机Mockup\n- 禁止使用emoji和特殊符号\n- 严禁堆砌文字，保持简洁易读\n' +
+      '### 色彩方案\n| 元素 | 颜色参考 | 使用场景 |\n|------|----------|----------|\n| 主色调 | 蓝色系 | 主标题 |\n| 辅助色 | 白色 | 文字背景、留白 |\n| 警示色 | 橙色 | 痛点揭示、警示 |\n| 信任色 | 绿色 | 解决方案、建议 |\n| 文字深色 | 深灰 | 浅色背景时 |\n| 文字浅色 | 白色 | 深色/场景图背景时 |\n' +
+      '### 字体规范\n- 字体使用：微软雅黑 / 思源黑体 / 华文细黑\n- 禁止使用：emoji、特殊符号\n\n' +
+      '---\n## 四、评论区运营\n' +
+      '### 评论区首评\n（输出一段个人化、带情感的首评文案，引发互动讨论）\n' +
+      '### 底部标签（5个，每个标注策略类型）\n| 序号 | 标签类型 | 标签内容 |\n|------|----------|----------|\n| 1 | 区域+行业关键词 | #具体标签 |\n| 2 | IP/品牌词 | #账号相关标签 |\n| 3 | 蓝海长尾词问句 | #长尾搜索词 |\n| 4 | 目标客户行业问题 | #用户痛点标签 |\n| 5 | 搜后搜词 | #相关话题标签 |\n\n' +
+      '---\n## 五、延伸话题推荐\n' +
+      '### 延伸选题（5个可以继续做的选题）\n| 序号 | 延伸选题 | 类型 | 说明 |\n|------|----------|------|------|\n| 1 | 选题标题 | 类型 | 延续理由 |\n| 2 | 选题标题 | 类型 | 延续理由 |\n| 3 | 选题标题 | 类型 | 延续理由 |\n| 4 | 选题标题 | 类型 | 延续理由 |\n| 5 | 选题标题 | 类型 | 延续理由 |\n```\n\n' +
+      '**重要规则**：\n' +
+      '1. 每张图必须输出完整的【AI生图约束】代码块，用户可以直接复制到豆包使用\n' +
+      '2. 画面内容和文字排版必须融合，不要拆成"画面"和"排版"两个独立区块\n' +
+      '3. 标签必须标注策略类型（区域+行业关键词/IP品牌词/蓝海长尾词问句/目标客户行业问题/搜后搜词）\n' +
+      '4. 制作规范的色彩方案根据实际选题调整颜色参考';
   } else {
+    contentTypeInfo = '- 文章篇幅：' + settings.articleLength + '\n';
     platformGuide =
-      '目标：公众号长文 / 深度文章\n' +
-      '生成格式：选题调研 + SEO元数据 + 完整大纲 + 写作提示词 + 标题备选 + 话题标签';
+      '## 长文内容格式要求（必须严格遵守）\n\n' +
+      '目标平台：公众号 / 知乎 / 头条号 / 博客\n\n' +
+      '**核心原则：长文直接由LLM生成完整内容，不需要生成"提示词"再复制到别处。用户拿到就能发布。**\n\n' +
+      '### 输出结构（按顺序）\n' +
+      '1. **选题分析**：选题类型 + 目标关键词 + 蓝海机会 + 建议人设\n' +
+      '2. **文章元数据**：SEO标题 + 副标题 + 摘要 + 话题标签\n' +
+      '3. **完整正文**：直接生成全篇内容，不需要大纲或写作提示词\n\n' +
+      '### 文章正文格式要求\n' +
+      '- 开头：用故事/数据/问题切入，3句话内抓住读者\n' +
+      '- 结构：开头钩子 → 背景/问题展开 → 核心内容（分2-3个小节）→ 总结/行动建议 → 结尾引导互动\n' +
+      '- 每个小节有小标题，段落之间有呼吸感\n' +
+      '- 字数参考：' + settings.articleLength + '\n' +
+      '- 语言风格：' + lang + '，口语化但有一定深度\n' +
+      '- 文末必须包含：互动引导（点赞/在看/评论）+ 下期预告\n\n' +
+      '### 标题规范\n' +
+      '- 主标题：有冲击力，含数字或悬念，20字以内\n' +
+      '- 副标题：补充说明，10字以内\n' +
+      '- 备选标题：提供2个不同角度的备选标题\n' +
+      '- 话题标签：5个，标注策略类型（同图文标签策略）\n\n' +
+      '### 参考示例\n' +
+      '```\n选题类型：痛点解决\n目标关键词：高考志愿填报 指南、选专业 方法\n蓝海机会：目前搜"志愿填报"的结果多是政策解读，缺少过来人的实操方法论\n\n' +
+      'SEO标题：2026高考志愿填报终极指南：过来人教你3步选对专业，90%的家长都忽略了第二步\n副标题：一位37岁过来人的肺腑之言\n摘要：高考志愿填报是每个家庭的必修课。本文从过来人视角，分享3个选专业的核心方法，帮你避开最常见的5个坑。\n\n' +
+      '话题标签：#高考志愿填报 #选专业 #过来人经验 #2026高考 #家长必看\n\n---\n' +
+      '## 正文\n\n' +
+      '### 你还记得填志愿那天的感觉吗？\n\n' +
+      '那年夏天，我坐在电脑前，面对密密麻麻的专业代码，脑子一片空白。\n\n' +
+      '我妈在旁边念叨："学会计吧，好找工作。"我爸说："学计算机，工资高。"班主任说："看分数，能上哪个填哪个。"\n\n' +
+      '没有人告诉我——选专业是选一种活法。\n\n' +
+      '如今37岁的我回头看，那天的选择改变了我接下来十几年的人生轨迹。今天我想以一个过来人的身份，聊聊怎么选专业这件事。\n\n' +
+      '### 第一步：先搞清楚"你喜欢什么"，而不是"什么好就业"\n\n' +
+      '（正文内容...）\n\n' +
+      '### 第二步：查这个专业的"真面目"，不要只看名字\n\n' +
+      '（正文内容...）\n\n' +
+      '### 第三步：用"10年法则"判断一个专业的生命力\n\n' +
+      '（正文内容...）\n\n' +
+      '### 写在最后\n\n' +
+      '选专业这件事，说到底是一个认识自己的过程。\n\n' +
+      '你选的不只是一个专业，而是接下来四年你会遇到的人、思考的问题、建立的认知框架。这些才是真正塑造你的东西。\n\n' +
+      '如果你正在为填志愿发愁，可以把这篇文章转发给你的家人看看。也欢迎在评论区说说你的情况和困惑，我会尽量回复每一条。\n\n' +
+      '下期预告：填完志愿就万事大吉了？大学第一年最该做的5件事\n' +
+      '```\n\n' +
+      '**重要规则**：\n' +
+      '1. 直接生成完整正文，不要只给大纲或写作提示词\n' +
+      '2. 标题和话题标签必须完整输出\n' +
+      '3. 文末必须有互动引导和下期预告\n' +
+      '4. 根据文章篇幅（' + settings.articleLength + '）控制字数，短文精炼、长文有深度';
   }
 
-  return '你是自媒体内容提示词生成专家。你帮自媒体创作者生成AI内容创作工具所需的提示词（Prompt），而不是直接生成最终内容。\n\n' +
+  var roleDesc = '你是自媒体内容创作助手。\n' +
+    '对于**短视频**和**图文**：你生成的是给AI工具（即梦/豆包/Midjourney）用的提示词（Prompt），用户复制到对应工具使用。\n' +
+    '对于**长文**：你直接生成完整文章内容（标题+话题+正文），用户拿到就能发布，不需要复制到别处。\n\n';
+
+  return roleDesc +
     '## 用户背景\n' +
     '- 业务/账号：' + (settings.bizName || '通用自媒体') + '\n' +
     '- 默认内容类型：' + (ctMap[settings.contentType] || '短视频脚本提示词') + '\n' +
+    contentTypeInfo +
     personaInfo +
-    '- 语言：' + getLanguageDisplay() + '\n' +
+    '- 语言：' + lang + '\n' +
+    (settings.userProfile ? '- 创作者个人资料：' + settings.userProfile + '\n' : '') +
     '- 当前季节：' + sc.season + '（可关联热点：' + sc.themes + '）\n\n' +
     platformGuide + '\n\n' +
+    '## 选题推荐规则（当用户要求推荐选题时必须遵守）\n\n' +
+    '**核心原则：选题标题必须是具体的、可直接作为视频标题的角度，而不是选题类型的分类名。**\n\n' +
+    '❌ 错误示例：\n' +
+    '> 选题一：专业避坑指南\n' +
+    '> 选题类型：避坑指南\n' +
+    '→ "专业避坑指南"是分类，不是选题。用户看完不知道具体要做什么内容。\n\n' +
+    '✅ 正确示例：\n'+
+    '> 选题一：2026高考志愿填报：这5个专业的毕业生90%都后悔了\n' +
+    '> 选题类型：避坑指南\n' +
+    '> 目标关键词：高考志愿填报 避坑、大学专业选择 误区\n' +
+    '> 蓝海机会：目前搜"高考+专业避坑"的内容大多是长篇图文，15秒短视频角度稀缺，蓝海潜力高\n\n' +
+    '### 每个选题必须包含以下字段\n' +
+    '1. **选题标题**：具体的、有冲击力的标题（不是分类名），让用户一眼就想点进去看\n' +
+    '2. **选题类型标签**：痛点解决/科普知识/讲故事/避坑指南/好物推荐/对比测评/成长记录/行业分析/搞笑娱乐\n' +
+    '3. **目标关键词**：这个选题要抢占的搜索关键词（2-3个），考虑用户真实会搜的词\n' +
+    '4. **蓝海机会分析**：为什么这个角度目前竞争小？目标受众是不是被忽视的细分人群？长尾关键词有没有机会？\n' +
+    '5. **建议人设**：用什么人设来做最合适，为什么\n\n' +
+    '### 蓝海选题策略\n' +
+    '- 不要选泛词（如"高考志愿填报"），要选长尾词（如"2026年高考 数学专业 就业前景"）\n' +
+    '- 找信息差：大多数内容没讲清楚、但用户很想知道的具体问题\n' +
+    '- 找人群差：为特定细分人群做内容（如"二本分数如何选一本专业""女孩子适不适合学计算机"）\n' +
+    '- 找平台差：抖音/快手已有的热门选题里，哪些在视频号/小红书上还没人做\n\n' +
     '## 选题类型（重要）\n' +
     '每次生成选题时，必须在开头明确标注选题类型：**痛点解决** / **科普知识** / **讲故事** / **避坑指南** / **好物推荐** / **对比测评** / **成长记录** / **行业分析** / **搞笑娱乐**。并简要说明为什么选这个类型（1-2句话）。\n\n' +
     '## 输出规范\n' +
-    '1. **结构化输出**：用清晰的标题分段，每个AI工具的提示词用 ``` 代码块包裹，方便用户一键复制\n' +
-    '2. **提示词具体化**：给豆包/即梦/Midjourney的提示词要包含具体的主体、场景、风格、光影、画质描述，不要写"请填入"之类的占位符\n' +
-    '3. **可调整**：用户说"换个角度"、"详细一点"、"改短"等，你要根据上下文调整之前的输出，不要从头生成\n' +
-    '4. **实用性优先**：提示词要能在对应AI工具中直接使用，考虑平台的特性（即梦偏中文理解、Midjourney偏英文关键词）\n\n' +
+    '1. **选题推荐用表格呈现**：当推荐多个选题时，用表格清晰展示每个选题的标题、类型、关键词、蓝海机会，方便用户对比选择\n' +
+    '2. **结构化输出**：用清晰的标题分段，每个AI工具的提示词用 ``` 代码块包裹，方便用户一键复制\n' +
+    '3. **提示词具体化**：要包含具体的主体、场景、风格、光影描述，不要写"请填入"之类的占位符\n' +
+    '4. **短视频脚本必须拆分镜头**：禁止写"一镜到底"或单镜头描述。每个镜头标注时间段、景别、人物动作表情、旁白台词\n' +
+    '5. **可调整**：用户说"换个角度"、"详细一点"、"改短"等，你要根据上下文调整之前的输出，不要从头生成\n' +
+    '6. **实用性优先**：提示词要能在对应AI工具中直接使用，考虑平台的特性（即梦偏中文理解、Midjourney偏英文关键词）\n\n' +
     '## 对话规则\n' +
     '- 用户第一次描述需求时，先确认关键信息（内容类型、时长/篇幅、目标平台），如果不清楚就简要提问\n' +
     '- 用户给出调整意见时，在原基础上修改，保留用户认可的部分\n' +
@@ -854,6 +1313,7 @@ function finishStreaming(msg) {
   msg._contentEl.innerHTML = msg._html;
   msg._contentEl.querySelectorAll('pre').forEach(function(pre) { addCopyButton(pre); });
   scrollToBottom();
+  updateGenerateBtn();
   updateStatusBar();
   isGenerating = false;
   updateSendButton();
@@ -890,26 +1350,98 @@ function addCopyButton(pre) {
 // Simple markdown renderer
 function renderMarkdown(text) {
   var html = escapeHtml(text);
-  // Code blocks first
+
+  // Code blocks (protect first, process rest, then restore)
+  var codeBlocks = [];
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
-    return '<pre>' + escapeHtml(code.trimEnd()) + '</pre>';
+    codeBlocks.push('<pre>' + escapeHtml(code.trimEnd()) + '</pre>');
+    return '\x00CODE' + (codeBlocks.length - 1) + '\x00';
   });
+
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Tables: | col | col | → HTML table
+  html = html.replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:^\|.+\|\s*\n?)+)/gm, function(match, header, rows) {
+    var hcells = header.split('|').filter(function(c) { return c.trim(); });
+    var thead = '<tr>' + hcells.map(function(c) { return '<th>' + c.trim() + '</th>'; }).join('') + '</tr>';
+    var rlines = rows.trim().split('\n');
+    var tbody = '';
+    for (var ri = 0; ri < rlines.length; ri++) {
+      var rcells = rlines[ri].split('|').filter(function(c) { return c.trim(); });
+      tbody += '<tr>' + rcells.map(function(c) { return '<td>' + c.trim() + '</td>'; }).join('') + '</tr>';
+    }
+    return '<div class="table-wrap"><table>' + thead + tbody + '</table></div>';
+  });
+
+  // Horizontal rules
+  html = html.replace(/^---+\s*$/gm, '<hr>');
+  html = html.replace(/^\*\*\*+\s*$/gm, '<hr>');
+
   // Headings
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  // Bold
+
+  // Bold and italic
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Italic
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Blockquote
-  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-  // Unordered list items
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  // Ordered list items
-  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+  // Split into blocks (double newlines separate blocks)
+  var blocks = html.split('\n\n');
+  var result = [];
+
+  for (var b = 0; b < blocks.length; b++) {
+    var block = blocks[b].trim();
+    if (!block) continue;
+
+    // Check if block is already a special element
+    if (/^<(h[1-4]|hr|pre|div|blockquote|ul|ol|table)/.test(block) || block.indexOf('\x00CODE') === 0) {
+      result.push(block);
+      continue;
+    }
+
+    // Blockquote: handle lines starting with &gt;
+    if (block.indexOf('&gt; ') === 0) {
+      var lines = block.split('\n');
+      var quotes = [];
+      for (var q = 0; q < lines.length; q++) {
+        if (lines[q].indexOf('&gt; ') === 0) {
+          quotes.push(lines[q].replace('&gt; ', ''));
+        } else if (lines[q].trim()) {
+          quotes.push(lines[q]);
+        }
+      }
+      result.push('<blockquote>' + quotes.join('<br>') + '</blockquote>');
+      continue;
+    }
+
+    // Unordered list: lines starting with - or *
+    if (/^- /.test(block)) {
+      var items = block.split('\n').filter(function(l) { return /^- /.test(l); });
+      result.push('<ul>' + items.map(function(li) { return '<li>' + li.replace(/^- /, '') + '</li>'; }).join('') + '</ul>');
+      continue;
+    }
+
+    // Ordered list: lines starting with digit.
+    if (/^\d+\. /.test(block)) {
+      var oitems = block.split('\n').filter(function(l) { return /^\d+\. /.test(l); });
+      result.push('<ol>' + oitems.map(function(li) { return '<li>' + li.replace(/^\d+\. /, '') + '</li>'; }).join('') + '</ol>');
+      continue;
+    }
+
+    // Regular paragraph (handle single newlines as <br>)
+    var paras = block.split('\n');
+    result.push('<p>' + paras.join('<br>') + '</p>');
+  }
+
+  html = result.join('\n');
+
+  // Restore code blocks
+  html = html.replace(/\x00CODE(\d+)\x00/g, function(_, i) {
+    return codeBlocks[parseInt(i)];
+  });
 
   return html;
 }
@@ -932,52 +1464,121 @@ function scrollToBottom() {
 function clearChat() {
   messages = [];
   settings.persona = 'auto';
+  saveSettingsToStorage();
+  setActiveChip('#sbPersona', 'auto');
   document.getElementById('chatArea').innerHTML =
     '<div class="chat-empty" id="chatEmpty">' +
       '<div class="chat-empty-icon">💬</div>' +
-      '<div class="chat-empty-text" id="chatEmptyText">选择一种创作方式开始</div>' +
-      '<div class="chat-empty-hints" id="chatEmptyCards"></div>' +
+      '<div class="chat-empty-text">选择一种创作场景开始，或在下方输入你的需求</div>' +
+      '<div class="chat-empty-cards" id="chatEmptyCards"></div>' +
     '</div>';
   renderScenarioCards();
-  updateCtxBar();
+  updateGenerateBtn();
   updateStatusBar();
 }
 
 // ============================================================
-// SCENARIO CARDS — 根据内容类型动态生成人设+场景推荐
+// SCENARIO CARDS
 // ============================================================
 function renderScenarioCards() {
   var container = document.getElementById('chatEmptyCards');
   if (!container) return;
 
   var ct = settings.contentType;
-  var scenarios = PERSONA_SCENARIOS[ct] || PERSONA_SCENARIOS['short-video'];
+  var scenarios = TOPIC_SCENARIOS[ct] || TOPIC_SCENARIOS['short-video'];
   var biz = settings.bizName || '这个领域';
-  var typeLabel = ct === 'short-video' ? '短视频' : ct === 'image-text' ? '图文' : '长文';
+
+  // Group scenarios by topicType
+  var groups = {};
+  for (var i = 0; i < scenarios.length; i++) {
+    var s = scenarios[i];
+    if (!groups[s.topicType]) groups[s.topicType] = [];
+    groups[s.topicType].push(s);
+  }
+
+  var typeDetail = '';
+  if (ct === 'short-video') {
+    var vl = getVideoLengthInfo(settings.videoLength);
+    typeDetail = vl.label + '短视频';
+  } else if (ct === 'image-text') {
+    typeDetail = '图文（' + getImageRatioInfo(settings.imageRatio).label + '，风格：' + settings.imageStyle + '）';
+  } else {
+    typeDetail = '长文（' + settings.articleLength + '）';
+  }
 
   var html = '';
-  var keys = Object.keys(scenarios);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    var s = scenarios[key];
-    var p = PERSONAS[key];
-    var desc = s.desc.replace('{biz}', biz);
 
-    var firstMsg = '我要做一个关于' + biz + '的' + typeLabel + '，用' + p.name + '（' + s.label + '）的风格来创作。选题类型倾向：' + s.topicType + '。帮我生成完整的' + typeLabel + '提示词。';
+  // Add dynamic generation prompt card first
+  html +=
+    '<div class="topic-gen-card" id="topicGenCard">' +
+      '<div class="topic-gen-icon">✨</div>' +
+      '<div class="topic-gen-body">' +
+        '<div class="topic-gen-title">让我帮你分析「' + escapeHtml(biz) + '」，生成爆款选题</div>' +
+        '<div class="topic-gen-desc">AI 会根据你的业务特点，推荐最适合的选题方向和具体角度</div>' +
+      '</div>' +
+      '<div class="topic-gen-arrow">→</div>' +
+    '</div>';
 
+  // Then render topic type groups
+  var groupKeys = Object.keys(groups);
+  for (var g = 0; g < groupKeys.length; g++) {
+    var topicType = groupKeys[g];
+    var items = groups[topicType];
+    var meta = TOPIC_TYPE_META[topicType] || { color:'#78716c', bg:'#f5f5f4', tag:'', tip:'' };
+
+    html += '<div class="topic-group">';
     html +=
-      '<div class="scenario-card" data-persona="' + key + '" data-first-msg="' + escapeHtml(firstMsg) + '">' +
-        '<div class="sc-card-top">' +
-          '<span class="sc-card-icon">' + p.icon + '</span>' +
-          '<span class="sc-card-name">' + p.name + '</span>' +
-          '<span class="sc-card-label">' + s.label + '</span>' +
-          '<span class="sc-card-topic">' + s.topicType + '</span>' +
-        '</div>' +
-        '<div class="sc-card-desc">' + desc + '</div>' +
+      '<div class="topic-group-header">' +
+        '<span class="topic-group-icon" style="background:' + meta.bg + ';color:' + meta.color + '">' + (items[0].topicIcon || '') + '</span>' +
+        '<span class="topic-group-name" style="color:' + meta.color + '">' + topicType + '</span>' +
+        '<span class="topic-group-tag">' + meta.tag + '</span>' +
       '</div>';
+    html += '<div class="topic-group-tip">' + meta.tip + '</div>';
+    html += '<div class="topic-group-cards">';
+
+    for (var j = 0; j < items.length; j++) {
+      var s = items[j];
+      var p = PERSONAS[s.persona];
+      var desc = s.desc.replace('{biz}', biz);
+
+      var firstMsg = '';
+      if (ct === 'short-video') {
+        firstMsg = '我要做一个关于' + biz + '的' + typeDetail + '，选题类型：' + topicType + '，切入角度：' + s.label + '，用人设「' + p.name + '」的风格来创作。帮我生成完整的分镜脚本和画面提示词。';
+      } else if (ct === 'image-text') {
+        firstMsg = '我要做一个关于' + biz + '的' + typeDetail + '，选题类型：' + topicType + '，切入角度：' + s.label + '，用人设「' + p.name + '」的风格来创作。帮我生成完整的图文提示词。';
+      } else {
+        firstMsg = '我要写一篇关于' + biz + '的' + typeDetail + '，选题类型：' + topicType + '，切入角度：' + s.label + '，用人设「' + p.name + '」的风格来创作。帮我生成完整的写作提示词。';
+      }
+
+      html +=
+        '<div class="scenario-card" data-persona="' + s.persona + '" data-first-msg="' + escapeHtml(firstMsg) + '">' +
+          '<div class="sc-card-top">' +
+            '<span class="sc-card-icon">' + p.icon + '</span>' +
+            '<span class="sc-card-name">' + s.label + '</span>' +
+            '<span class="sc-card-persona">' + p.name + '视角</span>' +
+          '</div>' +
+          '<div class="sc-card-desc">' + desc + '</div>' +
+        '</div>';
+    }
+
+    html += '</div></div>';
   }
 
   container.innerHTML = html;
+
+  // Bind dynamic generation card click
+  var genCard = document.getElementById('topicGenCard');
+  if (genCard) {
+    genCard.addEventListener('click', function() {
+      if (!settings.apiKey) {
+        openSettings();
+        return;
+      }
+      var genMsg = '请帮我分析「' + biz + '」这个领域的' + typeDetail + '内容，推荐5个具体的爆款选题。每个选题要说明：选题类型（痛点解决/科普知识/讲故事等）、推荐理由、适合用什么人设来做。让我先选感兴趣的选题，再生成具体的提示词。';
+      document.getElementById('inputBox').value = genMsg;
+      sendMessage();
+    });
+  }
 }
 
 // ============================================================
@@ -992,6 +1593,24 @@ function sendMessage() {
   inputBox.style.height = 'auto';
   isGenerating = true;
   updateSendButton();
+
+  // Check if web search should be performed for topic generation
+  if (settings.searchEnabled && settings.bizName && /选题|推荐|趋势|热点|蓝海|SEO|搜索|关键词|爆款/.test(text)) {
+    updateStatusBar('正在搜索真实搜索趋势和SEO数据…');
+    performWebSearch(settings.bizName, settings.contentType).then(function(searchData) {
+      if (searchData) {
+        text = text + '\n\n---\n## 联网搜索到的真实用户搜索趋势和长尾关键词（基于这些真实数据生成选题，不要凭空推测）\n\n' + searchData;
+      }
+      sendToLLM(text);
+    }).catch(function() {
+      sendToLLM(text);
+    });
+  } else {
+    sendToLLM(text);
+  }
+}
+
+function sendToLLM(text) {
   updateStatusBar('生成中…');
 
   addMessage('user', text);
@@ -1030,6 +1649,81 @@ function sendMessage() {
     return handleStream(response, assistantMsg);
   }).catch(function(err) {
     handleApiError(assistantMsg, err);
+  });
+}
+
+// ============================================================
+// WEB SEARCH — DuckDuckGo Suggestions API (CORS-friendly)
+// ============================================================
+function searchSuggestions(query) {
+  return fetch('https://duckduckgo.com/ac/?q=' + encodeURIComponent(query) + '&type=list')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.length > 1 && Array.isArray(data[1])) {
+        return data[1];
+      }
+      return [];
+    })
+    .catch(function() { return []; });
+}
+
+function performWebSearch(bizName, contentType) {
+  var queries = [];
+
+  // Build search queries based on content type
+  if (contentType === 'short-video') {
+    queries = [
+      bizName,
+      bizName + ' 怎么',
+      bizName + ' 推荐',
+      bizName + ' 避坑',
+      bizName + ' 攻略',
+      bizName + ' 2026',
+    ];
+  } else if (contentType === 'image-text') {
+    queries = [
+      bizName + ' 推荐',
+      bizName + ' 测评',
+      bizName + ' 对比',
+      bizName + ' 怎么选',
+      bizName + ' 好物',
+    ];
+  } else {
+    queries = [
+      bizName + ' 教程',
+      bizName + ' 趋势',
+      bizName + ' 分析',
+      bizName + ' 入门',
+      bizName + ' 避坑',
+    ];
+  }
+
+  // Run all searches in parallel
+  var searchPromises = queries.map(function(q) { return searchSuggestions(q); });
+
+  return Promise.all(searchPromises).then(function(results) {
+    var allSuggestions = [];
+    var seen = {};
+    for (var i = 0; i < results.length; i++) {
+      var suggestions = results[i];
+      for (var j = 0; j < suggestions.length; j++) {
+        var s = suggestions[j];
+        if (!seen[s]) {
+          seen[s] = true;
+          allSuggestions.push(s);
+        }
+      }
+    }
+
+    if (allSuggestions.length === 0) return '';
+
+    // Format as search trend data
+    var formatted = '用户在搜索引擎中真实搜索的相关关键词：\n';
+    for (var k = 0; k < Math.min(allSuggestions.length, 20); k++) {
+      formatted += '- ' + allSuggestions[k] + '\n';
+    }
+    formatted += '\n以上是浏览器联网获取的真实搜索建议数据，反映了用户当前的搜索热点和需求。请基于这些真实搜索词（不要自己编造），找出竞争小但搜索量可观的长尾蓝海关键词，围绕它们生成具体的选题。';
+    return formatted;
   });
 }
 
@@ -1111,9 +1805,10 @@ function updateStatusBar(msg) {
   }
   bar.classList.remove('error');
   if (!settings.apiKey) {
-    bar.textContent = '就绪 — 请先在设置中配置 API Key（点击右上角 ⚙）';
+    bar.textContent = '就绪 — 请先配置 API Key（点击右上角 🔑）';
   } else if (settings.bizName) {
-    bar.textContent = '就绪 — ' + settings.bizName;
+    var ctLabel = settings.contentType === 'short-video' ? '短视频' : settings.contentType === 'image-text' ? '图文' : '长文';
+    bar.textContent = '就绪 — ' + settings.bizName + ' · ' + ctLabel;
   } else {
     bar.textContent = '就绪';
   }
@@ -1123,9 +1818,6 @@ function updateStatusBar(msg) {
 // STARTUP
 // ============================================================
 init();
-if (!settings.apiKey) {
-  setTimeout(openSettings, 600);
-}
 </script>
 </body>
 </html>
