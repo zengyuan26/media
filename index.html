@@ -84,8 +84,16 @@ input,select,textarea,button{font-family:inherit}
 .sidebar-chip.active{border-color:#f97316;background:#fff7ed;color:#c2410c;font-weight:600}
 .sidebar-chip.small{font-size:.68rem;padding:4px 8px}
 
+.sidebar-settings-link{
+  display:none;width:100%;padding:8px 0;margin-top:auto;
+  border:1.5px solid #e7e5e4;border-radius:9px;
+  background:#fafaf9;color:#57534e;
+  font-size:.76rem;font-weight:500;cursor:pointer;
+  transition:all .15s;font-family:inherit;
+}
+.sidebar-settings-link:hover{background:#f5f5f4;border-color:#d6d3d1}
 .sidebar-generate-btn{
-  width:100%;padding:12px 0;margin-top:auto;
+  width:100%;padding:12px 0;margin-top:8px;
   border:none;border-radius:10px;
   background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;
   font-size:.82rem;font-weight:700;cursor:pointer;
@@ -464,6 +472,8 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
   .mobile-fab{display:flex}
   .sidebar-mobile-header{display:flex}
   .sidebar-handle{display:block}
+  .sidebar-settings-link{display:block}
+  #btnSettings{display:none}
 
   /* Sidebar → Bottom Sheet */
   .sidebar{
@@ -660,6 +670,7 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
       </label>
     </div>
 
+    <button class="sidebar-settings-link" id="sbSettingsLink">⚙ API 设置</button>
     <button class="sidebar-generate-btn" id="sbGenerateBtn">✨ 开始生成</button>
   </div>
 
@@ -1143,6 +1154,10 @@ function bindEvents() {
   });
 
   // Bottom sheet events (mobile)
+  document.getElementById('sbSettingsLink').addEventListener('click', function() {
+    closeBottomSheet();
+    openSettings();
+  });
   document.getElementById('mobileFab').addEventListener('click', openBottomSheet);
   document.getElementById('sheetOverlay').addEventListener('click', closeBottomSheet);
   document.getElementById('btnSheetClose').addEventListener('click', closeBottomSheet);
