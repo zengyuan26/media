@@ -380,20 +380,108 @@ input,select,textarea,button{font-family:inherit}
 .btn-secondary:hover{background:#e7e5e4}
 
 /* ============================================================
-   RESPONSIVE
+   MOBILE: Bottom Sheet Overlay & FAB
    ============================================================ */
-@media(max-width:700px){
-  .sidebar{width:220px;padding:10px}
-  .sidebar-chip{font-size:.68rem;padding:4px 8px}
-  .msg-body{max-width:92%}
-  .chat-area{padding:10px}
-  .input-area{padding:6px 10px 10px}
-  .scenario-card{width:100%}
+.sheet-overlay{
+  display:none;
+  position:fixed;top:0;right:0;bottom:0;left:0;
+  background:rgba(0,0,0,.4);z-index:99;
+  opacity:0;transition:opacity .3s;
+}
+.sheet-overlay.open{opacity:1}
+
+.sidebar-mobile-header{
+  display:none;align-items:center;justify-content:space-between;
+  padding:12px 16px 8px;flex-shrink:0;
+}
+.sidebar-handle{
+  display:none;
+  width:32px;height:4px;border-radius:2px;background:#d6d3d1;
+  margin:0 auto;
+}
+.sidebar-sheet-title{font-size:.82rem;font-weight:700;color:#1c1917}
+
+.mobile-fab{
+  display:none;
+  position:fixed;bottom:76px;right:14px;z-index:50;
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;
+  box-shadow:0 4px 16px rgba(249,115,22,.35);
+  border:none;cursor:pointer;font-size:1.2rem;
+  align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.mobile-fab:active{transform:scale(.92)}
+
+/* ============================================================
+   RESPONSIVE — Mobile (≤768px)
+   ============================================================ */
+@media(max-width:768px){
+  /* Show mobile-only elements */
+  .sheet-overlay{display:block}
+  .mobile-fab{display:flex}
+  .sidebar-mobile-header{display:flex}
+  .sidebar-handle{display:block}
+
+  /* Sidebar → Bottom Sheet */
+  .sidebar{
+    position:fixed;bottom:0;left:0;right:0;
+    width:100%;max-height:80vh;z-index:100;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    border-radius:16px 16px 0 0;
+    border-right:none;
+    box-shadow:0 -4px 24px rgba(0,0,0,.15);
+    overflow-y:auto;
+    padding:0 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .sidebar.open{transform:translateY(0)}
+
+  /* Main layout */
+  .main-layout{flex-direction:column}
+  .chat-column{width:100%}
+
+  /* Header compact */
+  .header{padding:6px 12px;min-height:44px}
+  .header-icon{width:28px;height:28px;font-size:.8rem}
+  .header-title{font-size:.8rem}
+  .btn-icon{width:28px;height:28px;font-size:.9rem}
+
+  /* Chat area */
+  .chat-area{padding:10px 12px;gap:8px}
+  .msg-body{max-width:88%}
+  .msg-content{font-size:.8rem;padding:8px 11px}
+
+  /* Scenario cards — single column */
+  .scenario-card{width:100%;min-width:0}
   .chat-empty-cards{max-width:100%}
   .topic-group-cards{flex-direction:column}
-}
-@media(max-width:500px){
-  .sidebar{display:none}
+  .topic-gen-card{padding:12px 14px}
+
+  /* Input area */
+  .input-area{padding:6px 10px calc(10px + env(safe-area-inset-bottom, 0px))}
+  .quick-actions{
+    flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    padding-bottom:2px;gap:4px;
+  }
+  .quick-btn{flex-shrink:0;font-size:.64rem;padding:3px 8px}
+  .input-box{font-size:.8rem;padding:8px 10px}
+  .btn-send{width:36px;height:36px;font-size:.9rem}
+
+  /* Settings dialog */
+  .settings-dialog{width:94vw;max-height:90vh;border-radius:12px}
+  .settings-dialog-body{padding:12px 14px;gap:10px}
+  .settings-dialog-header{padding:8px 14px}
+  .settings-tab{padding:6px 10px;font-size:.7rem}
+  .settings-dialog-footer{padding:10px 14px}
+  .settings-dialog-title{font-size:.8rem}
+
+  /* Status bar */
+  .status-bar{font-size:.56rem;padding:2px 0}
+
+  /* Typing dots */
+  .typing-dots span{width:5px;height:5px}
 }
 </style>
 </head>
@@ -416,9 +504,22 @@ input,select,textarea,button{font-family:inherit}
 <div class="main-layout">
   <!-- Sidebar -->
   <div class="sidebar" id="sidebar">
+    <div class="sidebar-handle"></div>
+    <div class="sidebar-mobile-header">
+      <span class="sidebar-sheet-title">创作配置</span>
+      <button class="btn-icon" id="btnSheetClose">✕</button>
+    </div>
     <div class="sidebar-section">
       <div class="sidebar-label">📋 业务名称</div>
       <input class="sidebar-input" id="sbBizName" placeholder="例如：XX健身、YY美食探店" maxlength="30">
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">📍 业务范围</div>
+      <div class="sidebar-chips" id="sbBizScope">
+        <div class="sidebar-chip active" data-value="全国">🌍 全国</div>
+        <div class="sidebar-chip" data-value="本地">📍 本地</div>
+      </div>
     </div>
 
     <div class="sidebar-section">
@@ -508,6 +609,9 @@ input,select,textarea,button{font-family:inherit}
     <button class="sidebar-generate-btn" id="sbGenerateBtn">✨ 开始生成</button>
   </div>
 
+  <!-- Sheet overlay (mobile only) -->
+  <div class="sheet-overlay" id="sheetOverlay"></div>
+
   <!-- Chat Column -->
   <div class="chat-column">
     <div class="chat-area" id="chatArea">
@@ -534,6 +638,9 @@ input,select,textarea,button{font-family:inherit}
     <div class="status-bar" id="statusBar">就绪 — 请先在设置中配置 API Key</div>
   </div>
 </div>
+
+<!-- Mobile FAB button -->
+<button class="mobile-fab" id="mobileFab" title="创作配置">⚙</button>
 
 <!-- ============================================================
      SETTINGS DIALOG
@@ -631,6 +738,11 @@ var TOPIC_SCENARIOS = {
     { topicType:'成长记录', topicIcon:'🌱', persona:'foil', label:'从零开始', desc:'记录{biz}从零起步的完整过程，展示真实进步，养成系吸粉' },
     { topicType:'搞笑娱乐', topicIcon:'😂', persona:'comedian', label:'花式整活', desc:'用幽默有趣的方式呈现{biz}的花式玩法，容易出爆款' },
     { topicType:'行业分析', topicIcon:'📊', persona:'teacher', label:'趋势解读', desc:'分析{biz}行业的最新趋势和机会，吸引同行和从业者关注' },
+    { topicType:'热点借势', topicIcon:'🔥', persona:'comedian', label:'热点玩梗', desc:'把当下热点和{biz}结合，用幽默角度切入，借搜索流量快速起量' },
+    { topicType:'情感共鸣', topicIcon:'💗', persona:'companion', label:'情绪共振', desc:'捕捉{biz}领域最戳心的情绪瞬间，让观众看完忍不住转发给朋友' },
+    { topicType:'教程教学', topicIcon:'📝', persona:'teacher', label:'手把手教', desc:'把{biz}的核心技能拆成可操作的步骤，观众边看边做' },
+    { topicType:'争议讨论', topicIcon:'💬', persona:'admirer', label:'观点碰撞', desc:'抛出{biz}领域有争议的话题，用讨论引爆评论区' },
+    { topicType:'挑战系列', topicIcon:'🎯', persona:'foil', label:'X天挑战', desc:'设定{biz}相关的挑战目标，每天更新进展，观众追更上瘾' },
   ],
   'image-text': [
     { topicType:'痛点解决', topicIcon:'💡', persona:'teacher', label:'步骤拆解', desc:'用图解方式拆解{biz}的常见问题，一步步展示解决方案' },
@@ -642,6 +754,10 @@ var TOPIC_SCENARIOS = {
     { topicType:'避坑指南', topicIcon:'🛡', persona:'foil', label:'误区盘点', desc:'用图解盘点{biz}的常见误区和错误做法，帮粉丝避雷' },
     { topicType:'成长记录', topicIcon:'🌱', persona:'foil', label:'前后对比', desc:'用对比图展示{biz}的进步和变化，视觉冲击力强' },
     { topicType:'搞笑娱乐', topicIcon:'😂', persona:'comedian', label:'趣味图解', desc:'用幽默漫画/图解呈现{biz}的有趣内容，传播性强' },
+    { topicType:'清单合集', topicIcon:'📋', persona:'admirer', label:'懒人清单', desc:'整理{biz}的终极清单（好物/方法/工具），一图说清，收藏率极高' },
+    { topicType:'数据解读', topicIcon:'📈', persona:'teacher', label:'一图看懂', desc:'把{biz}的复杂数据变成一张清晰的信息图，被转发和引用的概率高' },
+    { topicType:'幕后揭秘', topicIcon:'🎬', persona:'companion', label:'制作过程', desc:'用图文展示{biz}从零到一的制作过程，满足粉丝好奇心' },
+    { topicType:'互动话题', topicIcon:'💭', persona:'companion', label:'粉丝投票', desc:'发起{biz}相关的投票/选择类图文，评论区自己生产内容' },
   ],
   'long-article': [
     { topicType:'痛点解决', topicIcon:'💡', persona:'teacher', label:'深度教程', desc:'系统性解决{biz}的核心问题，打造标杆长文，SEO长尾流量' },
@@ -656,6 +772,10 @@ var TOPIC_SCENARIOS = {
     { topicType:'避坑指南', topicIcon:'🛡', persona:'companion', label:'过来人建议', desc:'以过来人身份，分享{biz}的实战经验和避坑心得' },
     { topicType:'成长记录', topicIcon:'🌱', persona:'companion', label:'年度复盘', desc:'复盘{biz}的阶段性成长和收获，用真实数据说话' },
     { topicType:'搞笑娱乐', topicIcon:'😂', persona:'comedian', label:'吐槽杂谈', desc:'用幽默犀利的风格吐槽{biz}的槽点和荒诞现象' },
+    { topicType:'人物专访', topicIcon:'🎙', persona:'admirer', label:'行业人物', desc:'深度采访{biz}领域的代表人物，借受访者影响力引流+产出独家内容' },
+    { topicType:'新闻评论', topicIcon:'📰', persona:'teacher', label:'事件解读', desc:'对{biz}行业最新动态做快速深度解读，抢占新闻搜索时间窗口' },
+    { topicType:'数据解读', topicIcon:'📊', persona:'teacher', label:'数据报告', desc:'用数据报告形式深度分析{biz}的趋势，长尾SEO价值高，被引用概率大' },
+    { topicType:'争议讨论', topicIcon:'⚡', persona:'admirer', label:'深度思辨', desc:'用长文深入探讨{biz}领域的争议话题，展现思考深度吸引高质量读者' },
   ],
 };
 
@@ -670,6 +790,17 @@ var TOPIC_TYPE_META = {
   '成长记录': { color:'#059669', bg:'#ecfdf5', tag:'养成系 · 高互动', tip:'展示真实进步，观众有参与感和陪伴感' },
   '搞笑娱乐': { color:'#db2777', bg:'#fdf2f8', tag:'传播力强 · 易爆款', tip:'轻松有趣，最容易出圈的类型' },
   '行业分析': { color:'#4f46e5', bg:'#eef2ff', tag:'深度内容 · 精准粉', tip:'展现专业深度，吸引同行和高端读者' },
+  '热点借势': { color:'#f59e0b', bg:'#fffbeb', tag:'借势起量 · 时效强', tip:'紧跟热点事件，借搜索流量快速曝光' },
+  '情感共鸣': { color:'#ec4899', bg:'#fdf2f8', tag:'高转发 · 强共情', tip:'戳中情绪点，用户忍不住转发给朋友' },
+  '教程教学': { color:'#14b8a6', bg:'#f0fdfa', tag:'教程收藏 · 实用', tip:'步骤清晰可操作，收藏率和复看率都高' },
+  '争议讨论': { color:'#ef4444', bg:'#fef2f2', tag:'高互动 · 引讨论', tip:'抛出有争议的观点，评论区就是第二个内容' },
+  '数据解读': { color:'#6366f1', bg:'#eef2ff', tag:'信任感强 · 可引用', tip:'用数据和图表说话，被AI搜索引用的概率高' },
+  '幕后揭秘': { color:'#8b5cf6', bg:'#f5f3ff', tag:'满足好奇 · 真实感', tip:'展示幕后过程，打破"完美滤镜"建立真实连接' },
+  '清单合集': { color:'#0ea5e9', bg:'#f0f9ff', tag:'信息密度高 · 收藏', tip:'一次给足信息量，用户舍不得划走' },
+  '挑战系列': { color:'#f97316', bg:'#fff7ed', tag:'追更驱动 · 养成系', tip:'持续更新的系列，观众会为了看后续而关注' },
+  '互动话题': { color:'#22c55e', bg:'#f0fdf4', tag:'UGC参与 · 社区感', tip:'让观众成为内容的一部分，评论量和转发量双高' },
+  '人物专访': { color:'#a855f7', bg:'#faf5ff', tag:'借势引流 · 深度', tip:'借受访者的影响力引流，同时产出独家深度内容' },
+  '新闻评论': { color:'#64748b', bg:'#f8fafc', tag:'快速反应 · 观点', tip:'第一时间对行业新闻发表观点，抢占搜索窗口' },
 };
 
 function getSeasonContext() {
@@ -711,6 +842,7 @@ var DEFAULT_SETTINGS = {
   persona: 'auto',
   language: '普通话',
   customLanguage: '',
+  bizScope: '全国',
   searchEnabled: true,
   userProfile: '',
 };
@@ -751,6 +883,9 @@ function saveSettingsToStorage() {
 function syncSidebarToSettings() {
   settings.bizName = document.getElementById('sbBizName').value.trim();
 
+  var bsEl = document.querySelector('#sbBizScope .sidebar-chip.active');
+  if (bsEl) settings.bizScope = bsEl.dataset.value;
+
   var ctEl = document.querySelector('#sbContentType .sidebar-chip.active');
   if (ctEl) settings.contentType = ctEl.dataset.value;
 
@@ -782,6 +917,7 @@ function syncSidebarToSettings() {
 // Apply settings to all UI elements
 function applyAllSettings() {
   document.getElementById('sbBizName').value = settings.bizName;
+  setActiveChip('#sbBizScope', settings.bizScope);
 
   setActiveChip('#sbContentType', settings.contentType);
   setActiveChip('#sbVideoLength', settings.videoLength);
@@ -831,6 +967,23 @@ function updateGenerateBtn() {
   } else {
     btn.textContent = '✨ 开始生成';
   }
+}
+
+// ============================================================
+// BOTTOM SHEET (mobile)
+// ============================================================
+function openBottomSheet() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBottomSheet() {
+  var sidebar = document.getElementById('sidebar');
+  sidebar.classList.remove('open');
+  sidebar.style.transform = '';
+  document.getElementById('sheetOverlay').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ============================================================
@@ -935,6 +1088,48 @@ function bindEvents() {
     sendMessage();
   });
 
+  // Bottom sheet events (mobile)
+  document.getElementById('mobileFab').addEventListener('click', openBottomSheet);
+  document.getElementById('sheetOverlay').addEventListener('click', closeBottomSheet);
+  document.getElementById('btnSheetClose').addEventListener('click', closeBottomSheet);
+
+  // Close sheet when clicking generate button (mobile)
+  document.getElementById('sbGenerateBtn').addEventListener('click', function() {
+    if (window.innerWidth <= 768) closeBottomSheet();
+  });
+
+  // Touch swipe-down to close sheet
+  (function() {
+    var sidebar = document.getElementById('sidebar');
+    var startY = 0, startTranslate = 0, tracking = false;
+    sidebar.addEventListener('touchstart', function(e) {
+      if (!sidebar.classList.contains('open')) return;
+      startY = e.touches[0].clientY;
+      tracking = true;
+      sidebar.style.transition = 'none';
+    }, { passive: true });
+    sidebar.addEventListener('touchmove', function(e) {
+      if (!tracking) return;
+      var dy = e.touches[0].clientY - startY;
+      if (dy > 0) {
+        sidebar.style.transform = 'translateY(' + dy + 'px)';
+      }
+    }, { passive: true });
+    sidebar.addEventListener('touchend', function() {
+      if (!tracking) return;
+      tracking = false;
+      sidebar.style.transition = '';
+      var currentTransform = sidebar.style.transform;
+      var match = currentTransform.match(/translateY\((\d+)px\)/);
+      var dy = match ? parseInt(match[1]) : 0;
+      if (dy > 80) {
+        closeBottomSheet();
+      } else {
+        sidebar.style.transform = '';
+      }
+    });
+  })();
+
   // Scenario card clicks (both empty state and chat area)
   document.getElementById('chatArea').addEventListener('click', function(e) {
     var card = e.target.closest('.scenario-card');
@@ -955,6 +1150,7 @@ function bindEvents() {
 // SETTINGS DIALOG
 // ============================================================
 function openSettings() {
+  if (window.innerWidth <= 768) closeBottomSheet();
   document.getElementById('setApiKey').value = settings.apiKey;
   document.getElementById('setEndpoint').value = settings.endpoint;
   document.getElementById('setModel').value = settings.model;
@@ -1071,12 +1267,26 @@ function buildSystemPrompt() {
       '目标平台：小红书 / 公众号 / 图文自媒体\n' +
       'AI生图工具：豆包（Doubao）/ Midjourney / DALL·E\n\n' +
       '**核心原则：输出的是一个完整的图文内容生产包，包含标题设计、逐张图的内容+排版+AI生图约束、评论区运营、标签策略、制作规范。**\n\n' +
+      '**图文设计原则（小红书爆款方法论）：**\n' +
+      '1. **素人感 > 精美风**：纯色背景+大emoji+口语化文案，比品牌宣传风格更容易火。不要做得太"广告"\n' +
+      '2. **真实素材 > AI生图**：如果有真实照片/截图/对比图优先使用，纯文字卡片才用AI生图\n' +
+      '3. **痛点导向 > 功能堆砌**：说"能解决什么问题"比列"有什么功能"更有吸引力\n' +
+      '4. **聚焦核心卖点**：一张卡只讲一个点，不要把所有信息塞进一张图\n\n' +
       '### 输出结构（按顺序）\n' +
-      '1. **标题设计**：主标题 + 副标题 + 封面要素分析（H-V-F标注）\n' +
-      '2. **内容规划**：3张图，每张图包含：情绪/版式/色调标注 → 内容功能 → 画面描述 → AI生图约束（画面结构+文字内容+技术要求）\n' +
-      '3. **制作规范**：设计规格 + 色彩方案 + 字体规范\n' +
-      '4. **评论区运营**：首评文案 + 底部标签（带策略说明）\n' +
-      '5. **延伸话题推荐**：5个可以继续做的选题（表格形式）\n\n' +
+      '1. **标题设计**：从下方5种公式中选择1-2种组合 → 主标题 + 副标题 + 封面要素分析（H-V-F标注）\n' +
+      '2. **内容规划**：3-6张图（标准5张），每张图包含：情绪/版式/色调标注 → 内容功能 → 画面描述 → AI生图约束\n' +
+      '3. **Caption（发布配文）**：100-300字，结构：痛点共鸣→解决方案→具体内容→真实案例→行动号召\n' +
+      '4. **制作规范**：设计规格 + 色彩方案 + 字体规范\n' +
+      '5. **评论区运营**：首评文案 + 底部标签（核心标签×4 + 辅助标签×4）\n' +
+      '6. **延伸话题推荐**：5个可以继续做的选题（表格形式）\n\n' +
+      '### 标题公式（必须从以下5种中选择，匹配选题类型）\n' +
+      '| 公式 | 模板 | 适用选题 | 示例 |\n' +
+      '|------|------|----------|------|\n' +
+      '| 痛点+方案 | "{具体痛点}？{N个方法/步骤}" | 痛点解决、避坑指南 | "高考前一个月焦虑怎么办？做好这3件事就够了" |\n' +
+      '| 提问式 | "有没有那种{功能描述}的{品类}？" | 好物推荐、科普知识 | "有没有不用私教不用节食的减肥方法？" |\n' +
+      '| 发现式 | "我发现了个宝藏！{核心价值}" | 好物推荐、对比测评 | "发现一个被严重低估的防晒霜，测了20款排第一" |\n' +
+      '| 热点词 | "{热点词}爆火后，我用它做了{场景}" | 搞笑娱乐、行业分析 | "ChatGPT爆火后，我用它做了一个月小红书，结果..." |\n' +
+      '| 身份共鸣 | "{身份标签}必备！{核心功能}" | 成长记录、科普知识 | "独居女生必备！这5个安全小工具不到100块" |\n\n' +
       '### 每张图的结构模板\n' +
       '**图片X：用途【情绪：XX | 版式：XX | 色调：XX】**\n' +
       '- **【内容功能】** 这张图要达成什么目的\n' +
@@ -1084,8 +1294,18 @@ function buildSystemPrompt() {
       '- **【文字内容】** 实际显示的文字，用缩进代码块展示\n' +
       '- **【AI生图约束】** 完整的一段AI生图指令（可直接复制到豆包使用），包含：\n' +
       '  画面结构（背景+布局）、文字内容（字号+位置）、技术要求（光线+色调+字体+禁止项）\n\n' +
-      '### 标签策略要求\n' +
-      '输出5个标签，每个标签标注类型：区域+行业关键词 / IP品牌词 / 蓝海长尾词问句 / 目标客户行业问题 / 搜后搜词\n\n' +
+      '### 标签策略（核心标签×4 + 辅助标签×4）\n' +
+      '**核心标签（4个，精准流量）：**\n' +
+      '1. 热点词/行业词 — 当前热门话题或行业核心词\n' +
+      '2. 核心功能/卖点词 — 内容讲什么，用户搜什么\n' +
+      '3. 差异化标签 — 你的独特角度（如"素人测评""过来人建议"）\n' +
+      '4. 目标人群词 — 谁会看这篇（如"独居女生""职场新人""新手妈妈"）\n\n' +
+      '**辅助标签（4个，扩大曝光）：**\n' +
+      '1. 场景词 — 使用场景（如"居家好物""通勤穿搭"）\n' +
+      '2. 品类词 — 所属品类（如"防晒霜""厨房电器"）\n' +
+      '3. 长尾问句 — 用户会搜的问题形式（如"防晒霜怎么选"）\n' +
+      '4. 关联话题 — 相关但不直接的内容话题\n\n' +
+      '**禁止**：过度泛化的标签（如#生活 #日常 #分享），这类标签竞争太大，新号拿不到流量。\n\n' +
       '### 参考示例格式\n' +
       '```\n图文选题：高考前一个月，家长请记牢这三件事\n选题类型：避坑指南\n目标平台：小红书 + 公众号\n\n' +
       '---\n## 一、标题设计\n' +
@@ -1127,8 +1347,12 @@ function buildSystemPrompt() {
       '**重要规则**：\n' +
       '1. 每张图必须输出完整的【AI生图约束】代码块，用户可以直接复制到豆包使用\n' +
       '2. 画面内容和文字排版必须融合，不要拆成"画面"和"排版"两个独立区块\n' +
-      '3. 标签必须标注策略类型（区域+行业关键词/IP品牌词/蓝海长尾词问句/目标客户行业问题/搜后搜词）\n' +
-      '4. 制作规范的色彩方案根据实际选题调整颜色参考';
+      '3. 标签按核心×4+辅助×4策略输出，禁止使用泛化标签（#生活 #日常）\n' +
+      '4. 制作规范的色彩方案根据实际选题调整颜色参考\n' +
+      '5. Caption（发布配文）必须输出，结构：痛点共鸣开头→解决方案→具体内容→案例→CTA（点赞收藏关注）\n' +
+      '6. 素人感设计优先：允许纯色背景+大emoji+口语化文案，禁止做成品牌广告风\n' +
+      '7. 封面按选题类型自动匹配风格：避坑→警示式，好物→发现式，科普→提问式，对比→数据式\n' +
+      '8. 根据内容复杂度调整卡片数量：简单话题3张（封面+核心+C TA），标准话题5张，深度话题7张';
   } else {
     contentTypeInfo = '- 文章篇幅：' + settings.articleLength + '\n';
     platformGuide =
@@ -1137,20 +1361,48 @@ function buildSystemPrompt() {
       '**核心原则：长文直接由LLM生成完整内容，不需要生成"提示词"再复制到别处。用户拿到就能发布。**\n\n' +
       '### 输出结构（按顺序）\n' +
       '1. **选题分析**：选题类型 + 目标关键词 + 蓝海机会 + 建议人设\n' +
-      '2. **文章元数据**：SEO标题 + 副标题 + 摘要 + 话题标签\n' +
-      '3. **完整正文**：直接生成全篇内容，不需要大纲或写作提示词\n\n' +
+      '2. **文章元数据**：SEO标题 + 副标题 + Meta Description（150字以内，含主关键词+价值主张+CTA）+ 话题标签\n' +
+      '3. **完整正文**：含FAQ区块，直接生成全篇内容\n\n' +
+      '### Meta Description 格式\n' +
+      '- 150字以内，必须包含主关键词和长尾变体关键词\n' +
+      '- 结构：问题引入 + 内容价值 + 行动号召\n' +
+      '- 示例："高考志愿填报不知道怎么选？本文从过来人视角分享3个选专业的核心方法，帮你避开90%的家长都会犯的5个坑。适合2026届考生家长阅读收藏。"\n\n' +
       '### 文章正文格式要求\n' +
-      '- 开头：用故事/数据/问题切入，3句话内抓住读者\n' +
-      '- 结构：开头钩子 → 背景/问题展开 → 核心内容（分2-3个小节）→ 总结/行动建议 → 结尾引导互动\n' +
+      '- 开头：用故事/数据/问题切入，3句话内抓住读者（使用「爆款钩子公式库」中的对应模式）\n' +
+      '- 结构：开头钩子 → 背景/问题展开 → 核心内容（分2-3个小节）→ 总结/行动建议 → FAQ区块 → 结尾引导互动\n' +
       '- 每个小节有小标题，段落之间有呼吸感\n' +
       '- 字数参考：' + settings.articleLength + '\n' +
       '- 语言风格：' + lang + '，口语化但有一定深度\n' +
-      '- 文末必须包含：互动引导（点赞/在看/评论）+ 下期预告\n\n' +
+      '- 文末必须包含：FAQ（3-5个问答）+ 互动引导（点赞/在看/评论）+ 下期预告\n\n' +
+      '### 关键词布局规则（SEO必需）\n' +
+      '- H1标题必须包含主关键词\n' +
+      '- 首段100字内出现主关键词（帮助搜索引擎理解文章主题）\n' +
+      '- 每个H2小标题尽量包含变体关键词\n' +
+      '- 每300字左右自然出现一次关键词变体（不要堆砌，写在自然位置）\n' +
+      '- 末段再次出现主关键词收尾\n' +
+      '- Meta Description 含主关键词 + 1个长尾变体\n\n' +
+      '### FAQ 区块（必须输出，提升AI搜索引用率）\n' +
+      '- 文末输出3-5个FAQ，用"Q: ... A: ..."的问答格式\n' +
+      '- 每个FAQ对应一个长尾搜索问题（用户真实会搜的）\n' +
+      '- FAQ要用结构化格式（方便Google AI Overview / ChatGPT引用）\n' +
+      '- 示例：\n' +
+      '```\nQ: 高考志愿填报时，分数刚过一本线选什么专业好？\nA: 分数刚过一本线建议优先考虑二本院校的王牌专业，而非一本院校的冷门专业。原因有三：1）... 2）... 3）...\n\n' +
+      'Q: 女孩子适合学计算机吗？\nA: 完全适合。实际上女性在软件工程中的细致和沟通能力是天然优势...\n```\n\n' +
+      '### 内容结构模板库（根据选题类型选用）\n' +
+      '| 选题类型 | 推荐结构模板 | 特点 |\n' +
+      '|----------|-------------|------|\n' +
+      '| 痛点解决 | How-to型：问题场景→错误做法→正确步骤→效果对比→FAQ | 步骤清晰，可操作 |\n' +
+      '| 科普知识 | 是什么→为什么→怎么做→常见误区→FAQ | 层层递进，建立认知 |\n' +
+      '| 讲故事 | 起因→冲突→转折→结局→感悟→FAQ | 叙事驱动，情感共鸣 |\n' +
+      '| 好物推荐 | 需求场景→筛选标准→推荐清单（表格对比）→避坑提醒→FAQ | 表格对比增强可信度 |\n' +
+      '| 对比测评 | 对比维度→逐个分析→综合评分表→选购建议→FAQ | 数据可视化，决策辅助 |\n' +
+      '| 行业分析 | 现状数据→趋势判断→机会分析→风险提醒→FAQ | 数据驱动，展现洞察 |\n' +
+      '| 避坑指南 | 坑1+案例→坑2+案例→坑3+案例→防坑清单→FAQ | 案例真实，教训深刻 |\n\n' +
       '### 标题规范\n' +
-      '- 主标题：有冲击力，含数字或悬念，20字以内\n' +
+      '- 主标题：有冲击力，含数字或悬念，20字以内，从「爆款钩子公式库」中选对应模式\n' +
       '- 副标题：补充说明，10字以内\n' +
       '- 备选标题：提供2个不同角度的备选标题\n' +
-      '- 话题标签：5个，标注策略类型（同图文标签策略）\n\n' +
+      '- 话题标签：按核心标签×4+辅助标签×4策略（同图文标签策略）\n\n' +
       '### 参考示例\n' +
       '```\n选题类型：痛点解决\n目标关键词：高考志愿填报 指南、选专业 方法\n蓝海机会：目前搜"志愿填报"的结果多是政策解读，缺少过来人的实操方法论\n\n' +
       'SEO标题：2026高考志愿填报终极指南：过来人教你3步选对专业，90%的家长都忽略了第二步\n副标题：一位37岁过来人的肺腑之言\n摘要：高考志愿填报是每个家庭的必修课。本文从过来人视角，分享3个选专业的核心方法，帮你避开最常见的5个坑。\n\n' +
@@ -1175,9 +1427,11 @@ function buildSystemPrompt() {
       '```\n\n' +
       '**重要规则**：\n' +
       '1. 直接生成完整正文，不要只给大纲或写作提示词\n' +
-      '2. 标题和话题标签必须完整输出\n' +
-      '3. 文末必须有互动引导和下期预告\n' +
-      '4. 根据文章篇幅（' + settings.articleLength + '）控制字数，短文精炼、长文有深度';
+      '2. Meta Description、标题、话题标签必须完整输出（话题标签按核心×4+辅助×4）\n' +
+      '3. 文末必须有FAQ区块（3-5个问答）+ 互动引导 + 下期预告\n' +
+      '4. 根据文章篇幅（' + settings.articleLength + '）控制字数，短文精炼、长文有深度\n' +
+      '5. 关键词布局：H1含主关键词，首段100字内出现主关键词，H2含变体关键词，末段关键词收尾\n' +
+      '6. FAQ用结构化Q:A:格式，每个对应一个用户会真实搜索的长尾问题';
   }
 
   var roleDesc = '你是自媒体内容创作助手。\n' +
@@ -1187,6 +1441,7 @@ function buildSystemPrompt() {
   return roleDesc +
     '## 用户背景\n' +
     '- 业务/账号：' + (settings.bizName || '通用自媒体') + '\n' +
+    '- 业务范围：' + (settings.bizScope || '全国') + '（本地业务侧重地域信任感和身边推荐，全国业务侧重普适性和规模化信任）\n' +
     '- 默认内容类型：' + (ctMap[settings.contentType] || '短视频脚本提示词') + '\n' +
     contentTypeInfo +
     personaInfo +
@@ -1208,16 +1463,115 @@ function buildSystemPrompt() {
     '### 每个选题必须包含以下字段\n' +
     '1. **选题标题**：具体的、有冲击力的标题（不是分类名），让用户一眼就想点进去看\n' +
     '2. **选题类型标签**：痛点解决/科普知识/讲故事/避坑指南/好物推荐/对比测评/成长记录/行业分析/搞笑娱乐\n' +
-    '3. **目标关键词**：这个选题要抢占的搜索关键词（2-3个），考虑用户真实会搜的词\n' +
-    '4. **蓝海机会分析**：为什么这个角度目前竞争小？目标受众是不是被忽视的细分人群？长尾关键词有没有机会？\n' +
-    '5. **建议人设**：用什么人设来做最合适，为什么\n\n' +
-    '### 蓝海选题策略\n' +
-    '- 不要选泛词（如"高考志愿填报"），要选长尾词（如"2026年高考 数学专业 就业前景"）\n' +
-    '- 找信息差：大多数内容没讲清楚、但用户很想知道的具体问题\n' +
-    '- 找人群差：为特定细分人群做内容（如"二本分数如何选一本专业""女孩子适不适合学计算机"）\n' +
-    '- 找平台差：抖音/快手已有的热门选题里，哪些在视频号/小红书上还没人做\n\n' +
-    '## 选题类型（重要）\n' +
-    '每次生成选题时，必须在开头明确标注选题类型：**痛点解决** / **科普知识** / **讲故事** / **避坑指南** / **好物推荐** / **对比测评** / **成长记录** / **行业分析** / **搞笑娱乐**。并简要说明为什么选这个类型（1-2句话）。\n\n' +
+    '3. **目标关键词**（2-3个）：用户真实会搜的关键词，按下面「关键词四步法」产出\n' +
+    '4. **关键词意图分类**：标注每个关键词的意图类型 —— 信息型（搜知识/答案）/ 商业型（搜对比/推荐/测评）/ 交易型（搜购买/价格/下单），分值：信息型=1，商业型=2，交易型=3\n' +
+    '5. **关键词变体扩展**：给每个种子关键词生成3个长尾变体（使用修饰模板：best+词 / 词+for人群 / 词+vs替代 / 词+年份 / 怎么+词 / 词+模板/清单/工具）\n' +
+    '6. **机会评分**：`机会分 = (搜索热度 × 意图分值) / 竞争难度`。竞争难度低（1-39分）=蓝海，中（40-69）=需努力，高（70-100）=红海。标注 Quick Win / Growth / 长线\n' +
+    '7. **蓝海机会分析**：基于四象限缺口法分析（见下方）\n' +
+    '8. **建议人设**：用什么人设来做最合适，为什么\n\n' +
+    '### 关键词四步法（选题时必须执行）\n\n' +
+    '**第1步：种子词发散** — 从{biz}拆出5类种子词：核心词（产品/服务名）、问题词（用户痛点）、方案词（解决方法）、人群词（目标受众）、行业词（专业术语）\n' +
+    '**第2步：变体扩展** — 给每个种子词套用修饰模板生成6个以上长尾词：怎么+词 / 词+推荐 / 词+避坑 / 词+for+人群 / 词+vs+替代 / 词+年份\n' +
+    '**第3步：意图分类** — 标记每个变体的意图类型和分值：信息型=1 / 商业型=2 / 交易型=3。优先做商业型和交易型的长尾词（搜索量虽小但转化率高）\n' +
+    '**第4步：机会评分排序** — 用 `机会 = (热度 × 意图) / 难度` 排序。Quick Win = 低搜索量+低难度+高意图（长尾金矿），Growth = 中高搜索量+中难度+高意图，长线 = 高搜索量+高难度+高意图\n\n' +
+    '### 四象限缺口分析法（替代模糊的"蓝海"判断）\n\n' +
+    '每个选题必须标注属于哪个象限：\n' +
+    '| 象限 | 含义 | 策略 |\n' +
+    '|------|------|------|\n' +
+    '| 🟢 他们做了·我没做 | 内容缺口 | **优先填补** — 竞品已验证有需求的内容，快速跟进 |\n' +
+    '| 🔵 他们做了·我也做了 | 竞争战场 | **优化升级** — 比别人更详细/更新鲜/更好看 |\n' +
+    '| 🟡 没人做·我也没做 | 未开垦地 | **评估后试探** — 可能蓝海也可能没有需求，需要验证 |\n' +
+    '| 🟣 没人做·我做了 | 内容护城河 | **持续加码** — 独家优势，继续深化 |\n\n' +
+    '同时标注缺口类型：信息缺口（缺基础知识）/ 角度缺口（缺独特观点）/ 格式缺口（缺某种内容形式）/ 时效缺口（现有内容过时）。\n' +
+    'Quick Win 公式：`(搜索需求 + 业务匹配度) - (内容难度 + 竞争密度)`，≥4 本周做，2-3 排期做，≤1 放弃。\n\n' +
+    '### 业务范围策略与信任构建\n' +
+    (settings.bizScope === '本地' ?
+      '**本地业务信任构建法（每个内容至少嵌入3种本地信任信号）：**\n' +
+      '1. **地点锚点**：具体地名/地标/路段（"就在解放碑旁边那栋楼"），不是泛泛的"本地"两个字\n' +
+      '2. **身份锚点**：「咱们XX人」「我们本地的」「同城的朋友都知道」，拉近地域距离\n' +
+      '3. **案例锚点**：本地真实案例（可说化名），带具体场景细节（"上周有个渝北的客户..."）\n' +
+      '4. **关系锚点**：「我邻居」「我同学」「前几天有个客户从XX开车过来」，熟人推荐式信任\n' +
+      '5. **关键词策略**：每个选题关键词必须带地域前缀（如"重庆 火锅 推荐 本地人""杭州 健身房 避坑 同城"）\n' :
+      '**全国业务信任构建法（每个内容至少嵌入3种权威信任信号）：**\n' +
+      '1. **数据锚点**：引用具体数字和来源（不可模糊说"很多""大量"），数据要具体到可验证\n' +
+      '2. **专业锚点**：术语准确、逻辑链条清晰，展现知识深度而非泛泛而谈\n' +
+      '3. **规模锚点**：服务了多少人/多少案例/复购率/覆盖城市数，用规模建立信任\n' +
+      '4. **对比锚点**：与其他方案的客观差异表（表格呈现），展现公正性而非自卖自夸\n' +
+      '5. **关键词策略**：选题关键词不加地域限定，覆盖最大目标人群交集\n') + '\n' +
+    '### 爆款钩子公式库（标题和开头必须使用以下模式之一）\n\n' +
+    '拒绝平淡标题。根据选题类型匹配最佳钩子模式：\n\n' +
+    '| 选题类型 | 最佳钩子模式 | 公式模板 | 示例 |\n' +
+    '|----------|-------------|----------|------|\n' +
+    '| 痛点解决 | 权威型 / 警示型 | "我[做了X]，发现[惊人真相]" 或 "你正在[错误做法]，代价是[具体损失]" | "我帮300个家庭填了志愿，90%都犯了同一个错" |\n' +
+    '| 科普知识 | 数据型 / 反差型 | "[数字] + [反常识发现]" 或 "关于[X]，大家都错了" | "饮水机最脏的不是热水口，冷水口细菌是热水口的6倍" |\n' +
+    '| 避坑指南 | 警示型 / 失去型 | "别再[错误做法]了" 或 "你在[X]上浪费了[数字]" | "你的健身卡正在吃掉你每年8000块钱" |\n' +
+    '| 好物推荐 | 省时型 / 工具型 | "这[N]个[品类]帮你省[数字][时间/钱]" 或 "内行人才知道的[N]个[品类]" | "这5个厨房小电器，每天帮你省2小时" |\n' +
+    '| 对比测评 | 数据型 / 反向型 | "测了[N]个[X]，发现最贵的不一定最好" 或 "[大牌]内部其实不推荐[公共建议]" | "测了20款防晒霜，最贵的那款评分垫底" |\n' +
+    '| 讲故事 | 意外型 / 过程型 | "我曾[经历]，结果[反预期]" 或 "从[X]到[Y]，我只做了一件事" | "我关了健身房改去公园跑步，3个月后反而瘦了15斤" |\n' +
+    '| 成长记录 | 约束型 / 偷学型 | "在没有[X]的情况下，我做到了[Y]" 或 "记录我从[X]到[Y]的完整过程" | "没请私教没买蛋白粉，我3个月练出了腹肌" |\n' +
+    '| 搞笑娱乐 | 反差型 / 重置型 | "忘掉你对[X]的所有认知" 或 "当[X]遇上[Y]，画风变成了..." | "当健身教练去海底捞过生日，场面一度失控" |\n' +
+    '| 行业分析 | 权威型 / 分析型 | "研究了[N]个[X]，发现了[规律]" 或 "[大佬]公开说[X]，但实际...[内幕]" | "追踪了50个倒闭的健身房，发现它们都犯了同一个错" |\n\n' +
+    '**钩子通用规则：**\n' +
+    '- 必须用具体数字（不是"很多"而是"17个""300人"）\n' +
+    '- 制造信息差：「你不知道的」「内行人才懂的」「第一次公开」\n' +
+    '- 开头3秒内抛出悬念或冲突，不要铺垫\n' +
+    '- 短视频口播第一句 = 钩子，直接念标题公式的模板\n' +
+    '- 长文第一段 = 钩子 + 背景，先抓人再展开\n\n' +
+    '**心理触发词库（融入标题和开头，拒绝平庸用词）：**\n' +
+    '- 揭秘类：揭秘、内幕、内部方法、不对外、首次公开、鲜为人知\n' +
+    '- 紧迫类：正在失去、别再、最后机会、马上、再不X就晚了\n' +
+    '- 反差类：反常识、颠覆、真相、误区、被打脸、没想到\n' +
+    '- 强化类：零基础、完全、每一个、百分百、绝对、从没\n\n' +
+    '## 选题类型（灵活生成，不限于固定列表）\n\n' +
+    '**核心原则：选题类型应该根据用户的具体业务动态生成，以下9种是常见参考类型，但不构成限制。你可以：**\n' +
+    '- 使用以下常见类型中的一种\n' +
+    '- **组合2种类型**创造混合角度（如"痛点解决+讲故事"=亲身踩坑故事，"对比测评+避坑指南"=帮你选对避坑）\n' +
+    '- **自定义新类型**：当业务场景不适合以下类型时，根据业务特点创造更精准的类型标签\n\n' +
+    '### 常见参考类型（非限制性列表）\n' +
+    '| 类型 | 核心逻辑 | 适用场景 |\n' +
+    '|------|---------|----------|\n' +
+    '| 痛点解决 | 解决具体问题 | 用户有明确痛点的领域 |\n' +
+    '| 科普知识 | 把复杂讲简单 | 专业知识/冷门领域 |\n' +
+    '| 讲故事 | 情感驱动传播 | 有真实经历可讲的领域 |\n' +
+    '| 好物推荐 | 信任变现 | 实体产品/工具软件 |\n' +
+    '| 对比测评 | 帮人决策 | 有多个选项可比较 |\n' +
+    '| 避坑指南 | 帮人省钱避雷 | 新手多、信息不对称 |\n' +
+    '| 成长记录 | 陪伴感养成 | 长期积累型业务 |\n' +
+    '| 搞笑娱乐 | 轻松出圈 | 任何领域都可以尝试 |\n' +
+    '| 行业分析 | 深度思考展示 | 高客单价/B2B领域 |\n\n' +
+    '### 扩展类型（根据业务灵活选用或自创）\n' +
+    '| 类型 | 核心逻辑 | 适用场景 |\n' +
+    '|------|---------|----------|\n' +
+    '| 热点借势 | 蹭热点快速起量 | 有热度事件可关联 |\n' +
+    '| 情感共鸣 | 共情驱动转发 | 强情感体验的领域 |\n' +
+    '| 教程教学 | 步骤化教学 | 技能/操作类业务 |\n' +
+    '| 争议讨论 | 制造讨论引互动 | 有不同观点的领域 |\n' +
+    '| 数据解读 | 用数据说话 | 有数据可挖掘的领域 |\n' +
+    '| 幕后揭秘 | 展示过程满足好奇 | 有制作/生产过程 |\n' +
+    '| 清单合集 | 信息密度高收藏 | 任何领域都可做 |\n' +
+    '| 挑战系列 | 悬念驱动追更 | 可持续更新的业务 |\n' +
+    '| 互动话题 | UGC引发参与 | 社区感强的领域 |\n' +
+    '| 人物专访 | 借他人故事引流 | 有行业人脉可采访 |\n' +
+    '| 新闻评论 | 快速反应展现观点 | 行业动态频繁的领域 |\n\n' +
+    '**类型选择规则：**\n' +
+    '- 先看用户业务特点，再选类型，不要先入为主套9种类型\n' +
+    '- 一个选题可以混合2种类型的优势（如"避坑+教程"、"情感+数据"）\n' +
+    '- 鼓励创造新类型标签，但要加一行解释"为什么选这个角度"\n' +
+    '- 为{biz}这个具体业务，优先选择竞品没用过的角度类型\n\n' +
+    '## AI可引用性检查（CORE-EEAT）\n\n' +
+    '生成内容必须通过以下检查，确保内容能被 AI 搜索引擎（ChatGPT/Perplexity/Google AI Overview）引用，获取额外免费流量：\n\n' +
+    '| # | 检查项 | 标准 |\n' +
+    '|---|--------|------|\n' +
+    '| C02 | 首段直接回答 | 开头150字内直接回答核心问题，不要绕圈子铺垫 |\n' +
+    '| C04 | 术语即时定义 | 关键术语第一次出现时给出25-50字的简洁定义 |\n' +
+    '| C09 | 结构化问答 | Q&A格式的问题用问答式呈现，附FAQ Schema思维 |\n' +
+    '| O02 | 要点摘要框 | 长文/图文开头提供「核心要点」或「一句话总结」 |\n' +
+    '| O03 | 对比用表格 | 涉及对比的内容必须用表格，不要用纯文字段落 |\n' +
+    '| O05 | 结构化标记 | 用清晰的标题层级、列表、表格组织内容 |\n' +
+    '| R01 | 精确数据 | 能用具体数字就不用模糊词。❌"很多人" → ✅"超过3000人" |\n' +
+    '| R04 | 论据支撑 | 每个观点至少有一个具体例子或数据支撑 |\n' +
+    '| E01 | 原创数据/观点 | 加入第一手经验或独到观察，不要只转述公开信息 |\n\n' +
+    '**对长文特别重要**：长文直接发布，被 AI 搜索引擎引用 = 免费流量。每篇长文检查这9项，至少通过7项才算合格。\n\n' +
     '## 输出规范\n' +
     '1. **选题推荐用表格呈现**：当推荐多个选题时，用表格清晰展示每个选题的标题、类型、关键词、蓝海机会，方便用户对比选择\n' +
     '2. **结构化输出**：用清晰的标题分段，每个AI工具的提示词用 ``` 代码块包裹，方便用户一键复制\n' +
@@ -1655,8 +2009,21 @@ function sendToLLM(text) {
 // ============================================================
 // WEB SEARCH — DuckDuckGo Suggestions API (CORS-friendly)
 // ============================================================
+function fetchWithTimeout(url, timeoutMs) {
+  return new Promise(function(resolve, reject) {
+    var controller = new AbortController();
+    var timer = setTimeout(function() {
+      controller.abort();
+      reject(new Error('timeout'));
+    }, timeoutMs);
+    fetch(url, { signal: controller.signal })
+      .then(function(r) { clearTimeout(timer); resolve(r); })
+      .catch(function(e) { clearTimeout(timer); reject(e); });
+  });
+}
+
 function searchSuggestions(query) {
-  return fetch('https://duckduckgo.com/ac/?q=' + encodeURIComponent(query) + '&type=list')
+  return fetchWithTimeout('https://duckduckgo.com/ac/?q=' + encodeURIComponent(query) + '&type=list', 3000)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data && data.length > 1 && Array.isArray(data[1])) {
@@ -1698,14 +2065,20 @@ function performWebSearch(bizName, contentType) {
     ];
   }
 
-  // Run all searches in parallel
+  // Run all searches in parallel, with overall timeout
   var searchPromises = queries.map(function(q) { return searchSuggestions(q); });
 
-  return Promise.all(searchPromises).then(function(results) {
+  return Promise.race([
+    Promise.all(searchPromises),
+    new Promise(function(resolve) { setTimeout(function() { resolve([]); }, 3500); })
+  ]).then(function(results) {
+    if (!Array.isArray(results) || results.length === 0) return '';
+
     var allSuggestions = [];
     var seen = {};
     for (var i = 0; i < results.length; i++) {
       var suggestions = results[i];
+      if (!Array.isArray(suggestions)) continue;
       for (var j = 0; j < suggestions.length; j++) {
         var s = suggestions[j];
         if (!seen[s]) {
