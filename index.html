@@ -295,19 +295,21 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
 }
 
 /* Table cards (mobile) */
-.table-cards{display:flex;flex-direction:column;gap:8px;margin:6px 0}
+.table-cards{display:flex;flex-direction:column;gap:10px;margin:6px 0}
 .table-card{
-  background:#fff;border:1px solid #e7e5e4;border-radius:9px;
-  padding:10px 12px;display:flex;flex-direction:column;gap:5px;
+  background:#fff;border:1px solid #e7e5e4;border-radius:12px;
+  padding:14px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
 }
 .table-card-title{
-  font-size:.8rem;font-weight:600;color:#0f172a;line-height:1.4;
+  font-size:.84rem;font-weight:600;color:#0f172a;line-height:1.45;
+  padding-bottom:6px;border-bottom:1px solid #f0efed;
 }
-.table-card-fields{display:flex;flex-direction:column;gap:3px}
-.table-card-field{display:flex;gap:6px;font-size:.72rem;line-height:1.4}
-.table-card-label{color:#78716c;flex-shrink:0;font-weight:500}
+.table-card-fields{display:flex;flex-direction:column;gap:5px}
+.table-card-field{display:flex;gap:8px;font-size:.74rem;line-height:1.45}
+.table-card-label{color:#78716c;flex-shrink:0;font-weight:500;min-width:fit-content}
 .table-card-label::after{content:'：'}
-.table-card-value{color:#44403c;flex:1;min-width:0}
+.table-card-value{color:#44403c;flex:1;min-width:0;word-break:break-word}
 .table-card .copy-inline{margin-left:auto;flex-shrink:0}
 
 .msg-time{font-size:.62rem;color:#a8a29e;padding:0 3px}
@@ -613,9 +615,9 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
   .table-card .copy-inline{padding:4px 10px;font-size:.68rem;min-height:30px}
 
   /* --- Table cards --- */
-  .table-card{padding:12px 14px;border-radius:10px;gap:6px}
-  .table-card-title{font-size:.82rem}
-  .table-card-field{font-size:.74rem}
+  .table-card{padding:14px;border-radius:12px;gap:8px}
+  .table-card-title{font-size:.86rem;padding-bottom:8px;margin-bottom:2px}
+  .table-card-field{font-size:.76rem;gap:8px;line-height:1.5}
 }
 </style>
 </head>
@@ -1847,27 +1849,40 @@ function convertTablesToCards(contentEl) {
     var table = wrap.querySelector('table');
     if (!table) return;
 
-    // Read headers
+    // Read headers from thead or first row (markdown parser doesn't generate thead)
     var headers = [];
-    table.querySelectorAll('thead th').forEach(function(th) {
+    table.querySelectorAll('thead th, tr:first-child th').forEach(function(th) {
       headers.push(th.textContent.trim());
     });
     if (!headers.length) return;
 
-    // Build cards for each row
+    // Collect rows — skip first row if no explicit thead (it's the header row)
+    var rows = table.querySelectorAll('tbody tr');
+    var hasThead = !!table.querySelector('thead');
+    if (!hasThead && rows.length > 1) {
+      // First row in tbody is the header row, skip it
+      var tmp = [];
+      for (var ri = 1; ri < rows.length; ri++) tmp.push(rows[ri]);
+      rows = tmp;
+    }
+
+    if (!rows.length) return;
+
+    // Build cards
     var cardsHtml = '';
-    table.querySelectorAll('tbody tr').forEach(function(tr) {
-      var cells = tr.querySelectorAll('td');
-      if (cells.length === 0) return;
+    for (var r = 0; r < rows.length; r++) {
+      var cells = rows[r].querySelectorAll('td');
+      if (cells.length === 0) continue;
+
+      // First cell = card title
       var title = cells[0].textContent.trim();
       var fieldsHtml = '';
       for (var i = 1; i < headers.length && i < cells.length; i++) {
-        var label = headers[i];
         var value = cells[i].textContent.trim();
         if (!value || value === '-' || value === '—') continue;
         fieldsHtml +=
           '<div class="table-card-field">' +
-            '<span class="table-card-label">' + escapeHtml(label) + '</span>' +
+            '<span class="table-card-label">' + escapeHtml(headers[i]) + '</span>' +
             '<span class="table-card-value">' + escapeHtml(value) + '</span>' +
           '</div>';
       }
@@ -1876,7 +1891,7 @@ function convertTablesToCards(contentEl) {
           '<div class="table-card-title">' + escapeHtml(title) + '</div>' +
           '<div class="table-card-fields">' + fieldsHtml + '</div>' +
         '</div>';
-    });
+    }
 
     if (cardsHtml) {
       var cardsDiv = document.createElement('div');
