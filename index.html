@@ -53,10 +53,12 @@ input,select,textarea,button{font-family:inherit}
    SIDEBAR
    ============================================================ */
 .sidebar{
-  width:260px;flex-shrink:0;overflow-y:auto;
+  width:260px;flex-shrink:0;
   background:#fff;border-right:1px solid #e7e5e4;
-  padding:14px;display:flex;flex-direction:column;gap:16px;
+  padding:14px 14px 0;display:flex;flex-direction:column;
 }
+.sidebar-scroll{flex:1;overflow-y:auto;min-height:0;padding-bottom:8px;display:flex;flex-direction:column;gap:16px}
+.sidebar-footer{flex-shrink:0;padding:10px 0 14px;background:#fff}
 .sidebar-section{display:flex;flex-direction:column;gap:6px}
 .sidebar-label{
   font-size:.68rem;font-weight:600;color:#78716c;
@@ -86,22 +88,24 @@ input,select,textarea,button{font-family:inherit}
 .sidebar-chip.small{font-size:.68rem;padding:4px 8px}
 
 .sidebar-settings-link{
-  display:none;width:100%;padding:8px 0;margin-top:auto;
-  border:1.5px solid #e7e5e4;border-radius:9px;
-  background:#fafaf9;color:#57534e;
+  display:none;width:100%;padding:10px 0;margin-top:auto;
+  border:1.5px solid #e7e5e4;border-radius:10px;
+  background:#fafaf9;color:#78716c;
   font-size:.76rem;font-weight:500;cursor:pointer;
   transition:all .15s;font-family:inherit;
 }
 .sidebar-settings-link:hover{background:#f5f5f4;border-color:#d6d3d1}
 .sidebar-generate-btn{
-  width:100%;padding:12px 0;margin-top:8px;
-  border:none;border-radius:10px;
+  width:100%;padding:13px 0;
+  border:none;border-radius:12px;
   background:#d97706;color:#fff;
-  font-size:.82rem;font-weight:700;cursor:pointer;
+  font-size:.84rem;font-weight:700;cursor:pointer;
   transition:all .15s;font-family:inherit;
   box-shadow:0 1px 4px rgba(217,119,6,.15);
+  letter-spacing:.02em;
 }
-.sidebar-generate-btn:hover{box-shadow:0 2px 8px rgba(217,119,6,.2);transform:translateY(-1px)}
+.sidebar-generate-btn:hover{background:#b45309;box-shadow:0 2px 8px rgba(217,119,6,.2);transform:translateY(-1px)}
+.sidebar-generate-btn:active{transform:scale(.98)}
 .sidebar-generate-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
 /* Toggle switch */
@@ -502,15 +506,15 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
     border-radius:18px 18px 0 0;
     border-right:none;
     box-shadow:0 -2px 20px rgba(0,0,0,.1);
-    overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding:0 16px calc(16px + env(safe-area-inset-bottom, 0px));
-    display:flex;flex-direction:column;gap:14px;
+    padding:0;display:flex;flex-direction:column;
   }
   .sidebar.open{transform:translateY(0)}
-  .sidebar-mobile-header{padding:16px 0 8px}
+  .sidebar-mobile-header{padding:16px 16px 0;flex-shrink:0}
   .sidebar-sheet-title{font-size:.9rem}
-  .sidebar-handle{margin-bottom:6px}
+  .sidebar-handle{margin:6px auto 4px}
   #btnSheetClose{width:44px;height:44px;font-size:1.2rem}
+  .sidebar .sidebar-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px;display:flex;flex-direction:column;gap:14px;min-height:0}
+  .sidebar .sidebar-footer{flex-shrink:0;padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px));background:#fff;border-top:1px solid #f0efed}
 
   /* Larger sidebar inputs / chips for touch */
   .sidebar-input,.sidebar-select{padding:11px 14px;font-size:.82rem;min-height:46px}
@@ -519,7 +523,7 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
   .sidebar-label{font-size:.72rem}
   .sidebar-toggle-text{font-size:.72rem}
   .sidebar-settings-link{padding:12px 0;font-size:.78rem;min-height:44px;display:flex;align-items:center;justify-content:center}
-  .sidebar-generate-btn{padding:14px 0;font-size:.84rem;border-radius:12px}
+  .sidebar-generate-btn{padding:14px 0;font-size:.88rem;border-radius:14px;letter-spacing:.03em}
 
   /* --- Chat area --- */
   .chat-area{padding:12px 12px;gap:10px;overscroll-behavior:contain}
@@ -645,6 +649,8 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
       <span class="sidebar-sheet-title">创作配置</span>
       <button class="btn-icon" id="btnSheetClose">✕</button>
     </div>
+
+    <div class="sidebar-scroll">
     <div class="sidebar-section">
       <div class="sidebar-label">📋 业务名称</div>
       <input class="sidebar-input" id="sbBizName" placeholder="例如：XX健身、YY美食探店" maxlength="30">
@@ -743,7 +749,11 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
     </div>
 
     <button class="sidebar-settings-link" id="sbSettingsLink">⚙ API 设置</button>
+    </div><!-- /sidebar-scroll -->
+
+    <div class="sidebar-footer">
     <button class="sidebar-generate-btn" id="sbGenerateBtn">✨ 开始生成</button>
+    </div>
   </div>
 
   <!-- Sheet overlay (mobile only) -->
