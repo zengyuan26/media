@@ -285,6 +285,22 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
   flex:1;min-width:0;
 }
 
+/* Table cards (mobile) */
+.table-cards{display:flex;flex-direction:column;gap:8px;margin:6px 0}
+.table-card{
+  background:#fff;border:1px solid #e7e5e4;border-radius:9px;
+  padding:10px 12px;display:flex;flex-direction:column;gap:5px;
+}
+.table-card-title{
+  font-size:.8rem;font-weight:600;color:#1c1917;line-height:1.4;
+}
+.table-card-fields{display:flex;flex-direction:column;gap:3px}
+.table-card-field{display:flex;gap:6px;font-size:.72rem;line-height:1.4}
+.table-card-label{color:#78716c;flex-shrink:0;font-weight:500}
+.table-card-label::after{content:'：'}
+.table-card-value{color:#44403c;flex:1;min-width:0}
+.table-card .copy-inline{margin-left:auto;flex-shrink:0}
+
 .msg-time{font-size:.62rem;color:#a8a29e;padding:0 3px}
 
 /* Typing indicator */
@@ -1716,6 +1732,9 @@ function finishStreaming(msg) {
 function enhanceCopyTargets(contentEl) {
   if (window.innerWidth > 768) return;
 
+  // Convert tables to cards
+  convertTablesToCards(contentEl);
+
   // Add copy to h1/h2 (titles)
   contentEl.querySelectorAll('h1, h2').forEach(function(h) {
     if (h.querySelector('.copy-inline')) return;
@@ -1733,6 +1752,52 @@ function enhanceCopyTargets(contentEl) {
         var btn = makeCopyInline(tags.join(' '));
         p.appendChild(btn);
       }
+    }
+  });
+}
+
+// Convert markdown tables to card layout on mobile
+function convertTablesToCards(contentEl) {
+  contentEl.querySelectorAll('.table-wrap').forEach(function(wrap) {
+    var table = wrap.querySelector('table');
+    if (!table) return;
+
+    // Read headers
+    var headers = [];
+    table.querySelectorAll('thead th').forEach(function(th) {
+      headers.push(th.textContent.trim());
+    });
+    if (!headers.length) return;
+
+    // Build cards for each row
+    var cardsHtml = '';
+    table.querySelectorAll('tbody tr').forEach(function(tr) {
+      var cells = tr.querySelectorAll('td');
+      if (cells.length === 0) return;
+      var title = cells[0].textContent.trim();
+      var fieldsHtml = '';
+      for (var i = 1; i < headers.length && i < cells.length; i++) {
+        var label = headers[i];
+        var value = cells[i].textContent.trim();
+        if (!value || value === '-' || value === '—') continue;
+        fieldsHtml +=
+          '<div class="table-card-field">' +
+            '<span class="table-card-label">' + escapeHtml(label) + '</span>' +
+            '<span class="table-card-value">' + escapeHtml(value) + '</span>' +
+          '</div>';
+      }
+      cardsHtml +=
+        '<div class="table-card">' +
+          '<div class="table-card-title">' + escapeHtml(title) + '</div>' +
+          '<div class="table-card-fields">' + fieldsHtml + '</div>' +
+        '</div>';
+    });
+
+    if (cardsHtml) {
+      var cardsDiv = document.createElement('div');
+      cardsDiv.className = 'table-cards';
+      cardsDiv.innerHTML = cardsHtml;
+      wrap.parentNode.replaceChild(cardsDiv, wrap);
     }
   });
 }
