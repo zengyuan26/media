@@ -467,7 +467,7 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
    RESPONSIVE — Mobile (≤768px)
    ============================================================ */
 @media(max-width:768px){
-  /* Show mobile-only elements */
+  /* --- Show mobile-only elements --- */
   .sheet-overlay{display:block}
   .mobile-fab{display:flex}
   .sidebar-mobile-header{display:flex}
@@ -475,77 +475,142 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
   .sidebar-settings-link{display:block}
   #btnSettings{display:none}
 
-  /* Sidebar → Bottom Sheet */
-  .sidebar{
-    position:fixed;bottom:0;left:0;right:0;
-    width:100%;max-height:80vh;z-index:100;
-    transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.4,0,.2,1);
-    border-radius:16px 16px 0 0;
-    border-right:none;
-    box-shadow:0 -4px 24px rgba(0,0,0,.15);
-    overflow-y:auto;
-    padding:0 14px calc(14px + env(safe-area-inset-bottom, 0px));
-    display:flex;flex-direction:column;gap:12px;
-  }
-  .sidebar.open{transform:translateY(0)}
+  /* --- Global --- */
+  body{-webkit-tap-highlight-color:transparent}
 
-  /* Main layout */
+  /* --- Header --- */
+  .header{
+    padding:0 14px;min-height:48px;
+    border-bottom:1px solid #f0efed;
+  }
+  .header-icon{width:28px;height:28px;font-size:.8rem;border-radius:7px}
+  .header-title{font-size:.82rem}
+
+  /* --- Main layout --- */
   .main-layout{flex-direction:column}
   .chat-column{width:100%}
 
-  /* Header compact */
-  .header{padding:6px 12px;min-height:44px}
-  .header-icon{width:26px;height:26px;font-size:.75rem;border-radius:6px}
-  .header-title{font-size:.78rem}
+  /* --- Sidebar → Bottom Sheet --- */
+  .sidebar{
+    position:fixed;bottom:0;left:0;right:0;
+    width:100%;max-height:82vh;z-index:100;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    border-radius:18px 18px 0 0;
+    border-right:none;
+    box-shadow:0 -4px 32px rgba(0,0,0,.18);
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    display:flex;flex-direction:column;gap:14px;
+  }
+  .sidebar.open{transform:translateY(0)}
+  .sidebar-mobile-header{padding:14px 0 4px}
+  .sidebar-sheet-title{font-size:.88rem}
+  .sidebar-handle{margin-bottom:4px}
 
-  /* Chat empty state — simplify for mobile */
-  .chat-empty-icon{font-size:2rem}
-  .chat-empty-text{font-size:.74rem;text-align:center;padding:0 20px}
+  /* Larger sidebar inputs / chips for touch */
+  .sidebar-input,.sidebar-select{padding:10px 12px;font-size:.8rem}
+  .sidebar-chip{padding:7px 12px;font-size:.74rem}
+  .sidebar-chip.small{padding:6px 10px;font-size:.7rem}
+  .sidebar-label{font-size:.7rem}
+  .sidebar-toggle-text{font-size:.7rem}
+
+  /* --- Chat area --- */
+  .chat-area{padding:12px 12px;gap:10px}
+  .msg-body{max-width:87%}
+  .msg-content{
+    font-size:.82rem;padding:10px 13px;line-height:1.6;
+    border-radius:13px;
+  }
+  .msg.user .msg-content{border-radius:13px 13px 4px 13px}
+  .msg.assistant .msg-content{border-radius:13px 13px 13px 4px}
+  .msg-content h1{font-size:.95rem}
+  .msg-content h2{font-size:.85rem}
+  .msg-content h3{font-size:.8rem}
+  .msg-content p{margin:5px 0;line-height:1.6}
+  .msg-content li{line-height:1.5}
+  .msg-content pre{
+    padding:14px;font-size:.72rem;line-height:1.5;
+    border-radius:9px;margin:8px 0;
+  }
+  .msg-content blockquote{padding:6px 12px;font-size:.78rem}
+  .msg-content .table-wrap{border-radius:9px;margin:8px 0}
+
+  /* --- Chat empty state --- */
+  .chat-empty{padding:20px 0}
+  .chat-empty-icon{font-size:2.5rem}
+  .chat-empty-text{font-size:.78rem;padding:0 28px;line-height:1.5}
   .topic-group{display:none}
-  .topic-gen-card{margin:0}
+  .topic-gen-card{
+    margin:0;padding:16px 14px;border-radius:12px;
+    border-width:2px;
+  }
+  .topic-gen-title{font-size:.84rem}
+  .topic-gen-desc{font-size:.7rem}
 
-  /* Chat area */
-  .chat-area{padding:10px 10px;gap:8px}
-  .msg-body{max-width:88%}
-  .msg-content{font-size:.8rem;padding:8px 11px}
+  /* --- Message avatars & time --- */
+  .msg-avatar{width:32px;height:32px;font-size:.8rem;border-radius:8px}
+  .msg-time{font-size:.6rem}
+  .msg{animation-duration:.25s}
 
-  /* Scenario cards — single column */
-  .scenario-card{width:100%;min-width:0}
-  .chat-empty-cards{max-width:100%}
-  .topic-group-cards{flex-direction:column}
-  .topic-gen-card{padding:12px 14px}
-
-  /* Input area */
-  .input-area{padding:6px 10px calc(10px + env(safe-area-inset-bottom, 0px))}
+  /* --- Input area --- */
+  .input-area{
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    border-top:1px solid #f0efed;
+    gap:8px;
+  }
   .quick-actions{
     flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
-    padding-bottom:2px;gap:4px;
+    padding-bottom:2px;gap:5px;
+    scrollbar-width:none;
   }
-  .quick-btn{flex-shrink:0;font-size:.64rem;padding:3px 8px}
-  .input-box{font-size:.8rem;padding:8px 10px}
-  .btn-send{width:36px;height:36px;font-size:.9rem}
+  .quick-actions::-webkit-scrollbar{display:none}
+  .quick-btn{
+    flex-shrink:0;font-size:.68rem;padding:6px 12px;
+    border-radius:15px;min-height:30px;
+  }
+  .input-row{gap:8px}
+  .input-box{
+    font-size:16px;padding:10px 12px;min-height:42px;
+    line-height:1.4;border-radius:10px;
+  }
+  .btn-send{width:42px;height:42px;font-size:1rem;border-radius:10px}
 
-  /* Settings dialog — full screen on mobile */
+  /* --- FAB --- */
+  .mobile-fab{
+    bottom:80px;right:16px;
+    width:50px;height:50px;font-size:1.3rem;
+    box-shadow:0 4px 20px rgba(249,115,22,.4);
+  }
+
+  /* --- Settings dialog --- */
   .settings-dialog{
     width:100vw;max-width:100vw;max-height:100vh;height:100vh;
     border-radius:0;
   }
-  .settings-dialog-body{padding:10px 14px;gap:8px;flex:1}
-  .settings-dialog-header{padding:8px 14px;border-radius:0}
-  .settings-tab{padding:6px 10px;font-size:.7rem}
-  .settings-dialog-footer{padding:10px 14px;border-radius:0}
-  .settings-dialog-title{font-size:.8rem}
+  .settings-dialog-body{padding:12px 16px;gap:10px;flex:1}
+  .settings-dialog-header{padding:10px 16px;border-radius:0}
+  .settings-dialog-title{font-size:.86rem}
+  .settings-tab{padding:8px 14px;font-size:.74rem;border-radius:8px}
+  .settings-dialog-footer{padding:12px 16px;gap:10px;border-radius:0}
+  .field input,.field select{padding:10px 12px;font-size:16px}
+  .btn{padding:11px 18px;font-size:.84rem;border-radius:10px}
+  #setUserProfile{font-size:16px!important;padding:12px!important}
 
-  /* Status bar */
-  .status-bar{font-size:.56rem;padding:2px 0}
+  /* --- Status bar --- */
+  .status-bar{font-size:.6rem;padding:3px 0}
 
-  /* Typing dots */
-  .typing-dots span{width:5px;height:5px}
+  /* --- Typing dots --- */
+  .typing-dots span{width:6px;height:6px}
 
-  /* Copy buttons — always visible on mobile */
-  .copy-btn{opacity:1;padding:5px 10px;font-size:.62rem}
+  /* --- Copy buttons --- */
+  .copy-btn{opacity:1;padding:6px 12px;font-size:.64rem;border-radius:5px}
   .copy-inline{opacity:1}
+
+  /* --- Table cards --- */
+  .table-card{padding:12px 14px;border-radius:10px;gap:6px}
+  .table-card-title{font-size:.82rem}
+  .table-card-field{font-size:.74rem}
 }
 </style>
 </head>
