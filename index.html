@@ -1823,8 +1823,8 @@ function enhanceCopyTargets(contentEl) {
   convertTablesToCards(contentEl);
 
 
-  // Add copy to h1/h2 — copies entire section, not just heading
-  contentEl.querySelectorAll('h1, h2').forEach(function(h) {
+  // Add copy to h1/h2/h3 — copies entire section, not just heading
+  contentEl.querySelectorAll('h1, h2, h3').forEach(function(h) {
     if (h.querySelector('.copy-inline')) return;
     var btn = makeSectionCopyBtn(h);
     h.appendChild(btn);
@@ -1852,7 +1852,7 @@ function makeSectionCopyBtn(heading) {
   btn.title = '复制整段';
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
-    var level = heading.tagName; // 'H1' or 'H2'
+    var level = heading.tagName; // 'H1', 'H2', or 'H3'
     var parts = [];
     var el = heading;
     while (el) {
@@ -1860,8 +1860,9 @@ function makeSectionCopyBtn(heading) {
       el = el.nextElementSibling;
       if (!el) break;
       var tag = el.tagName;
-      if (level === 'H2' && (tag === 'H2' || tag === 'H1')) break;
-      if (level === 'H1' && tag === 'H1') break;
+      if (tag === 'H1') break;
+      if (level === 'H2' && tag === 'H2') break;
+      if (level === 'H3' && (tag === 'H2' || tag === 'H3')) break;
     }
     var text = parts.join('\n\n');
     navigator.clipboard.writeText(text).then(function() {
