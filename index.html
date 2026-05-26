@@ -967,9 +967,9 @@ function getImageRatioInfo(ratio) {
 }
 
 function getVideoLengthInfo(len) {
-  if (len === '15') return { label:'15秒', shots:'1-2个镜头', tip:'一个核心信息点，快节奏开场，适合短视频平台的极短内容' };
-  if (len === '60') return { label:'60秒', shots:'5-8个镜头', tip:'多层次叙事，完整的故事结构，适合深度内容输出' };
-  return { label:'30秒', shots:'3-5个镜头', tip:'标准短视频长度，完整的叙事弧线（开场-发展-收尾）' };
+  if (len === '15') return { label:'15秒', shots:'1-2个镜头', tip:'一个核心信息点，快节奏开场', wordLimit:'总旁白≤60字，每句≤20字' };
+  if (len === '60') return { label:'60秒', shots:'5-8个镜头', tip:'多层次叙事，完整的故事结构', wordLimit:'总旁白≤240字，每句≤35字' };
+  return { label:'30秒', shots:'3-5个镜头', tip:'标准短视频长度，完整的叙事弧线', wordLimit:'总旁白≤120字，每句≤28字' };
 }
 
 // ============================================================
@@ -1368,7 +1368,7 @@ function buildSystemPrompt() {
   var platformGuide = '';
   if (settings.contentType === 'short-video') {
     var vl = getVideoLengthInfo(settings.videoLength);
-    contentTypeInfo = '- 视频时长：' + vl.label + '（' + vl.shots + '，' + vl.tip + '）\n';
+    contentTypeInfo = '- 视频时长：' + vl.label + '（' + vl.shots + '，' + vl.wordLimit + '，' + vl.tip + '）\n';
 
     platformGuide =
       '## 短视频脚本格式要求（必须严格遵守）\n\n' +
@@ -1390,7 +1390,8 @@ function buildSystemPrompt() {
       '- 必须使用' + lang + '\n' +
       '- 口语化、有语气词、有情绪起伏\n' +
       '- 每句旁白和画面动作配合，不要两张皮\n' +
-      '- 关键词要加重，有停顿感\n\n' +
+      '- 关键词要加重，有停顿感\n' +
+      '- **口播字数限制（必须遵守）：' + vl.wordLimit + '**。所有镜头旁白字数加起来不得超过上限。每句旁白要短，用短句、口语词、停顿来填充时长，不要堆砌信息\n\n' +
       '### 参考示例格式\n' +
       '```\n脚本：饮水机冷水口的细菌是热水口的6倍（约14秒）\n选题类型：科普知识\n\n' +
       '【0-3秒】中景。女主角站在饮水机旁弯腰，手指在冷水口和热水口之间来回点，抬头看镜头，表情狡黠像在出题考人。\n' +
@@ -1409,7 +1410,10 @@ function buildSystemPrompt() {
       '- 比例：9:16 竖屏\n- 时长：' + vl.label + '\n- 景别：中近景为主，特写切细节\n' +
       '- 语速：中快，关键词加重\n- 光线：自然暖光\n' +
       '- 机位：固定机位，靠演员前倾/后退变景别\n- 人脸参考：上传主角照片\n```\n\n' +
-      '**重要**：不要写成"一镜到底"的单镜头描述。必须拆分成带时间戳的多个镜头，每个镜头都要有具体的人物动作和旁白台词。';
+      '**重要**：\n' +
+      '1. 不要写成"一镜到底"的单镜头描述。必须拆分成带时间戳的多个镜头\n' +
+      '2. 所有旁白字数总和必须≤' + vl.label + '对应的字数上限。口播语速约4字/秒，如果内容太多会念不完。宁可少写两句，也要保证语速正常\n' +
+      '3. 如果时长只有15秒，只讲一个核心信息点，不要试图讲多个点。30秒讲2-3个点，60秒可以讲完整故事';
   } else if (settings.contentType === 'image-text') {
     var ri = getImageRatioInfo(settings.imageRatio);
     contentTypeInfo = '- 图片风格倾向：' + settings.imageStyle + '\n- 图片比例：' + ri.label + '（' + ri.width + '×' + ri.height + 'px）\n';
