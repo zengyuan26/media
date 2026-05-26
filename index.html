@@ -164,6 +164,42 @@ input,select,textarea,button{font-family:inherit}
 .topic-gen-desc{font-size:.68rem;color:#78716c;margin-top:2px}
 .topic-gen-arrow{font-size:1rem;color:#d97706;flex-shrink:0}
 
+/* Keyword chips (topic generation flow) */
+.keyword-chips-wrap{
+  margin:12px 0;padding:14px 16px;
+  background:#fffbeb;border:1px solid #e7e5e4;border-radius:12px;
+}
+.keyword-chips-hint{
+  font-size:.75rem;color:#78716c;margin-bottom:10px;text-align:center;
+}
+.keyword-chips{
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;
+  justify-content:center;
+}
+.keyword-chip{
+  padding:7px 14px;border:1.5px solid #d6d3d1;border-radius:20px;
+  background:#fff;color:#57534e;font-size:.76rem;font-weight:500;
+  cursor:pointer;transition:all .15s;user-select:none;
+}
+.keyword-chip:hover{border-color:#d97706;background:#fef3c7;color:#92400e}
+.keyword-chip.active{
+  border-color:#d97706;background:#d97706;color:#fff;font-weight:600;
+  box-shadow:0 2px 6px rgba(217,119,6,.25);
+}
+.generate-topics-btn{
+  display:block;width:100%;padding:10px 20px;
+  border:none;border-radius:10px;
+  background:#d6d3d1;color:#78716c;
+  font-size:.8rem;font-weight:600;cursor:pointer;
+  transition:all .15s;
+}
+.generate-topics-btn:not(:disabled){
+  background:#d97706;color:#fff;
+  box-shadow:0 2px 8px rgba(217,119,6,.2);
+}
+.generate-topics-btn:not(:disabled):hover{background:#b45309}
+.generate-topics-btn:disabled{cursor:not-allowed;opacity:.6}
+
 /* Topic type groups */
 .topic-group{margin-bottom:16px}
 .topic-group-header{
@@ -557,6 +593,12 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
   }
   .topic-gen-title{font-size:.86rem}
   .topic-gen-desc{font-size:.72rem}
+
+  .keyword-chips-wrap{margin:10px 0;padding:12px 14px;border-radius:10px}
+  .keyword-chips-hint{font-size:.72rem}
+  .keyword-chips{gap:6px;margin-bottom:10px}
+  .keyword-chip{padding:9px 16px;font-size:.78rem;min-height:44px;display:flex;align-items:center}
+  .generate-topics-btn{padding:12px 20px;font-size:.82rem;border-radius:10px;min-height:46px}
 
   /* --- Message avatars & time --- */
   .msg-avatar{width:32px;height:32px;font-size:.8rem;border-radius:8px}
@@ -1283,6 +1325,31 @@ function bindEvents() {
 
   // Scenario card clicks (both empty state and chat area)
   document.getElementById('chatArea').addEventListener('click', function(e) {
+    // Keyword chip toggle
+    var chip = e.target.closest('.keyword-chip');
+    if (chip) {
+      chip.classList.toggle('active');
+      var wrap = chip.closest('.keyword-chips-wrap');
+      var anyActive = wrap.querySelectorAll('.keyword-chip.active').length > 0;
+      var genBtn = wrap.querySelector('.generate-topics-btn');
+      genBtn.disabled = !anyActive;
+      return;
+    }
+
+    // Generate topics button
+    var genBtn = e.target.closest('.generate-topics-btn');
+    if (genBtn && !genBtn.disabled) {
+      var wrap2 = genBtn.closest('.keyword-chips-wrap');
+      var activeChips = wrap2.querySelectorAll('.keyword-chip.active');
+      var selected = [];
+      activeChips.forEach(function(c) { selected.push(c.dataset.keyword); });
+      // Remove the chips wrap
+      wrap2.remove();
+      generateTopicsFromKeywords(selected);
+      return;
+    }
+
+    // Scenario card click
     var card = e.target.closest('.scenario-card');
     if (!card) return;
     if (!settings.apiKey) {
@@ -1605,6 +1672,16 @@ function buildSystemPrompt() {
     '- 当前季节：' + sc.season + '（可关联热点：' + sc.themes + '）\n\n' +
     platformGuide + '\n\n' +
     '## 选题推荐规则（当用户要求推荐选题时必须遵守）\n\n' +
+    (function() {
+      var recent = getRecentTopicTitles(settings.contentType, 30);
+      if (recent.length === 0) return '';
+      var s = '### ⚠️ 已生成过的选题（禁止重复，必须避开）\n以下选题之前已经推荐给用户过，**绝对不要**再次推荐这些标题或高度相似的角度：\n';
+      for (var i = 0; i < recent.length; i++) {
+        s += '- ' + recent[i] + '\n';
+      }
+      s += '\n请推荐全新的、不在上述列表中的选题。如果实在没有新的角度，请用完全不同的切入点重新构思。\n\n';
+      return s;
+    })() +
     '**核心原则：选题标题必须是具体的、可直接作为视频标题的角度，而不是选题类型的分类名。**\n\n' +
     '❌ 错误示例：\n' +
     '> 选题一：专业避坑指南\n' +
@@ -1740,6 +1817,171 @@ function buildSystemPrompt() {
     '- 每次输出提示词后，简要说明如何使用（复制到哪个平台、注意什么）';
 }
 
+// ============================================================
+// KEYWORD-FIRST TOPIC GENERATION
+// ============================================================
+
+function buildKeywordSystemPrompt() {
+  var ct = settings.contentType;
+  var biz = settings.bizName || '这个领域';
+  var styleHint = '';
+  if (ct === 'short-video') {
+    styleHint = '关键词偏向热点话题、视觉冲击、快节奏内容方向';
+  } else if (ct === 'image-text') {
+    styleHint = '关键词偏向种草推荐、对比选择、生活方式方向';
+  } else {
+    styleHint = '关键词偏向深度分析、系统知识、行业洞察方向';
+  }
+  return '你是一个选题关键词生成器。用户业务是「' + biz + '」，内容类型是' +
+    (ct === 'short-video' ? '短视频' : ct === 'image-text' ? '图文' : '长文') + '。\n\n' +
+    '请生成12-20个关键词/短语，作为选题方向的种子词。要求：\n' +
+    '- 每个关键词2-8个字\n' +
+    '- 覆盖不同方向：痛点、科普、故事、推荐、对比、避坑、热点、情感等\n' +
+    '- ' + styleHint + '\n' +
+    '- 避免过于泛化的词（如"生活""日常"）\n' +
+    '- 优先长尾、具体的角度词\n\n' +
+    '只输出纯JSON数组格式，不要任何解释、markdown或代码块：\n' +
+    '["关键词1", "关键词2", ...]';
+}
+
+function parseKeywords(text) {
+  // Try direct JSON parse first
+  try {
+    var arr = JSON.parse(text.trim());
+    if (Array.isArray(arr) && arr.length > 0) return arr.filter(function(x) { return typeof x === 'string' && x.trim(); });
+  } catch(e) {}
+  // Try to extract JSON array from text
+  var m = text.match(/\[([^\]]*)\]/s);
+  if (m) {
+    try {
+      var arr2 = JSON.parse('[' + m[1] + ']');
+      if (Array.isArray(arr2) && arr2.length > 0) return arr2.filter(function(x) { return typeof x === 'string' && x.trim(); });
+    } catch(e2) {}
+  }
+  // Fallback: split by lines, filter numbered items
+  var lines = text.split(/[\n,，、]+/);
+  return lines.map(function(l) {
+    return l.replace(/^\d+[\.\、\)\s]+/, '').replace(/^["'""''「」]|["'""''「」]$/g, '').trim();
+  }).filter(function(l) { return l.length >= 2 && l.length <= 20; });
+}
+
+// --- Topic History (localStorage) ---
+function loadTopicHistory() {
+  try {
+    var raw = localStorage.getItem('zimeiti-v2-topic-history');
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function saveTopicHistory(titles, ct) {
+  var history = loadTopicHistory();
+  if (!history[ct]) history[ct] = [];
+  for (var i = 0; i < titles.length; i++) {
+    var t = titles[i].trim();
+    if (t && history[ct].indexOf(t) === -1) {
+      history[ct].unshift(t);
+    }
+  }
+  // Keep last 100 per content type
+  if (history[ct].length > 100) history[ct] = history[ct].slice(0, 100);
+  try { localStorage.setItem('zimeiti-v2-topic-history', JSON.stringify(history)); } catch(e) {}
+}
+
+function getRecentTopicTitles(ct, maxCount) {
+  var history = loadTopicHistory();
+  var titles = history[ct] || [];
+  return titles.slice(0, maxCount || 30);
+}
+
+function extractTopicTitles(text) {
+  var titles = [];
+  // Match numbered topic titles: "选题一：xxx" "1. **xxx**" "### 选题" etc
+  var patterns = [
+    /选题[一二三四五六七八九十\d]+[：:]\s*(.+?)(?:\n|$)/g,
+    /\d+[\.\、]\s*\*{0,2}(.+?)\*{0,2}\s*(?:\n|$)/g,
+    /推荐选题[：:]\s*(.+?)(?:\n|$)/g,
+  ];
+  for (var p = 0; p < patterns.length; p++) {
+    var m;
+    while ((m = patterns[p].exec(text)) !== null) {
+      var t = m[1].trim();
+      if (t.length > 4 && t.length < 100 && titles.indexOf(t) === -1) {
+        titles.push(t);
+      }
+    }
+  }
+  // Also try to extract bolded titles like **xxx**
+  if (titles.length === 0) {
+    var boldRe = /\*\*(.+?)\*\*/g;
+    var bm;
+    while ((bm = boldRe.exec(text)) !== null) {
+      var bt = bm[1].trim();
+      if (bt.length > 5 && bt.length < 80 && titles.indexOf(bt) === -1) {
+        titles.push(bt);
+      }
+    }
+    // Only keep first 5 (most likely to be topic titles)
+    titles = titles.slice(0, 5);
+  }
+  return titles;
+}
+
+// --- Render keyword chips in chat ---
+function renderKeywordChips(keywords) {
+  var chatArea = document.getElementById('chatArea');
+  var wrap = document.createElement('div');
+  wrap.className = 'keyword-chips-wrap';
+
+  var hint = document.createElement('div');
+  hint.className = 'keyword-chips-hint';
+  hint.textContent = '选择你感兴趣的关键词（可多选），然后点击生成选题';
+  wrap.appendChild(hint);
+
+  var chipsDiv = document.createElement('div');
+  chipsDiv.className = 'keyword-chips';
+  for (var i = 0; i < keywords.length; i++) {
+    var chip = document.createElement('button');
+    chip.className = 'keyword-chip';
+    chip.textContent = keywords[i];
+    chip.dataset.keyword = keywords[i];
+    chipsDiv.appendChild(chip);
+  }
+  wrap.appendChild(chipsDiv);
+
+  var genBtn = document.createElement('button');
+  genBtn.className = 'generate-topics-btn';
+  genBtn.textContent = '✨ 根据选中的关键词生成选题';
+  genBtn.disabled = true;
+  wrap.appendChild(genBtn);
+
+  chatArea.appendChild(wrap);
+  scrollToBottom();
+}
+
+// --- Send keywords to LLM for topic generation ---
+function generateTopicsFromKeywords(keywords) {
+  var biz = settings.bizName || '这个领域';
+  var ct = settings.contentType;
+  var ctLabel = ct === 'short-video' ? '短视频' : ct === 'image-text' ? '图文' : '长文';
+  var recentTitles = getRecentTopicTitles(ct, 30);
+
+  var historyBlock = '';
+  if (recentTitles.length > 0) {
+    historyBlock = '\n\n## ⚠️ 已生成过的选题（必须避开，不要重复推荐）\n以下选题之前已经推荐过了，请务必避开这些标题和相似角度，推荐全新的选题：\n';
+    for (var i = 0; i < recentTitles.length; i++) {
+      historyBlock += '- ' + recentTitles[i] + '\n';
+    }
+    historyBlock += '\n如果实在没有新的角度可以覆盖这些关键词，可以在选题标题后标注「（该角度已覆盖最优选题）」并尝试从完全不同的切入点来写。\n';
+  }
+
+  var prompt = '请帮我分析「' + biz + '」这个领域的' + ctLabel + '内容。\n\n' +
+    '用户选中的关键词方向：' + keywords.join('、') + '\n\n' +
+    '请根据这些关键词方向，推荐5个具体的爆款选题。每个选题要说明：选题类型（痛点解决/科普知识/讲故事等）、选题标题、推荐理由、适合用什么人设来做、目标关键词。' +
+    historyBlock;
+
+  sendToLLM(prompt, false);
+}
+
 function addMessage(role, content) {
   var msg = { role: role, content: content, time: new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }) };
   messages.push(msg);
@@ -1822,6 +2064,24 @@ function finishStreaming(msg) {
   msg._contentEl.innerHTML = msg._html;
   msg._contentEl.querySelectorAll('pre').forEach(function(pre) { addCopyButton(pre); });
   enhanceCopyTargets(msg._contentEl);
+
+  // Keyword generation mode: parse keywords and render chips
+  if (msg._isKeywordGen) {
+    var keywords = parseKeywords(msg.content);
+    if (keywords.length > 0) {
+      renderKeywordChips(keywords);
+    }
+  } else {
+    // Try to extract and save topic titles from topic generation results
+    var contentLower = msg.content.toLowerCase();
+    if (contentLower.indexOf('选题') !== -1 || contentLower.indexOf('推荐') !== -1) {
+      var titles = extractTopicTitles(msg.content);
+      if (titles.length > 0) {
+        saveTopicHistory(titles, settings.contentType);
+      }
+    }
+  }
+
   scrollToBottom();
   updateGenerateBtn();
   updateStatusBar();
@@ -2258,7 +2518,13 @@ function sendMessage() {
   isGenerating = true;
   updateSendButton();
 
-  // Check if web search should be performed for topic generation
+  // Keyword-first topic generation: route to keyword gen mode
+  if (/分析.*推荐.*选题|推荐.*选题|生成.*选题|帮我.*选题/.test(text) && /选题/.test(text)) {
+    sendToLLM(text, true);
+    return;
+  }
+
+  // Check if web search should be performed for other topic-related queries
   if (settings.searchEnabled && settings.bizName && /选题|推荐|趋势|热点|蓝海|SEO|搜索|关键词|爆款/.test(text)) {
     updateStatusBar('正在搜索真实搜索趋势和SEO数据…');
     performWebSearch(settings.bizName, settings.contentType).then(function(searchData) {
@@ -2274,14 +2540,17 @@ function sendMessage() {
   }
 }
 
-function sendToLLM(text) {
+function sendToLLM(text, isKeywordGen) {
   updateStatusBar('生成中…');
 
   addMessage('user', text);
   var assistantMsg = addStreamingMessage();
 
+  var systemPrompt = isKeywordGen ? buildKeywordSystemPrompt() : buildSystemPrompt();
+  assistantMsg._isKeywordGen = !!isKeywordGen;
+
   var apiMessages = [
-    { role: 'system', content: buildSystemPrompt() },
+    { role: 'system', content: systemPrompt },
   ];
   for (var i = 0; i < messages.length; i++) {
     var m = messages[i];
