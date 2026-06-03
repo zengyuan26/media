@@ -724,6 +724,14 @@ h1:hover .copy-inline,h2:hover .copy-inline,p:hover .copy-inline,
       </div>
     </div>
 
+    <div class="sidebar-section" id="sbSubtitleGroup">
+      <div class="sidebar-label">💬 字幕</div>
+      <div class="sidebar-chips" id="sbSubtitle">
+        <div class="sidebar-chip active" data-value="1">开</div>
+        <div class="sidebar-chip" data-value="0">关</div>
+      </div>
+    </div>
+
     <div class="sidebar-section" id="sbImageStyleGroup" style="display:none">
       <div class="sidebar-label">🎨 图片风格</div>
       <div class="sidebar-chips" id="sbImageStyle">
@@ -1040,6 +1048,7 @@ var DEFAULT_SETTINGS = {
   bizName: '',
   contentType: 'short-video',
   videoLength: '30',
+  subtitleEnabled: true,
   imageStyle: '摄影写实',
   imageRatio: '1:1',
   articleLength: '中篇~2000字',
@@ -1096,6 +1105,9 @@ function syncSidebarToSettings() {
   var vlEl = document.querySelector('#sbVideoLength .sidebar-chip.active');
   if (vlEl) settings.videoLength = vlEl.dataset.value;
 
+  var subEl = document.querySelector('#sbSubtitle .sidebar-chip.active');
+  if (subEl) settings.subtitleEnabled = subEl.dataset.value === '1';
+
   var isEl = document.querySelector('#sbImageStyle .sidebar-chip.active');
   if (isEl) settings.imageStyle = isEl.dataset.value;
 
@@ -1125,6 +1137,7 @@ function applyAllSettings() {
 
   setActiveChip('#sbContentType', settings.contentType);
   setActiveChip('#sbVideoLength', settings.videoLength);
+  setActiveChip('#sbSubtitle', settings.subtitleEnabled ? '1' : '0');
   setActiveChip('#sbImageStyle', settings.imageStyle);
   setActiveChip('#sbImageRatio', settings.imageRatio);
   setActiveChip('#sbArticleLength', settings.articleLength);
@@ -1155,6 +1168,7 @@ function setActiveChip(groupSelector, value) {
 function updateConditionalFields() {
   var ct = settings.contentType;
   document.getElementById('sbVideoLengthGroup').style.display = ct === 'short-video' ? 'flex' : 'none';
+  document.getElementById('sbSubtitleGroup').style.display = ct === 'short-video' ? 'flex' : 'none';
   document.getElementById('sbImageStyleGroup').style.display = ct === 'image-text' ? 'flex' : 'none';
   document.getElementById('sbImageRatioGroup').style.display = ct === 'image-text' ? 'flex' : 'none';
   document.getElementById('sbArticleLengthGroup').style.display = ct === 'long-article' ? 'flex' : 'none';
@@ -1526,6 +1540,15 @@ function buildSystemPrompt() {
       '- 关键词要加重，有停顿感\n' +
       '- **口播字数限制（必须遵守）：' + vl.wordLimit + '**。口播语速约4字/秒。每段15秒的旁白必须≤60字，每句≤20字。用短句、口语词、停顿来填充时长，不要堆砌信息\n\n';
 
+    var subtitleRequirement = settings.subtitleEnabled ?
+      '### 字幕要求（屏幕叠加字幕）\n' +
+      '- **必须为每句旁白标注对应的字幕内容**，格式：`字幕："逐词拆分的字幕文本"`\n' +
+      '- 字幕按旁白节奏拆分，每段2-5个字，用 `/` 分隔断句点（如 `字幕："饮水机哪边最脏 / 不是热水口 / 是冷水口"`）\n' +
+      '- 字幕位置：画面中下部偏上，避免遮挡关键画面\n' +
+      '- 字幕风格：白字黑边/黑底白字，匹配短视频平台默认字幕样式\n' +
+      '- 字幕和旁白必须一一对应，不要漏句或多句\n\n' :
+      '### 字幕\n用户选择不添加字幕，不要输出字幕相关内容。\n\n';
+
     var multiSegExample = segCount > 1 ?
       '### 参考示例（' + vl.label + ' / ' + segCount + '段）\n' +
       '```\n' +
@@ -1605,6 +1628,7 @@ function buildSystemPrompt() {
       outputStructure +
       sceneRequirement +
       narrationRequirement +
+      subtitleRequirement +
       multiSegExample +
       importantRules;
   } else if (settings.contentType === 'image-text') {
