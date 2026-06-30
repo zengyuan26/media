@@ -1093,12 +1093,14 @@ function parseLink() {
   var isUrl = /^https?:\/\//.test(input) || /douyin\.com/i.test(input) || /jimeng/i.test(input);
 
   if (isUrl) {
-    // Try to fetch the link content first
     addCopyChatMessage('system', '🔍 正在获取链接内容…');
     fetchLinkContent(input, function(fetchErr, content) {
       if (fetchErr || !content) {
-        btn.textContent = '🗑 清空'; btn.classList.add('clear-mode'); btn.disabled = false;
-        addCopyChatMessage('error', '无法获取链接内容。\n\n可能原因：\n1. 平台限制外部访问\n2. 链接需要登录才能查看\n\n💡 建议：直接粘贴视频的文案/脚本文字，一样可以分析。');
+        btn.textContent = '🔍 解析文本'; btn.classList.remove('clear-mode'); btn.disabled = false;
+        document.getElementById('remixInput').value = '';
+        document.getElementById('remixInput').placeholder = '链接无法自动获取。请手动复制视频的文案/脚本文字，粘贴到这里…';
+        document.getElementById('remixInput').focus();
+        addCopyChatMessage('system', '⚠️ 链接内容无法自动获取（平台限制外部访问）。\n\n✅ **解决方法**：在抖音/即梦里复制视频文案，粘贴到上方输入框，点击「🔍 解析文本」即可。\n\n分析效果和解析链接完全一样。');
         return;
       }
       doAnalyze(content, false);
@@ -1137,37 +1139,36 @@ function addCopyChatMessage(role, content) {
 }
 
 function fetchLinkContent(url, callback) {
-  // AbortSignal.timeout fallback for older browsers
+  var CORS_PROXIES = [
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?',
+  ];
   function fetchWithTimeout(u, ms) {
     var ctrl = new AbortController();
     var timer = setTimeout(function() { ctrl.abort(); }, ms);
     return fetch(u, { signal: ctrl.signal }).finally(function() { clearTimeout(timer); });
   }
-  // Try direct fetch first — many public sites allow CORS
-  fetchWithTimeout(url, 8000)
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.text();
-    })
-    .then(function(html) {
-      var text = extractTextFromHtml(html);
-      if (text.length < 50 || /^Error/i.test(text) || /not found/i.test(text)) {
-        throw new Error('no usable content');
-      }
-      callback(null, text.slice(0, 4000));
-    })
-    .catch(function() {
-      // Fallback: try corsproxy.io
-      var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-      fetchWithTimeout(proxyUrl, 8000)
-        .then(function(r) { if (!r.ok) throw new Error('proxy failed'); return r.text(); })
-        .then(function(html) {
-          var text = extractTextFromHtml(html);
-          if (text.length < 50 || /^Error/i.test(text)) { callback('无法获取链接内容，请直接粘贴视频脚本文本', null); return; }
-          callback(null, text.slice(0, 4000));
-        })
-        .catch(function(e) { callback('无法获取链接内容（链接可能需要登录或平台限制外部访问）。\n💡 建议直接粘贴视频的文案/脚本文字，分析效果一样好。', null); });
-    });
+
+  // Try direct + each proxy in sequence
+  var attempts = [url].concat(CORS_PROXIES.map(function(p) { return p + encodeURIComponent(url); }));
+  var idx = 0;
+
+  function tryNext() {
+    if (idx >= attempts.length) {
+      callback('link_failed', null);
+      return;
+    }
+    var u = attempts[idx++];
+    fetchWithTimeout(u, 6000)
+      .then(function(r) { if (!r.ok) throw new Error('status ' + r.status); return r.text(); })
+      .then(function(html) {
+        var text = extractTextFromHtml(html);
+        if (text.length < 80) throw new Error('too short');
+        callback(null, text.slice(0, 4000));
+      })
+      .catch(function() { tryNext(); });
+  }
+  tryNext();
 }
 
 function extractTextFromHtml(html) {
@@ -1599,6 +1600,26 @@ function bindEvents() {
     hintEl.textContent = '✓ 已保存';
     updateProfilePreviewOnMePage();
     setTimeout(function() { hintEl.textContent = ''; }, 2000);
+  });
+
+  // API config save button (in settings overlay)
+  var btnSaveApi = document.getElementById('btnSaveApiConfig');
+  var apiHintEl = document.getElementById('apiConfigSaveHint');
+  if (btnSaveApi) btnSaveApi.addEventListener('click', function() {
+    syncMeToSettings();
+    if (typeof sbUser !== 'undefined' && sbUser) sbSaveApiConfig();
+    updateSendButton();
+    updateStatusBar();
+    apiHintEl.textContent = '✓ API 配置已保存';
+    btnSaveApi.textContent = '✓ 已保存';
+    btnSaveApi.style.background = '#c5e0d5';
+    btnSaveApi.style.color = '#3d7a6e';
+    setTimeout(function() {
+      apiHintEl.textContent = '';
+      btnSaveApi.textContent = '💾 保存 API 配置';
+      btnSaveApi.style.background = '';
+      btnSaveApi.style.color = '';
+    }, 2000);
   });
 
   // Update profile preview on me page
