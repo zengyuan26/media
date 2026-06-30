@@ -1690,9 +1690,6 @@ function updateStatusBar(msg) {
     showOnboarding();
   }
 
-  document.getElementById('btnSkipLogin').addEventListener('click', function() {
-    dismissLoginPage();
-  });
 
   // Login tab switching
   var loginMode = 'login';
