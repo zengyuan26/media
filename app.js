@@ -1093,18 +1093,14 @@ function parseLink() {
   var isUrl = /^https?:\/\//.test(input) || /douyin\.com/i.test(input) || /jimeng/i.test(input);
 
   if (isUrl) {
-    addCopyChatMessage('system', '🔍 正在获取链接内容…');
-    fetchLinkContent(input, function(fetchErr, content) {
-      if (fetchErr || !content) {
-        btn.textContent = '🔍 解析文本'; btn.classList.remove('clear-mode'); btn.disabled = false;
-        document.getElementById('remixInput').value = '';
-        document.getElementById('remixInput').placeholder = '链接无法自动获取。请手动复制视频的文案/脚本文字，粘贴到这里…';
-        document.getElementById('remixInput').focus();
-        addCopyChatMessage('system', '⚠️ 链接内容无法自动获取（平台限制外部访问）。\n\n✅ **解决方法**：在抖音/即梦里复制视频文案，粘贴到上方输入框，点击「🔍 解析文本」即可。\n\n分析效果和解析链接完全一样。');
-        return;
-      }
-      doAnalyze(content, false);
-    });
+    // Don't try to fetch — Douyin/Jimeng block CORS, and proxies are unreliable in China.
+    // Instead, immediately guide user to paste the video script text.
+    btn.textContent = '🔍 解析文本'; btn.disabled = false;
+    document.getElementById('remixInput').value = '';
+    document.getElementById('remixInput').placeholder = '请复制视频的文案/脚本文字，粘贴到这里…';
+    document.getElementById('remixInput').focus();
+    addCopyChatMessage('system', '📋 检测到链接。抖音/即梦等平台限制外部访问，无法自动获取内容。\n\n✅ **请这样做**：在抖音/即梦中打开视频 → 复制视频文案 → 粘贴到上方输入框 → 点击「🔍 解析文本」\n\n💡 分析效果和解析链接完全一样，而且更准确。');
+    return;
   } else {
     doAnalyze(input, false);
   }
