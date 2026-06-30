@@ -50,7 +50,7 @@ async function sbGetSession() { return sbUser ? { user: sbUser } : null; }
 async function sbLoadProfile() {
   if (!sbUser) return null;
   if (!sb) return null;
-  var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _n;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').select('*').eq('id', sbUser.id).single());
   if (!r || r.error || !r.data) return null;
   var p = r.data;
@@ -64,6 +64,7 @@ async function sbLoadProfile() {
   settings.bgmEnabled = (_j = p.bgm_enabled) !== null && _j !== void 0 ? _j : true;
   settings.searchEnabled = (_k = p.search_enabled) !== null && _k !== void 0 ? _k : true;
   settings.userProfile = (_l = p.user_profile) !== null && _l !== void 0 ? _l : '';
+  if (p.onboarding_done) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
   return p;
 }
 
@@ -82,6 +83,7 @@ async function sbSaveProfile() {
     bgm_enabled: settings.bgmEnabled,
     search_enabled: settings.searchEnabled,
     user_profile: settings.userProfile,
+    onboarding_done: localStorage.getItem('zimeiti-v3-onboarding-done') === '1',
     updated_at: new Date().toISOString()
   }));
 }
@@ -98,8 +100,14 @@ async function sbLoadApiConfig() {
     settings.endpoint = (_c = r.data.endpoint) !== null && _c !== void 0 ? _c : 'https://api.deepseek.com/v1';
     settings.model = (_d = r.data.model) !== null && _d !== void 0 ? _d : 'deepseek-chat';
     settings.customModel = (_e = r.data.custom_model) !== null && _e !== void 0 ? _e : '';
-    saveSettingsToStorage();
+  } else {
+    // No cloud data for this user — clear API config
+    settings.apiKey = '';
+    settings.endpoint = 'https://api.deepseek.com/v1';
+    settings.model = 'deepseek-chat';
+    settings.customModel = '';
   }
+  saveSettingsToStorage();
 }
 
 async function sbSaveApiConfig() {

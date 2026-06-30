@@ -1772,7 +1772,6 @@ function updateStatusBar(msg) {
   async function loadAllFromCloud() {
     if (!sb) return;
     try { await sbLoadProfile(); } catch(e) {}
-    if (settings.bizName) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
     try { await sbLoadApiConfig(); } catch(e) {}
     try { await sbLoadCharacters(); } catch(e) {}
     try { await sbLoadScenes(); } catch(e) {}
