@@ -183,58 +183,73 @@ h1:hover .copy-inline,h2:hover .copy-inline,.copy-inline.always-show{opacity:1}
 /* ============================================================
    CREATE & REMIX TABS
    ============================================================ */
-#tabCreate,#tabRemix{background:#f7f3ed;padding:18px 20px;gap:16px;overflow-y:auto}
-.create-textarea{width:100%;resize:none;min-height:90px;line-height:1.6;font-size:1rem;border-radius:12px;padding:14px 16px}
+#tabCreate,#tabRemix{background:#f7f3ed;flex-direction:column;overflow:hidden}
+.create-scroll{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:18px}
+.create-bottom{
+  flex-shrink:0;padding:12px 18px 16px;
+  background:#f7f3ed;border-top:1px solid #e8e2d8;
+  display:flex;flex-direction:column;gap:10px;
+}
+.create-textarea{width:100%;resize:none;min-height:80px;line-height:1.6;font-size:1rem;border-radius:12px;padding:12px 14px}
 .create-textarea::placeholder{color:#b5aca0}
-.create-actions{display:flex;gap:10px}
 .create-btn{
   padding:14px 20px;border:1.5px solid #e0d8ce;border-radius:12px;
   background:#fff;color:#6b6258;font-size:.88rem;font-weight:500;
   cursor:pointer;transition:all .15s;white-space:nowrap;
 }
 .create-btn:hover{background:#f5f2ec;border-color:#c5bdb0}
-.create-btn.primary{background:#5b9a8b;color:#fff;border:none;font-weight:600;flex:1;font-size:.92rem}
+.create-btn.primary{background:#5b9a8b;color:#fff;border:none;font-weight:600;font-size:.92rem}
 .create-btn.primary:hover{background:#4d8a7a}
 .create-btn.primary:disabled{opacity:.35;cursor:not-allowed}
 
-/* Asset box */
-.asset-box{background:#fff;border:1.5px solid #e8e2d8;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
-.asset-box-title{font-size:.75rem;font-weight:700;color:#a09888;text-transform:uppercase;letter-spacing:.04em}
-.asset-label{font-size:.7rem;color:#b5aca0;font-weight:500}
-.asset-grid{display:flex;flex-wrap:wrap;gap:10px}
-.asset-item{
+/* Asset rows in create/remix tabs */
+.asset-row{display:flex;flex-direction:column;gap:10px}
+.asset-row-label{font-size:.82rem;font-weight:600;color:#6b6258}
+.asset-icon-grid{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.asset-icon-grid .asset-item{
   display:flex;flex-direction:column;align-items:center;gap:6px;
-  width:68px;padding:10px 6px;border-radius:12px;cursor:pointer;
-  transition:all .15s;border:1.5px solid transparent;user-select:none;
+  padding:4px;border-radius:14px;cursor:pointer;
+  transition:all .15s;border:2px solid transparent;user-select:none;
 }
-.asset-item:hover{background:#f5f2ec}
-.asset-item.active{border-color:#5b9a8b;background:#f0f7f4}
-.asset-item .asset-icon{
-  width:44px;height:44px;border-radius:12px;
+.asset-icon-grid .asset-item:hover{background:#f0ece4}
+.asset-icon-grid .asset-item.active{border-color:#5b9a8b;background:#f0f7f4}
+.asset-icon-grid .asset-item .asset-icon{
+  width:52px;height:52px;border-radius:14px;
   background:#ede8e1;display:flex;align-items:center;justify-content:center;
-  font-size:1.3rem;
+  font-size:1.4rem;
 }
-.asset-item .asset-name{font-size:.65rem;color:#8a8278;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-.asset-item.active .asset-icon{box-shadow:0 0 0 2px #5b9a8b}
-.asset-item.active .asset-name{color:#4d8a7a;font-weight:600}
-.asset-item.add-new .asset-icon{background:transparent;border:2px dashed #d5cec0;font-size:1.5rem;color:#b5aca0}
+.asset-icon-grid .asset-item.active .asset-icon{box-shadow:0 0 0 2px #5b9a8b}
+.asset-icon-grid .asset-item .asset-name{font-size:.68rem;color:#8a8278;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.asset-icon-grid .asset-item.active .asset-name{color:#4d8a7a;font-weight:600}
+/* Add-new placeholder circle */
+.asset-icon-grid .asset-add{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:4px;border-radius:14px;cursor:pointer;user-select:none;
+}
+.asset-icon-grid .asset-add .asset-icon{
+  width:52px;height:52px;border-radius:50%;
+  border:2px dashed #d5cec0;display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;color:#b5aca0;transition:all .15s;
+}
+.asset-icon-grid .asset-add:hover .asset-icon{border-color:#5b9a8b;color:#5b9a8b;background:#f0f7f4}
+.asset-icon-grid .asset-add .asset-name{font-size:.65rem;color:#a09888}
 
 /* Remix tab */
-.remix-body{display:flex;flex-direction:column;gap:12px;flex:1}
 .copy-parse-btn{
-  width:100%;padding:14px;border:1.5px solid #5b9a8b;border-radius:12px;
+  padding:14px;border:1.5px solid #5b9a8b;border-radius:12px;
   background:#f0f7f4;color:#4d8a7a;font-size:.88rem;font-weight:600;
   cursor:pointer;transition:all .15s;
 }
 .copy-parse-btn:hover{background:#dcebe4}
 .copy-parse-btn:disabled{opacity:.4;cursor:not-allowed}
 .copy-parse-btn.clear-mode{background:#fce4e4;border-color:#e57373;color:#e57373}
-.copy-chat-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:200px;padding:14px;background:#fff;border:1.5px solid #e8e2d8;border-radius:12px}
+.copy-chat-area{display:flex;flex-direction:column;gap:10px;min-height:100px}
 .copy-chat-area .msg-content{font-size:.88rem}
 .copy-chat-area .msg-content h2{font-size:.92rem}
 .copy-chat-area .msg-content table{font-size:.78rem}
 .copy-chat-area .msg-content table th{background:#f0f7f4;color:#4d8a7a}
-.copy-generate-row{display:flex;flex-direction:column;gap:10px}
+.copy-generate-row{display:none;flex-direction:column;gap:10px}
+.copy-generate-row.open{display:flex}
 
 /* ============================================================
    ME TAB (我的)
@@ -259,6 +274,40 @@ h1:hover .copy-inline,h2:hover .copy-inline,.copy-inline.always-show{opacity:1}
 .me-card-box{background:#fff;border:1.5px solid #e8e2d8;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
 .me-section-head{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:700;color:#6b6258}
 .me-section-badge{font-size:.65rem;padding:2px 8px;border-radius:4px;background:#e8f0ec;color:#5b9a8b;font-weight:500}
+
+/* Asset entry buttons (side by side) */
+.asset-entry-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:18px 12px;border:1.5px solid #e8e2d8;border-radius:14px;
+  cursor:pointer;transition:all .15s;background:#faf7f2;text-align:center;
+}
+.asset-entry-btn:hover{border-color:#5b9a8b;background:#f0f7f4}
+.asset-entry-icon{font-size:1.6rem}
+.asset-entry-label{font-size:.8rem;font-weight:600;color:#4d4a46}
+.asset-entry-count{font-size:.68rem;color:#a09888}
+
+/* Manager list items */
+.mgr-item{
+  display:flex;align-items:center;gap:14px;padding:12px 14px;
+  background:#faf7f2;border-radius:12px;border:1.5px solid #ede8e1;
+}
+.mgr-item:hover{background:#f0ece4}
+.mgr-item-avatar{
+  width:40px;height:40px;border-radius:50%;background:#5b9a8b;
+  display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;color:#fff;
+}
+.mgr-item-info{flex:1;min-width:0}
+.mgr-item-name{font-size:.82rem;font-weight:600;color:#2d2a26}
+.mgr-item-desc{font-size:.7rem;color:#8a8278;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgr-item-badge{font-size:.62rem;padding:2px 8px;border-radius:4px;background:#e8f0ec;color:#5b9a8b;font-weight:500}
+.mgr-item-btn{
+  width:34px;height:34px;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.mgr-item-btn.edit{background:#ede8e1;color:#6b6258}
+.mgr-item-btn.edit:hover{background:#e0d8ce}
+.mgr-item-btn.del{background:#fce4e4;color:#e57373}
+.mgr-item-btn.del:hover{background:#f8d0d0}
 
 /* Sub-tabs */
 .me-subtabs{display:flex;gap:0;border-bottom:1.5px solid #e8e2d8;margin:0 -20px;padding:0 20px}
@@ -357,9 +406,9 @@ h1:hover .copy-inline,h2:hover .copy-inline,.copy-inline.always-show{opacity:1}
 .obo-page.hidden{display:none}
 .obo-inner{
   width:100%;height:100%;
-  display:flex;flex-direction:column;padding:40px 28px 24px;
+  display:flex;flex-direction:column;justify-content:center;padding:40px 28px 24px;
 }
-.obo-steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:40px}
+.obo-steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px}
 .obo-dot{
   width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:.78rem;font-weight:700;background:#e0d8ce;color:#a09888;transition:all .25s;flex-shrink:0;
@@ -368,7 +417,7 @@ h1:hover .copy-inline,h2:hover .copy-inline,.copy-inline.always-show{opacity:1}
 .obo-dot.done{background:#c5e0d5;color:#fff}
 .obo-line{width:48px;height:2px;background:#e0d8ce;margin:0 6px;transition:background .25s}
 .obo-line.done{background:#c5e0d5}
-.obo-panels{flex:1;position:relative;overflow:hidden}
+.obo-panels{position:relative;overflow:hidden;margin-bottom:24px}
 .obo-panel{
   position:absolute;top:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:18px;
   opacity:0;transform:translateX(30px);transition:all .3s;pointer-events:none;text-align:center;
@@ -439,9 +488,14 @@ h1:hover .copy-inline,h2:hover .copy-inline,.copy-inline.always-show{opacity:1}
   .msg.user .msg-content{border-radius:14px 14px 4px 14px}
   .msg.assistant .msg-content{border-radius:14px 14px 14px 4px}
 
-  #tabCreate,#tabRemix{padding:14px 14px;gap:14px}
-  .create-textarea{font-size:16px;padding:14px;min-height:80px}
+  #tabCreate,#tabRemix{overflow:hidden;flex-direction:column}
+  .create-scroll{padding:12px 14px;gap:14px}
+  .create-bottom{padding:10px 14px 14px}
+  .create-textarea{font-size:16px;padding:12px;min-height:70px}
   .create-btn{padding:14px 18px;font-size:.85rem}
+  .asset-icon-grid{gap:10px}
+  .asset-icon-grid .asset-item .asset-icon{width:46px;height:46px}
+  .asset-icon-grid .asset-add .asset-icon{width:46px;height:46px}
 
   .me-scroll{padding:14px 14px;gap:16px}
   .dialog{width:100vw;max-width:100vw;max-height:100vh;max-height:100dvh;height:100vh;height:100dvh;border-radius:0}

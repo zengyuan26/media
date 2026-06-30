@@ -255,8 +255,6 @@ function syncSettingsToMeForm() {
 // SETTINGS SYNC — "我的" Tab ↔ settings
 // ============================================================
 function syncMeToSettings() {
-  var bsEl = document.querySelector('#meBizScope .chip.active');
-  if (bsEl) settings.bizScope = bsEl.dataset.value;
   var pEl = document.getElementById('mePersonaSelect');
   if (pEl) settings.persona = pEl.value;
   settings.language = document.getElementById('meLanguage').value;
@@ -280,7 +278,6 @@ function syncMeToSettings() {
 
 function applyAllSettings() {
   document.getElementById('meBizName').value = settings.bizName;
-  setActiveChip('#meBizScope', settings.bizScope);
   var pSel = document.getElementById('mePersonaSelect'); if (pSel) pSel.value = settings.persona;
   document.getElementById('meLanguage').value = settings.language;
   document.getElementById('meCustomLanguage').value = settings.customLanguage || '';
@@ -425,69 +422,8 @@ function deleteCharacterFromDialog() {
   closeCharacterEditor();
 }
 
-function renderCharacterCards() {
-  var grid = document.getElementById('charGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  for (var i = 0; i < characterProfiles.length; i++) {
-    var ch = characterProfiles[i];
-    var card = document.createElement('div');
-    card.className = 'asset-item';
-    card.dataset.charId = ch.id;
-    var name = ch.name || (ch.type === 'protagonist' ? '主角' : '配角');
-    if (name.length > 4) name = name.slice(0, 4);
-    card.innerHTML =
-      '<div class="asset-icon">' + (ch.type === 'protagonist' ? '👤' : '👥') + '</div>' +
-      '<div class="asset-name">' + escapeHtml(name) + '</div>';
-    card.addEventListener('click', function(e) {
-      grid.querySelectorAll('.asset-item').forEach(function(c) { c.classList.remove('active'); });
-      this.classList.add('active');
-    });
-    grid.appendChild(card);
-  }
-
-  // New button
-  var newCard = document.createElement('div');
-  newCard.className = 'character-card empty';
-  newCard.id = 'charCardNew';
-  newCard.innerHTML = '<div class="char-avatar-new">+</div><div class="char-name">新建</div>';
-  newCard.addEventListener('click', function() { openCharacterEditor(); });
-  grid.appendChild(newCard);
-
-  var hint = document.getElementById('charGrid');
-  hint.style.display = characterProfiles.length > 0 ? 'none' : 'block';
-}
-
-function renderRemixCharacterCards() {
-  var grid = document.getElementById('remixCharGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  for (var i = 0; i < characterProfiles.length; i++) {
-    var ch = characterProfiles[i];
-    var card = document.createElement('div');
-    card.className = 'character-card';
-    card.dataset.charId = ch.id;
-    card.innerHTML =
-      '<div class="char-avatar">' + (ch.type === 'protagonist' ? '👤' : '👥') + '</div>' +
-      '<div class="char-name">' + escapeHtml(ch.name) + '</div>';
-    card.addEventListener('click', function(e) {
-      grid.querySelectorAll('.asset-item').forEach(function(c) { c.classList.remove('active'); });
-      this.classList.add('active');
-    });
-    grid.appendChild(card);
-  }
-
-  var newCard = document.createElement('div');
-  newCard.className = 'asset-item add-new';
-  newCard.innerHTML = '<div class="asset-icon">+</div><div class="asset-name">新建</div>';
-  newCard.addEventListener('click', function() { openCharacterEditor(); });
-  grid.appendChild(newCard);
-
-  var hint = document.getElementById('remixCharGrid');
-  if (hint) hint.style.display = characterProfiles.length > 0 ? 'none' : 'block';
-}
+function renderCharacterCards() { renderAssetGrid('charGrid', 'character'); }
+function renderRemixCharacterCards() { renderAssetGrid('remixCharGrid', 'character'); }
 
 function openSceneEditor() {
   document.getElementById('sceneEditorOverlay').classList.add('open');
@@ -532,57 +468,55 @@ function renderSceneListInEditor() {
   }
   list.innerHTML = html;
 }
-function renderSceneCards() {
-  var grid = document.getElementById('sceneGrid');
+function renderSceneCards() { renderAssetGrid('sceneGrid', 'scene'); }
+function renderRemixSceneCards() { renderAssetGrid('remixSceneGrid', 'scene'); }
+
+function renderAssetGrid(gridId, type) {
+  var grid = document.getElementById(gridId);
   if (!grid) return;
   grid.innerHTML = '';
-  for (var i = 0; i < sceneProfiles.length; i++) {
-    var s = sceneProfiles[i];
-    var card = document.createElement('div');
-    card.className = 'asset-item';
-    card.dataset.sceneId = s.id;
-    var sname = s.name;
-    if (sname.length > 4) sname = sname.slice(0, 4);
-    card.innerHTML = '<div class="asset-icon">🏠</div><div class="asset-name">' + escapeHtml(sname) + '</div>';
-    card.addEventListener('click', function(e) {
-      grid.querySelectorAll('.asset-item').forEach(function(c) { c.classList.remove('active'); });
-      this.classList.add('active');
-    });
-    grid.appendChild(card);
+
+  if (type === 'character') {
+    for (var i = 0; i < characterProfiles.length; i++) {
+      var ch = characterProfiles[i];
+      var name = (ch.name || (ch.type === 'protagonist' ? '主角' : '配角'));
+      if (name.length > 4) name = name.slice(0, 4);
+      var card = document.createElement('div');
+      card.className = 'asset-item';
+      card.dataset.charId = ch.id;
+      card.innerHTML = '<div class="asset-icon">' + (ch.type === 'protagonist' ? '👤' : '👥') + '</div><div class="asset-name">' + escapeHtml(name) + '</div>';
+      card.addEventListener('click', function() {
+        grid.querySelectorAll('.asset-item').forEach(function(c) { c.classList.remove('active'); });
+        this.classList.add('active');
+      });
+      grid.appendChild(card);
+    }
+    var add = document.createElement('div');
+    add.className = 'asset-add';
+    add.innerHTML = '<div class="asset-icon">+</div><div class="asset-name">添加</div>';
+    add.addEventListener('click', function() { openCharacterManager(); });
+    grid.appendChild(add);
+  } else {
+    for (var j = 0; j < sceneProfiles.length; j++) {
+      var s = sceneProfiles[j];
+      var sname = s.name;
+      if (sname.length > 4) sname = sname.slice(0, 4);
+      var sc = document.createElement('div');
+      sc.className = 'asset-item';
+      sc.dataset.sceneId = s.id;
+      sc.innerHTML = '<div class="asset-icon">🏠</div><div class="asset-name">' + escapeHtml(sname) + '</div>';
+      sc.addEventListener('click', function() {
+        grid.querySelectorAll('.asset-item').forEach(function(c) { c.classList.remove('active'); });
+        this.classList.add('active');
+      });
+      grid.appendChild(sc);
+    }
+    var addBtn = document.createElement('div');
+    addBtn.className = 'asset-add';
+    addBtn.innerHTML = '<div class="asset-icon">+</div><div class="asset-name">添加</div>';
+    addBtn.addEventListener('click', function() { openSceneManager(); });
+    grid.appendChild(addBtn);
   }
-  var newCard = document.createElement('div');
-  newCard.className = 'asset-item add-new';
-  newCard.innerHTML = '<div class="asset-icon">+</div><div class="asset-name">新建</div>';
-  newCard.addEventListener('click', function() { openSceneEditor(); });
-  grid.appendChild(newCard);
-  var hint = document.getElementById('sceneGrid');
-  if (hint) hint.style.display = sceneProfiles.length > 0 ? 'none' : 'block';
-}
-function renderRemixSceneCards() {
-  var grid = document.getElementById('remixSceneGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  for (var i = 0; i < sceneProfiles.length; i++) {
-    var s = sceneProfiles[i];
-    var card = document.createElement('div');
-    card.className = 'asset-item';
-    card.dataset.sceneId = s.id;
-    var sname = s.name;
-    if (sname.length > 4) sname = sname.slice(0, 4);
-    card.innerHTML = '<div class="asset-icon">🏠</div><div class="asset-name">' + escapeHtml(sname) + '</div>';
-    card.addEventListener('click', function(e) {
-      grid.querySelectorAll('.asset-item').forEach(function(c) { c.classList.remove('active'); });
-      this.classList.add('active');
-    });
-    grid.appendChild(card);
-  }
-  var newCard = document.createElement('div');
-  newCard.className = 'asset-item add-new';
-  newCard.innerHTML = '<div class="asset-icon">+</div><div class="asset-name">新建</div>';
-  newCard.addEventListener('click', function() { openSceneEditor(); });
-  grid.appendChild(newCard);
-  var hint = document.getElementById('remixSceneGrid');
-  if (hint) hint.style.display = sceneProfiles.length > 0 ? 'none' : 'block';
 }
 function getSelectedScene(scrollId) {
   var activeCard = document.querySelector('#' + scrollId + ' .asset-item.active:not(.add-new)');
@@ -626,6 +560,106 @@ function renderCharacterList() {
       '<div class="char-avatar-name">新建</div>' +
     '</div>';
   scroll.innerHTML = html;
+}
+
+// ============================================================
+// CHARACTER & SCENE MANAGERS (list pages)
+// ============================================================
+function openCharacterManager() {
+  document.getElementById('characterManagerOverlay').classList.add('open');
+  renderCharManagerList();
+}
+function closeCharacterManager() {
+  document.getElementById('characterManagerOverlay').classList.remove('open');
+}
+function renderCharManagerList() {
+  var list = document.getElementById('charManagerList');
+  if (!list) return;
+  if (characterProfiles.length === 0) {
+    list.innerHTML = '<div style="font-size:.76rem;color:#a09888;text-align:center;padding:24px 0">还没有形象，点击下方按钮创建</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < characterProfiles.length; i++) {
+    var ch = characterProfiles[i];
+    html += '<div class="mgr-item">' +
+      '<div class="mgr-item-avatar">' + (ch.type === 'protagonist' ? '👤' : '👥') + '</div>' +
+      '<div class="mgr-item-info">' +
+        '<div class="mgr-item-name">' + escapeHtml(ch.name || '未命名') + '</div>' +
+        '<div class="mgr-item-desc">' + escapeHtml((ch.gender||'') + ' · ' + (ch.clothing||'')) + '</div>' +
+      '</div>' +
+      '<span class="mgr-item-badge">' + (ch.type === 'protagonist' ? '主角' : '配角') + '</span>' +
+      '<button class="mgr-item-btn edit" onclick="event.stopPropagation();closeCharacterManager();openCharacterEditor(\'' + ch.id + '\')">✎</button>' +
+      '<button class="mgr-item-btn del" onclick="event.stopPropagation();deleteCharacterFromManager(\'' + ch.id + '\')">✕</button>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+  // Update counts
+  var charCount = document.getElementById('charCount');
+  if (charCount) charCount.textContent = characterProfiles.length + '个';
+}
+function deleteCharacterFromManager(id) {
+  if (!confirm('确定删除这个形象？')) return;
+  characterProfiles = characterProfiles.filter(function(c) { return c.id !== id; });
+  saveCharacterProfiles();
+  if (typeof sbUser !== 'undefined' && sbUser) sbDeleteCharacter(id);
+  renderCharManagerList();
+  renderCharacterCards(); renderRemixCharacterCards();
+  renderCharacterList();
+}
+
+function openSceneManager() {
+  document.getElementById('sceneManagerOverlay').classList.add('open');
+  renderSceneManagerList();
+}
+function closeSceneManager() {
+  document.getElementById('sceneManagerOverlay').classList.remove('open');
+}
+function renderSceneManagerList() {
+  var list = document.getElementById('sceneManagerList');
+  if (!list) return;
+  if (sceneProfiles.length === 0) {
+    list.innerHTML = '<div style="font-size:.76rem;color:#a09888;text-align:center;padding:24px 0">还没有场景</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < sceneProfiles.length; i++) {
+    var s = sceneProfiles[i];
+    html += '<div class="mgr-item">' +
+      '<div class="mgr-item-avatar" style="background:#e8c97a">🏠</div>' +
+      '<div class="mgr-item-info">' +
+        '<div class="mgr-item-name">' + escapeHtml(s.name) + '</div>' +
+        '<div class="mgr-item-desc">' + escapeHtml(s.description || '无描述') + '</div>' +
+      '</div>' +
+      '<button class="mgr-item-btn del" onclick="event.stopPropagation();deleteSceneFromManager(\'' + s.id + '\')">✕</button>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+  var sceneCount = document.getElementById('sceneCount');
+  if (sceneCount) sceneCount.textContent = sceneProfiles.length + '个';
+}
+function addSceneFromManager() {
+  var name = document.getElementById('newSceneName2').value.trim();
+  var desc = document.getElementById('newSceneDesc2').value.trim();
+  if (!name) return;
+  var data = { id: generateId(), name: name, description: desc };
+  sceneProfiles.push(data);
+  saveSceneProfiles();
+  if (typeof sbUser !== 'undefined' && sbUser) sbSaveScene(data);
+  document.getElementById('newSceneName2').value = '';
+  document.getElementById('newSceneDesc2').value = '';
+  renderSceneManagerList();
+  renderSceneCards();
+  renderRemixSceneCards();
+}
+function deleteSceneFromManager(id) {
+  if (!confirm('确定删除这个场景？')) return;
+  sceneProfiles = sceneProfiles.filter(function(s) { return s.id !== id; });
+  saveSceneProfiles();
+  if (typeof sbUser !== 'undefined' && sbUser) sbDeleteScene(id);
+  renderSceneManagerList();
+  renderSceneCards();
+  renderRemixSceneCards();
 }
 
 function getSelectedCharacter() {
@@ -1084,7 +1118,7 @@ function parseLink() {
     btn.textContent = '🔍 解析链接'; btn.classList.remove('clear-mode');
     document.getElementById('copyChatArea').classList.remove('open');
     document.getElementById('copyChatArea').innerHTML = '';
-    document.getElementById('copyGenerateRow').style.display = 'none';
+    document.getElementById('copyGenerateRow').classList.remove('open');
     return;
   }
 
@@ -1093,13 +1127,22 @@ function parseLink() {
   var isUrl = /^https?:\/\//.test(input) || /douyin\.com/i.test(input) || /jimeng/i.test(input);
 
   if (isUrl) {
-    // Don't try to fetch — Douyin/Jimeng block CORS, and proxies are unreliable in China.
-    // Instead, immediately guide user to paste the video script text.
-    btn.textContent = '🔍 解析文本'; btn.disabled = false;
-    document.getElementById('remixInput').value = '';
-    document.getElementById('remixInput').placeholder = '请复制视频的文案/脚本文字，粘贴到这里…';
-    document.getElementById('remixInput').focus();
-    addCopyChatMessage('system', '📋 检测到链接。抖音/即梦等平台限制外部访问，无法自动获取内容。\n\n✅ **请这样做**：在抖音/即梦中打开视频 → 复制视频文案 → 粘贴到上方输入框 → 点击「🔍 解析文本」\n\n💡 分析效果和解析链接完全一样，而且更准确。');
+    addCopyChatMessage('system', '🔍 正在通过服务端获取链接内容…');
+    // Call Vercel serverless function to bypass CORS
+    fetch('/api/fetch-link?url=' + encodeURIComponent(input))
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error);
+        if (!data.text || data.text.length < 50) throw new Error('Content too short');
+        doAnalyze(data.text, true);
+      })
+      .catch(function(e) {
+        btn.textContent = '🔍 解析文本'; btn.disabled = false;
+        document.getElementById('remixInput').value = '';
+        document.getElementById('remixInput').placeholder = '链接抓取失败，请手动复制视频的文案/脚本文字粘贴到这里…';
+        document.getElementById('remixInput').focus();
+        addCopyChatMessage('system', '⚠️ 链接内容无法获取（' + (e.message || '平台限制') + '）。\n\n✅ **解决方法**：在抖音/即梦中复制视频文案，粘贴到上方输入框，点击「🔍 解析文本」即可。');
+      });
     return;
   } else {
     doAnalyze(input, false);
@@ -1118,7 +1161,7 @@ function parseLink() {
     document.getElementById('copyChatArea').classList.add('open');
     addCopyChatMessage('assistant', result);
     addCopyChatMessage('system', '✅ 分析完成！你可以输入调整意见（如"换个钩子""加上本地案例"），然后点击「✨ 生成脚本」进行改写。');
-    document.getElementById('copyGenerateRow').style.display = 'flex';
+    document.getElementById('copyGenerateRow').classList.add('open');
     btn.textContent = '🔄 重新解析';
   });
 }
@@ -1132,56 +1175,6 @@ function addCopyChatMessage(role, content) {
   var icon = role === 'user' ? '👤' : role === 'error' ? '⚠️' : role === 'system' ? '💬' : '✨';
   div.innerHTML = '<div class="msg-avatar">' + icon + '</div><div class="msg-body"><div class="msg-content">' + renderMarkdown(content) + '</div></div>';
   chatArea.appendChild(div); chatArea.scrollTop = chatArea.scrollHeight;
-}
-
-function fetchLinkContent(url, callback) {
-  var CORS_PROXIES = [
-    'https://api.allorigins.win/raw?url=',
-    'https://corsproxy.io/?',
-  ];
-  function fetchWithTimeout(u, ms) {
-    var ctrl = new AbortController();
-    var timer = setTimeout(function() { ctrl.abort(); }, ms);
-    return fetch(u, { signal: ctrl.signal }).finally(function() { clearTimeout(timer); });
-  }
-
-  // Try direct + each proxy in sequence
-  var attempts = [url].concat(CORS_PROXIES.map(function(p) { return p + encodeURIComponent(url); }));
-  var idx = 0;
-
-  function tryNext() {
-    if (idx >= attempts.length) {
-      callback('link_failed', null);
-      return;
-    }
-    var u = attempts[idx++];
-    fetchWithTimeout(u, 6000)
-      .then(function(r) { if (!r.ok) throw new Error('status ' + r.status); return r.text(); })
-      .then(function(html) {
-        var text = extractTextFromHtml(html);
-        if (text.length < 80) throw new Error('too short');
-        callback(null, text.slice(0, 4000));
-      })
-      .catch(function() { tryNext(); });
-  }
-  tryNext();
-}
-
-function extractTextFromHtml(html) {
-  // Remove scripts, styles, and get visible text
-  var text = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, '\n')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x2F;/g, '/')
-    .replace(/&nbsp;/g, ' ');
-  // Remove excessive whitespace
-  text = text.replace(/\n{3,}/g, '\n\n').replace(/[ \t]{2,}/g, ' ').trim();
-  return text;
 }
 
 function buildCopyAnalysisPrompt(input, isUrl) {
@@ -1395,8 +1388,18 @@ var oboStep = 1;
 var oboTotal = 2;
 
 function showOnboarding() {
-  if (localStorage.getItem('zimeiti-v3-onboarding-done') === '1') return;
+  // Skip if already completed OR if bizName already exists (from cloud/localStorage)
+  if (localStorage.getItem('zimeiti-v3-onboarding-done') === '1' || settings.bizName) {
+    // Auto-persist flag so cloud-restored users don't see onboarding again
+    if (settings.bizName) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
+    return;
+  }
   oboStep = 1;
+  // Clear stale form values from previous session
+  document.getElementById('oboBizName').value = '';
+  document.getElementById('oboCharClothing').value = '';
+  document.getElementById('oboCharName').value = '';
+  document.querySelectorAll('#oboCharGender .chip').forEach(function(c) { c.classList.remove('active'); c.style.borderColor = ''; });
   document.getElementById('onboardingPage').classList.remove('hidden');
   updateOboUI();
 }
@@ -1430,8 +1433,6 @@ function oboNext() {
     }
     document.getElementById('oboBizName').style.borderColor = '';
     settings.bizName = bizName;
-    var scopeEl = document.querySelector('#oboBizScope .chip.active');
-    if (scopeEl) settings.bizScope = scopeEl.dataset.value;
     saveSettingsToStorage();
   }
   if (oboStep === 2) {
@@ -1487,12 +1488,6 @@ function finishOnboarding() {
 // Onboarding event listeners
 document.getElementById('btnOboNext').addEventListener('click', oboNext);
 document.getElementById('btnOboPrev').addEventListener('click', oboPrev);
-document.querySelector('#oboBizScope').addEventListener('click', function(e) {
-  var chip = e.target.closest('.chip');
-  if (!chip) return;
-  this.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
-  chip.classList.add('active');
-});
 document.querySelector('#oboCharGender').addEventListener('click', function(e) {
   var chip = e.target.closest('.chip');
   if (!chip) return;
@@ -1618,6 +1613,21 @@ function bindEvents() {
     }, 2000);
   });
 
+  // API key eye toggle (show/hide)
+  var btnToggleApi = document.getElementById('btnToggleApiKey');
+  var apiKeyInput = document.getElementById('meApiKey');
+  if (btnToggleApi && apiKeyInput) {
+    btnToggleApi.addEventListener('click', function() {
+      if (apiKeyInput.type === 'password') {
+        apiKeyInput.type = 'text';
+        btnToggleApi.textContent = '👁';
+      } else {
+        apiKeyInput.type = 'password';
+        btnToggleApi.textContent = '🙈';
+      }
+    });
+  }
+
   // Update profile preview on me page
   updateProfilePreviewOnMePage();
 
@@ -1717,6 +1727,11 @@ function updateStatusBar(msg) {
       } else {
         await sbSignIn(email, pass);
       }
+      // Reset to defaults before loading THIS user's cloud data
+      settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+      characterProfiles = [];
+      sceneProfiles = [];
+      localStorage.removeItem('zimeiti-v3-onboarding-done');
       await loadAllFromCloud();
       applyAllSettings();
       renderCharacterCards(); renderRemixCharacterCards();
@@ -1786,26 +1801,17 @@ function updateStatusBar(msg) {
   // Update account UI
   function updateAccountUI() {
     var avatar = document.getElementById('meAvatar');
-    var statusEl = document.getElementById('accountStatusText');
     if (typeof sbUser !== 'undefined' && sbUser) {
       if (avatar) {
         avatar.textContent = (sbUser.email || 'U').charAt(0).toUpperCase();
         avatar.style.background = 'linear-gradient(135deg,#5b9a8b,#3d7a6e)';
       }
-      if (statusEl) {
-        statusEl.textContent = '☁️ ' + sbUser.email;
-        statusEl.style.color = '#7bb8a6';
-        statusEl.style.cursor = 'default';
-        statusEl.onclick = null;
-      }
-    } else {
-      if (statusEl) {
-        statusEl.textContent = '🔑 登录 / 注册 — 云端同步数据';
-        statusEl.style.color = '#b5aca0';
-        statusEl.style.cursor = 'pointer';
-        statusEl.onclick = function() { showAuth(); };
-      }
     }
+    // Update asset counts
+    var charCount = document.getElementById('charCount');
+    var sceneCount = document.getElementById('sceneCount');
+    if (charCount) charCount.textContent = characterProfiles.length + '个';
+    if (sceneCount) sceneCount.textContent = sceneProfiles.length + '个';
     updateProfilePreviewOnMePage();
   }
 
@@ -1814,6 +1820,10 @@ function updateStatusBar(msg) {
     sbGetSession().then(function(session) {
     if (session) {
       sbUser = session.user;
+      settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+      characterProfiles = [];
+      sceneProfiles = [];
+      localStorage.removeItem('zimeiti-v3-onboarding-done');
       loadAllFromCloud().then(function() {
         applyAllSettings();
         renderCharacterCards();

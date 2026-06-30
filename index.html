@@ -40,41 +40,26 @@
 
   <!-- TAB 2: 创作 -->
   <div class="tab-panel" id="tabCreate">
-    <!-- 资产库 -->
-    <div class="asset-box">
-      <div class="asset-box-title">🗂 资产库</div>
-      <div class="asset-label">💃 形象</div>
-      <div class="asset-grid" id="charGrid"></div>
-      <div class="asset-label">🏠 场景</div>
-      <div class="asset-grid" id="sceneGrid"></div>
-    </div>
-
-    <!-- 输入区 -->
-    <div class="create-input-area">
-      <textarea class="create-textarea" id="createInput" rows="4" placeholder="描述你想创作的短视频内容…"></textarea>
-    </div>
-
-    <div class="create-actions">
+    <div class="create-scroll"></div>
+    <div class="create-bottom">
+      <div class="asset-row">
+        <span class="asset-row-label">选择形象</span>
+        <div class="asset-icon-grid" id="charGrid"></div>
+      </div>
+      <div class="asset-row">
+        <span class="asset-row-label">选择场景</span>
+        <div class="asset-icon-grid" id="sceneGrid"></div>
+      </div>
+      <textarea class="create-textarea" id="createInput" rows="3" placeholder="描述你想创作的短视频内容…"></textarea>
       <button class="create-btn primary" id="btnGenerate">✨ 生成脚本</button>
     </div>
   </div>
 
   <!-- TAB 3: 复制爆款 -->
   <div class="tab-panel" id="tabRemix">
-    <!-- 资产库 -->
-    <div class="asset-box">
-      <div class="asset-box-title">🗂 资产库</div>
-      <div class="asset-label">💃 形象</div>
-      <div class="asset-grid" id="remixCharGrid"></div>
-      <div class="asset-label">🏠 场景</div>
-      <div class="asset-grid" id="remixSceneGrid"></div>
-    </div>
-
-    <div class="remix-body">
-      <textarea class="create-textarea" id="remixInput" rows="3" placeholder="粘贴抖音/即梦链接，或直接粘贴视频脚本文本…"></textarea>
-      <button class="copy-parse-btn" id="btnParseLink">🔍 解析链接</button>
+    <div class="create-scroll">
       <div class="copy-chat-area" id="copyChatArea"></div>
-      <div class="copy-generate-row" id="copyGenerateRow" style="display:none">
+      <div class="copy-generate-row" id="copyGenerateRow">
         <textarea class="me-input" id="copyAdjustInput" rows="2" placeholder="输入调整意见…（可选）" style="flex:1;resize:none"></textarea>
         <div style="display:flex;gap:8px;align-items:center">
           <label class="me-toggle-row" style="flex-shrink:0">
@@ -91,6 +76,18 @@
         </div>
       </div>
     </div>
+    <div class="create-bottom">
+      <div class="asset-row">
+        <span class="asset-row-label">选择形象</span>
+        <div class="asset-icon-grid" id="remixCharGrid"></div>
+      </div>
+      <div class="asset-row">
+        <span class="asset-row-label">选择场景</span>
+        <div class="asset-icon-grid" id="remixSceneGrid"></div>
+      </div>
+      <textarea class="create-textarea" id="remixInput" rows="3" placeholder="粘贴抖音/即梦链接，或直接粘贴视频脚本文本…"></textarea>
+      <button class="copy-parse-btn" id="btnParseLink" style="width:100%;margin-top:0">🔍 解析链接</button>
+    </div>
   </div>
 
   <!-- TAB 4: 我的 -->
@@ -106,16 +103,9 @@
               <input class="me-profile-name" id="meBizName" placeholder="业务名称：例如 XX健身" maxlength="30">
               <button class="me-save-chip" id="btnSaveBizName">保存</button>
             </div>
-            <div class="chip-row" id="meBizScope" style="margin-top:6px">
-              <div class="chip active" data-value="全国">全国</div>
-              <div class="chip" data-value="本地">本地</div>
-            </div>
           </div>
         </div>
         <button class="btn-icon" id="btnMeSettings" title="设置">⚙</button>
-      </div>
-      <div id="accountStatus" style="padding:0 20px 4px;font-size:.7rem;color:#b5aca0">
-        <span id="accountStatusText" style="cursor:pointer" onclick="showAuth()">🔑 登录 / 注册 — 云端同步数据</span>
       </div>
 
       <!-- 个人资料入口 -->
@@ -131,14 +121,18 @@
 
       <!-- 资产管理 -->
       <div class="me-card-box">
-        <div class="me-section-head"><span>🗂 资产</span><span class="me-section-badge">形象+场景</span></div>
-        <div class="me-pref-row" style="cursor:pointer" onclick="openCharacterEditor()">
-          <span class="me-pref-label">💃 形象</span>
-          <span style="font-size:.64rem;color:#666">管理 →</span>
-        </div>
-        <div class="me-pref-row" style="cursor:pointer" onclick="openSceneEditor()">
-          <span class="me-pref-label">🏠 场景</span>
-          <span style="font-size:.64rem;color:#666">管理 →</span>
+        <div class="me-section-head"><span>🗂 资产</span></div>
+        <div style="display:flex;gap:12px">
+          <div class="asset-entry-btn" id="btnCharManager" onclick="openCharacterManager()">
+            <span class="asset-entry-icon">💃</span>
+            <span class="asset-entry-label">形象管理</span>
+            <span class="asset-entry-count" id="charCount">0个</span>
+          </div>
+          <div class="asset-entry-btn" id="btnSceneManager" onclick="openSceneManager()">
+            <span class="asset-entry-icon">🏠</span>
+            <span class="asset-entry-label">场景管理</span>
+            <span class="asset-entry-count" id="sceneCount">0个</span>
+          </div>
         </div>
       </div>
 
@@ -237,6 +231,44 @@
      PROFILE DIALOG
      ============================================================ -->
 <!-- ============================================================
+     CHARACTER MANAGER OVERLAY
+     ============================================================ -->
+<div class="overlay" id="characterManagerOverlay" onclick="if(event.target===this)closeCharacterManager()">
+  <div class="dialog settings-dialog">
+    <div class="dialog-header">
+      <span class="dialog-title">💃 形象管理</span>
+      <button class="btn-icon" onclick="closeCharacterManager()">✕</button>
+    </div>
+    <div class="dialog-body" id="charManagerList">
+      <div style="font-size:.76rem;color:#a09888;text-align:center;padding:24px 0">还没有形象，点击下方按钮创建</div>
+    </div>
+    <div class="dialog-footer">
+      <button class="dialog-btn primary" onclick="closeCharacterManager();openCharacterEditor()" style="width:100%">+ 新建形象</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCENE MANAGER OVERLAY
+     ============================================================ -->
+<div class="overlay" id="sceneManagerOverlay" onclick="if(event.target===this)closeSceneManager()">
+  <div class="dialog settings-dialog">
+    <div class="dialog-header">
+      <span class="dialog-title">🏠 场景管理</span>
+      <button class="btn-icon" onclick="closeSceneManager()">✕</button>
+    </div>
+    <div class="dialog-body" id="sceneManagerList">
+      <div style="font-size:.76rem;color:#a09888;text-align:center;padding:24px 0">还没有场景</div>
+    </div>
+    <div style="padding:12px 20px;border-top:1.5px solid #ede8e1;display:flex;flex-direction:column;gap:10px">
+      <input class="me-input" id="newSceneName2" placeholder="场景名称：例如 厨房、办公室">
+      <input class="me-input" id="newSceneDesc2" placeholder="场景描述：例如 明亮的开放式厨房">
+      <button class="dialog-btn primary" onclick="addSceneFromManager()" style="width:100%">+ 添加场景</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      SCENE EDITOR OVERLAY
      ============================================================ -->
 <div class="overlay" id="sceneEditorOverlay" onclick="if(event.target===this)closeSceneEditor()">
@@ -259,7 +291,7 @@
   </div>
 </div>
 
-<div class="overlay" id="profileDialog" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="overlay" id="profileDialog" style="z-index:115" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="dialog settings-dialog">
     <div class="dialog-header">
       <span class="dialog-title">📝 个人资料</span>
@@ -284,13 +316,12 @@
     </div>
     <div class="dialog-body">
       <div class="me-card-box" style="border:none;padding:0">
-        <div class="me-section-head" style="cursor:pointer" onclick="document.getElementById('profileDialog').classList.add('open')">
-            <span>📝 个人资料</span>
-            <span style="font-size:.64rem;color:#666;font-weight:400">编辑介绍 →</span>
-          </div>
-          <div class="me-section-head"><span>🔑 API 配置</span></div>
-        <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." style="margin-bottom:6px">
-        <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint：https://api.deepseek.com/v1" style="margin-bottom:6px">
+        <div class="me-section-head"><span>🔑 API 配置</span></div>
+        <div style="position:relative;margin-bottom:6px">
+          <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." autocomplete="off" style="padding-right:44px">
+          <button id="btnToggleApiKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏">🙈</button>
+        </div>
+        <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint：https://api.deepseek.com/v1" readonly style="margin-bottom:6px;background:#f0ece4;color:#8a8278">
         <select class="me-input" id="meModel">
           <option value="deepseek-chat">deepseek-chat</option>
           <option value="deepseek-reasoner">deepseek-reasoner</option>
@@ -424,13 +455,6 @@
         <div class="obo-field">
           <label class="obo-label">业务名称 <span class="field-required">*必填</span></label>
           <input class="obo-input" id="oboBizName" placeholder="例如：XX健身、YY美食探店" maxlength="30">
-        </div>
-        <div class="obo-field">
-          <label class="obo-label">业务范围</label>
-          <div class="chip-row" id="oboBizScope">
-            <div class="chip active" data-value="全国">🌍 全国</div>
-            <div class="chip" data-value="本地">📍 本地</div>
-          </div>
         </div>
       </div>
 
