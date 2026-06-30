@@ -1137,11 +1137,9 @@ function parseLink() {
         doAnalyze(data.text, true);
       })
       .catch(function(e) {
-        btn.textContent = '🔍 解析文本'; btn.disabled = false;
-        document.getElementById('remixInput').value = '';
-        document.getElementById('remixInput').placeholder = '链接抓取失败，请手动复制视频的文案/脚本文字粘贴到这里…';
-        document.getElementById('remixInput').focus();
-        addCopyChatMessage('system', '⚠️ 链接内容无法获取（' + (e.message || '平台限制') + '）。\n\n✅ **解决方法**：在抖音/即梦中复制视频文案，粘贴到上方输入框，点击「🔍 解析文本」即可。');
+        // Server fetch failed — pass the URL directly to AI and let it work with it
+        addCopyChatMessage('system', '⚠️ 页面内容无法自动抓取（平台限制）。已将链接直接交给 AI 进行分析。');
+        doAnalyze('视频链接：' + input + '\n\n请根据这个链接信息，尽你所能分析这个视频的选题类型、可能的钩子模式、目标受众，并给出改进建议。如果平台是你熟知的内容平台，请基于平台特点给出分析。', true);
       });
     return;
   } else {
