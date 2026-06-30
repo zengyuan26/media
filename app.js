@@ -1472,9 +1472,12 @@ function oboPrev() {
   updateOboUI();
 }
 
-function finishOnboarding() {
+async function finishOnboarding() {
   document.getElementById('onboardingPage').classList.add('hidden');
   localStorage.setItem('zimeiti-v3-onboarding-done', '1');
+  if (typeof sbUser !== 'undefined' && sbUser) {
+    try { await sbSaveProfile(); } catch(e) { console.log('save profile failed:', e); }
+  }
   applyAllSettings();
   renderCharacterCards(); renderRemixCharacterCards();
   renderSceneCards(); renderRemixSceneCards();
@@ -1769,6 +1772,7 @@ function updateStatusBar(msg) {
   async function loadAllFromCloud() {
     if (!sb) return;
     try { await sbLoadProfile(); } catch(e) {}
+    if (settings.bizName) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
     try { await sbLoadApiConfig(); } catch(e) {}
     try { await sbLoadCharacters(); } catch(e) {}
     try { await sbLoadScenes(); } catch(e) {}
@@ -1829,7 +1833,7 @@ function updateStatusBar(msg) {
   var _origSaveSettings = saveSettingsToStorage;
   saveSettingsToStorage = function() {
     _origSaveSettings();
-    if (typeof sbUser !== 'undefined' && sbUser) sbSaveProfile();
+    if (typeof sbUser !== 'undefined' && sbUser) sbSaveProfile().catch(function(e) { console.log('sync profile failed:', e); });
   };
 
   // Override character save
