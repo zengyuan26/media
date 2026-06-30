@@ -23,31 +23,45 @@ export default async function handler(req, res) {
 async function fetchAndExtract(url) {
   var ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
 
-  // First request: follow redirects (important for v.douyin.com short links)
+  // Step 1: follow redirects to resolve short links (v.douyin.com → www.douyin.com/video/xxx)
   var resp = await fetch(url, {
     redirect: 'follow',
-    headers: {
-      'User-Agent': ua,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'zh-CN,zh;q=0.9',
-    },
+    headers: { 'User-Agent': ua },
     signal: AbortSignal.timeout(10000)
   });
 
   var finalUrl = resp.url;
-  var html = await resp.text();
+  var videoId = extractDouyinVideoId(finalUrl);
 
-  // === Douyin-specific: try to extract JSON data from script tags ===
-  // Douyin video pages embed data in window.__INITIAL_STATE__ or similar
+  // Step 2: try Douyin internal JSON API (what watermark-removal tools use)
+  if (videoId) {
+    var apiUrl = 'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids=' + videoId;
+    try {
+      var apiResp = await fetch(apiUrl, {
+        headers: {
+          'User-Agent': ua,
+          'Referer': 'https://www.douyin.com/',
+          'Accept-Language': 'zh-CN,zh;q=0.9'
+        },
+        signal: AbortSignal.timeout(8000)
+      });
+      var json = await apiResp.json();
+      var infoText = extractFromItemInfo(json);
+      if (infoText && infoText.length >= 20) {
+        return { text: infoText, finalUrl: finalUrl };
+      }
+    } catch (e) { /* fall through to HTML parsing */ }
+  }
+
+  // Step 3: fallback — parse HTML page for embedded JSON data
+  var html = await resp.text();
   var douyinData = extractDouyinScriptData(html);
   if (douyinData) return { text: douyinData, finalUrl: finalUrl };
 
-  // === General HTML extraction ===
   var text = extractFromHtml(html);
   if (text.length >= 50) return { text: text, finalUrl: finalUrl };
 
-  // === If content too short, try the share page for Douyin ===
-  var videoId = extractDouyinVideoId(finalUrl);
+  // Step 4: last resort — try share page
   if (videoId) {
     var shareUrl = 'https://www.iesdouyin.com/share/video/' + videoId + '/';
     try {
@@ -77,6 +91,46 @@ function extractDouyinVideoId(url) {
   m = url.match(/modal_id=(\d+)/);
   if (m) return m[1];
   return null;
+}
+
+function extractFromItemInfo(json) {
+  var items = json.item_list || json.itemList || [];
+  if (!items.length) return null;
+
+  var item = items[0];
+  var parts = [];
+
+  if (item.desc) parts.push('文案：' + item.desc);
+
+  if (item.author) {
+    parts.push('作者：' + (item.author.nickname || item.author.unique_id || '未知'));
+  }
+
+  if (item.music) {
+    var m = item.music;
+    parts.push('音乐：' + (m.title || '') + (m.author ? ' - ' + m.author : ''));
+  }
+
+  if (item.statistics) {
+    var s = item.statistics;
+    var stats = [];
+    if (s.digg_count) stats.push('点赞' + formatNum(s.digg_count));
+    if (s.comment_count) stats.push('评论' + formatNum(s.comment_count));
+    if (s.share_count) stats.push('分享' + formatNum(s.share_count));
+    if (s.play_count) stats.push('播放' + formatNum(s.play_count));
+    if (stats.length) parts.push('数据：' + stats.join(' / '));
+  }
+
+  if (item.create_time) {
+    var d = new Date(item.create_time * 1000);
+    parts.push('发布时间：' + d.toLocaleDateString('zh-CN'));
+  }
+
+  if (item.video && item.video.duration) {
+    parts.push('视频时长：' + Math.round(item.video.duration / 1000) + '秒');
+  }
+
+  return parts.length ? parts.join('\n') : null;
 }
 
 function extractDouyinScriptData(html) {
