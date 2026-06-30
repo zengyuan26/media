@@ -418,17 +418,14 @@
       <div style="font-size:1.3rem;font-weight:700;color:#2d2a26;margin-bottom:4px">自媒体创作助手</div>
       <div style="font-size:.82rem;color:#8a8278">AI短视频脚本创作 · 即梦提示词</div>
     </div>
-    <!-- Tab切换 -->
-    <div style="display:flex;width:100%;background:#ede8e1;border-radius:10px;padding:3px">
-      <div class="login-tab active" data-mode="login" style="flex:1;padding:10px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;color:#8a8278">登录</div>
-      <div class="login-tab" data-mode="register" style="flex:1;padding:10px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;color:#8a8278">注册</div>
-    </div>
-    <style>.login-tab.active{background:#fff;color:#2d2a26;box-shadow:0 1px 3px rgba(0,0,0,.06)}</style>
     <!-- 表单 -->
     <div style="width:100%;display:flex;flex-direction:column;gap:10px">
       <input type="text" class="me-input" id="loginEmail" placeholder="用户名" style="text-align:center">
       <input type="password" class="me-input" id="loginPassword" placeholder="密码（至少6位）" style="text-align:center">
-      <button class="dialog-btn primary" id="btnLogin" style="width:100%">登录</button>
+      <div style="display:flex;gap:8px;width:100%">
+        <button class="dialog-btn primary" id="btnLogin" style="flex:1">登录</button>
+        <button class="dialog-btn" id="btnRegister" style="flex:1;background:#ede8e1;color:#2d2a26">注册</button>
+      </div>
     </div>
     <div id="loginError" style="font-size:.75rem;color:#e57373;display:none"></div>
 

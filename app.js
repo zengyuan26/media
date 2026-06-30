@@ -1691,19 +1691,7 @@ function updateStatusBar(msg) {
   }
 
 
-  // Login tab switching
-  var loginMode = 'login';
-  document.querySelectorAll('.login-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      loginMode = this.dataset.mode;
-      document.querySelectorAll('.login-tab').forEach(function(t) { t.classList.remove('active'); });
-      this.classList.add('active');
-      document.getElementById('btnLogin').textContent = loginMode === 'login' ? '登录' : '注册';
-      document.getElementById('loginError').style.display = 'none';
-    });
-  });
-
-  document.getElementById('btnLogin').addEventListener('click', async function() {
+  function doLoginOrRegister(mode) {
     var username = document.getElementById('loginEmail').value.trim();
     var email = username.includes('@') ? username : username + '@user.app';
     var pass = document.getElementById('loginPassword').value;
@@ -1715,14 +1703,13 @@ function updateStatusBar(msg) {
     }
     try {
       errEl.style.display = 'none';
-      if (loginMode === 'register') {
+      if (mode === 'register') {
         await sbSignUp(email, pass);
         errEl.textContent = '✓ 注册成功！已自动登录';
         errEl.style.color = '#5b9a8b'; errEl.style.display = 'block';
       } else {
         await sbSignIn(email, pass);
       }
-      // Reset to defaults before loading THIS user's cloud data
       settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
       characterProfiles = [];
       sceneProfiles = [];
@@ -1733,12 +1720,15 @@ function updateStatusBar(msg) {
       renderSceneCards(); renderRemixSceneCards();
       renderCharacterList();
       updateStatusBar(); updateAccountUI(); renderScriptHistory();
-      setTimeout(dismissLoginPage, loginMode === 'register' ? 500 : 0);
+      setTimeout(dismissLoginPage, mode === 'register' ? 500 : 0);
     } catch(e) {
-      errEl.textContent = (loginMode === 'register' ? '注册' : '登录') + '失败：' + (e.message || '请检查邮箱和密码');
+      errEl.textContent = (mode === 'register' ? '注册' : '登录') + '失败：' + (e.message || '请检查邮箱和密码');
       errEl.style.color = '#e57373'; errEl.style.display = 'block';
     }
-  });
+  }
+
+  document.getElementById('btnLogin').addEventListener('click', function() { doLoginOrRegister('login'); });
+  document.getElementById('btnRegister').addEventListener('click', function() { doLoginOrRegister('register'); });
   var _el=document.getElementById('btnAuthLogin'); if(_el) _el.addEventListener('click', async function() {
     var email = document.getElementById('authEmail').value.trim();
     var pass = document.getElementById('authPassword').value;
