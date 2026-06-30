@@ -1691,7 +1691,7 @@ function updateStatusBar(msg) {
   }
 
 
-  function doLoginOrRegister(mode) {
+  async function doLoginOrRegister(mode) {
     var username = document.getElementById('loginEmail').value.trim();
     var email = username.includes('@') ? username : username + '@user.app';
     var pass = document.getElementById('loginPassword').value;
