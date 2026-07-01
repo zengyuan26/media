@@ -1466,9 +1466,21 @@ function bindEvents() {
   if (btnLogout1) btnLogout1.addEventListener('click', doLogout);
   if (btnLogout2) btnLogout2.addEventListener('click', doLogout);
 
-  // Login / Register
-  document.getElementById('btnLogin').addEventListener('click', function() { doLoginOrRegister('login'); });
-  document.getElementById('btnRegister').addEventListener('click', function() { doLoginOrRegister('register'); });
+  // Login tab switching
+  var loginMode = 'login';
+  document.querySelectorAll('.login-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      loginMode = this.dataset.mode;
+      document.querySelectorAll('.login-tab').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      var btn = document.getElementById('btnLogin');
+      btn.textContent = loginMode === 'login' ? '登录' : '注册';
+      document.getElementById('loginPhone').style.display = loginMode === 'register' ? 'block' : 'none';
+      document.getElementById('loginError').style.display = 'none';
+    });
+  });
+
+  document.getElementById('btnLogin').addEventListener('click', function() { doLoginOrRegister(loginMode); });
 
   // Forgot password
   document.getElementById('btnForgotPwd').addEventListener('click', showResetForm);

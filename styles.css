@@ -76,6 +76,7 @@ input:focus,textarea:focus,select:focus{border-color:#5b9a8b;box-shadow:0 0 0 3p
   opacity:0;pointer-events:none;transition:opacity .2s
 }
 .overlay.open,#loginPage:not(.hidden){opacity:1;pointer-events:auto}
+body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .header{display:none}
 .dialog{
   width:460px;max-width:92vw;max-height:88vh;border-radius:18px;
   background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.12);

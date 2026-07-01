@@ -6,7 +6,7 @@
   "author": "zengyuan26",
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
+    "start": "npx electron .",
     "build:win": "electron-builder --win --x64",
     "build:mac": "electron-builder --mac",
     "build": "electron-builder --win --x64 --mac"
@@ -29,7 +29,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": null
@@ -41,7 +43,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "自媒体创作助手",
-      "installerLanguages": ["zh-CN"],
+      "installerLanguages": [
+        "zh-CN"
+      ],
       "language": "2052",
       "unicode": true
     },
@@ -49,5 +53,8 @@
       "target": "dmg",
       "category": "public.app-category.productivity"
     }
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2"
   }
 }
