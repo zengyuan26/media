@@ -915,36 +915,24 @@ function toggleVoiceInput() {
 // Phase 1: director analysis only
 function buildDirectorSystemPrompt() {
   return '你是短视频导演助手。根据用户对爆款视频的描述，输出导演分析 JSON。\n\n' +
-    '## 输出格式（所有字段必填）\n\n' +
+    '## 输出格式（所有字段必填，不得为空）\n\n' +
     '{\n' +
     '  "directorAnalysis": {\n' +
-    '    "title": "吸引人的标题（必填）",\n' +
-    '    "totalDuration": "预估总时长，如 30s（必填）",\n' +
+    '    "title": "吸引人的标题",\n' +
+    '    "totalDuration": "预估总时长，如 30s",\n' +
     '    "directorBrief": {\n' +
-    '      "coreIdea": "核心创意一句话（必填）",\n' +
-    '      "targetEmotion": "希望观众经历的情绪变化（必填）",\n' +
-    '      "hookType": "钩子类型（必填）",\n' +
-    '      "videoStyle": "视觉风格（必填）"\n' +
-    '    },\n' +
-    '    "rhythmMap": [\n' +
-    '      {"timeRange": "时间段", "label": "节奏标签", "tempo": "快/中/慢", "purpose": "目的"}\n' +
-    '    ],\n' +
-    '    "emotionCurve": [\n' +
-    '      {"timeRange": "时间段", "emotion": "情绪描述", "intensity": 1-10, "trigger": "触发原因"}\n' +
-    '    ],\n' +
-    '    "audienceReaction": {\n' +
-    '      "targetAudience": "目标人群（必填）",\n' +
-    '      "painPoint": "痛点（必填）",\n' +
-    '      "beforeWatching": "看之前的认知状态（必填）",\n' +
-    '      "afterWatching": "看之后的变化（必填）",\n' +
-    '      "whyItWorks": ["有效原因"]\n' +
+    '      "coreIdea": "核心创意一句话：这个视频讲什么、为什么能火（必填）",\n' +
+    '      "hookDesign": "前3秒钩子设计：具体画面是什么 + 为什么能抓住人（必填）",\n' +
+    '      "emotionalTone": "情绪基调：整体色彩倾向/节奏感/语气风格，如 暖黄色调·快节奏·压迫感旁白（必填）",\n' +
+    '      "visualReference": "视觉参考：像哪个账号/电影/摄影师的风格，如 日系生活美学·滨田英明风·低饱和暖调（必填）",\n' +
+    '      "keyFrames": ["必须出现的核心画面1", "核心画面2", "核心画面3"]\n' +
     '    }\n' +
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- 每个字段必须填写具体内容，不得为空、不得写"待定"或"无"\n' +
-    '- rhythmMap 至少 3 段，覆盖全片时长\n' +
-    '- emotionCurve 至少 3 个节点，intensity 填数字 1-10\n' +
+    '- keyFrames 至少 3 个，是具体的画面描述，不是抽象概念\n' +
+    '- hookDesign 要说清楚前3秒的画面内容，不是"用悬念吸引"这种空话\n' +
+    '- visualReference 要具体到风格/摄影师/账号名，不要写"现代简约"\n' +
     '- 纯 JSON 输出，不要 ```json``` 包裹';
 }
 
@@ -964,32 +952,44 @@ function buildShotsSystemPrompt() {
     '标题：' + (da.title || '') + '\n' +
     '总时长：' + (da.totalDuration || '') + '\n' +
     '核心创意：' + (db.coreIdea || '') + '\n' +
-    '目标情绪：' + (db.targetEmotion || '') + '\n' +
-    '钩子类型：' + (db.hookType || '') + '\n' +
-    '视觉风格：' + (db.videoStyle || '') + '\n' +
-    '目标人群：' + ((da.audienceReaction || {}).targetAudience || '') + '\n\n' +
+    '钩子设计：' + (db.hookDesign || '') + '\n' +
+    '情绪基调：' + (db.emotionalTone || '') + '\n' +
+    '视觉参考：' + (db.visualReference || '') + '\n' +
+    '关键画面：' + ((db.keyFrames || []).join(' / ')) + '\n\n' +
+    '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
+    '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
+    '拉镜：缓拉 dolly out（逐渐远离）/ 急拉 whip out（快速后退）\n' +
+    '摇镜：横摇 pan（水平扫视）/ 纵摇 tilt（上下扫视）\n' +
+    '移镜：横移 truck（侧面平移）/ 跟移 tracking（跟随主体移动）\n' +
+    '升降：上升 pedestal up / 下降 pedestal down\n' +
+    '手持：手持晃动 handheld shake / 呼吸感 handheld float\n' +
+    '固定：固定机位 static / 微动 subtle drift\n' +
+    '特殊：俯拍 overhead / 仰拍 low angle / 过肩 OTS / POV 主观视角\n\n' +
     '## 输出格式\n' +
     '{\n' +
     '  "shots": [\n' +
     '    {\n' +
     '      "id": "shot_1",\n' +
     '      "duration": "时间范围",\n' +
-    '      "shotType": "景别（远景/全景/中景/近景/特写）",\n' +
-    '      "subjects": [{"characterId": "", "characterName": "角色描述", "position": "位置", "direction": "朝向", "additionalDesc": "表情/状态"}],\n' +
+    '      "shotType": "景别（大远景/远景/全景/中景/近景/特写/大特写）",\n' +
+    '      "subjects": [{"characterId": "", "characterName": "角色描述", "position": "画面位置", "direction": "朝向", "additionalDesc": "表情/状态"}],\n' +
     '      "action": "具体动作（必填）",\n' +
-    '      "scene": {"sceneId": "", "sceneName": "场景", "environment": "环境", "atmosphere": "氛围"},\n' +
-    '      "lighting": {"type": "光影", "direction": "方向"},\n' +
-    '      "camera": {"movement": "运镜", "focalLength": "焦段", "angle": "角度"},\n' +
-    '      "style": {"visualStyle": "视觉风格"},\n' +
+    '      "scene": {"sceneId": "", "sceneName": "场景", "environment": "环境细节", "atmosphere": "氛围"},' +
+    '      "lighting": {"type": "光影类型（自然光/暖色侧光/冷色顶光/逆光剪影/柔光漫射/硬光高对比）", "direction": "光源方向"},\n' +
+    '      "camera": {"movement": "运镜（从运镜手法参考中选）", "focalLength": "焦段（24mm/35mm/50mm/85mm/135mm）", "angle": "角度（平视/俯拍/仰拍/45°侧拍）"},\n' +
+    '      "style": {"visualStyle": "视觉风格"},' +
     '      "quality": {"resolution": "4K", "fps": 60},\n' +
-    '      "dialogue": "台词",\n' +
-    '      "emotionBeat": "情绪节点"\n' +
+    '      "dialogue": "台词（无则填\\"\\"）",\n' +
+    '      "emotionBeat": "本镜的情绪节点"\n' +
     '    }\n' +
     '  ]\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- 至少 4 个镜头，每个镜头的 action/dialogue 必须填写具体内容\n' +
-    '- 第 2 镜起每镜必填 continuity：{"transition":"硬切/叠化/甩镜头","carryOver":["延续元素"],"newElements":["新元素"],"eyeLine":"视线衔接","actionLink":"动作因果","emotionLink":"情绪变化","cameraLink":"运镜衔接"}\n' +
+    '- 至少 4 个镜头，镜头数匹配总时长（约每5-8秒一个镜头）\n' +
+    '- 每个镜头的 action 必须具体到身体动作和物体变化，不要写"进行展示"这种空话\n' +
+    '- 运镜必须从运镜手法参考中选择，写出完整名称如"缓推 dolly in"\n' +
+    '- 焦段根据景别选择：特写85mm+，近景50mm，中景35mm，全景24mm\n' +
+    '- 第2镜起必填 continuity：{"transition":"硬切/叠化/甩镜头/匹配剪辑","carryOver":["延续元素"],"newElements":["新元素"],"eyeLine":"视线方向变化","actionLink":"动作因果关系","emotionLink":"情绪变化","cameraLink":"运镜对比"}\n' +
     '- 纯 JSON 输出，不要 ```json``` 包裹\n\n' +
     '## 可用资源\n' +
     '角色库：\n' + (charList || '（空）') + '\n' +
@@ -1003,29 +1003,12 @@ function normalizeDirectorAnalysis(data) {
   da.totalDuration = da.totalDuration || '30s';
   var db = da.directorBrief = da.directorBrief || {};
   db.coreIdea = db.coreIdea || da.title || '精彩短视频';
-  db.targetEmotion = db.targetEmotion || '好奇→认同→行动';
-  db.hookType = db.hookType || '悬念型';
-  db.videoStyle = db.videoStyle || '现代简约';
-  if (!Array.isArray(da.rhythmMap) || da.rhythmMap.length === 0) {
-    da.rhythmMap = [
-      { timeRange: '0-5s', label: '钩子', tempo: '快速', purpose: '抓住注意力' },
-      { timeRange: '5-20s', label: '展开', tempo: '中速', purpose: '传递信息' },
-      { timeRange: '20-30s', label: '收尾', tempo: '中速', purpose: '促成行动' }
-    ];
+  db.hookDesign = db.hookDesign || '前3秒用强视觉冲击或反常识画面抓住注意力';
+  db.emotionalTone = db.emotionalTone || '中性色调·中速节奏·自然语气';
+  db.visualReference = db.visualReference || '现代短视频风格·干净利落的画面';
+  if (!Array.isArray(db.keyFrames) || db.keyFrames.length === 0) {
+    db.keyFrames = ['开场关键画面', '核心内容展示画面', '结尾收束画面'];
   }
-  if (!Array.isArray(da.emotionCurve) || da.emotionCurve.length === 0) {
-    da.emotionCurve = [
-      { timeRange: '0-5s', emotion: '😱 惊讶', intensity: 9, trigger: '开头钩子' },
-      { timeRange: '5-20s', emotion: '🤔 好奇', intensity: 6, trigger: '信息展开' },
-      { timeRange: '20-30s', emotion: '😊 认同', intensity: 7, trigger: '价值确认' }
-    ];
-  }
-  var ar = da.audienceReaction = da.audienceReaction || {};
-  ar.targetAudience = ar.targetAudience || '短视频用户';
-  ar.painPoint = ar.painPoint || '信息获取效率低';
-  ar.beforeWatching = ar.beforeWatching || '对话题了解有限';
-  ar.afterWatching = ar.afterWatching || '获得新认知或情感共鸣';
-  ar.whyItWorks = Array.isArray(ar.whyItWorks) && ar.whyItWorks.length ? ar.whyItWorks : ['内容有针对性', '表达方式吸引人'];
 }
 
 // Phase 2: generate shots after director confirmed
@@ -1111,79 +1094,44 @@ function renderDirectorReview() {
   var da = currentDirectorAnalysis;
   if (!da || !board) return;
   var db = da.directorBrief || {};
-  var ar = da.audienceReaction || {};
-  var rhythmMap = da.rhythmMap || [];
-  var emotionCurve = da.emotionCurve || [];
-  var colors = ['#5b9a8b','#6bae9e','#7dc2b1','#8fd6c4','#a1ead7'];
+  var kf = db.keyFrames || [];
 
   var html = '';
 
-  // Title
-  html += '<div style="text-align:center;padding:6px 0 2px"><span style="font-size:1.05rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.7rem;color:#8a8278;margin-left:6px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+  // Title + duration
+  html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1.15rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
-  // Confirm button at top
-  html += '<div style="text-align:center;padding:6px 0 10px">';
+  // Confirm buttons
+  html += '<div style="text-align:center;padding:4px 0 12px">';
   html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">🔄 重新来</button>';
-  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.85rem;padding:10px 28px">确认，生成分镜 ✨</button>';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.88rem;padding:10px 32px">确认，生成分镜 ✨</button>';
   html += '</div>';
 
-  // 1. Director brief (open by default)
+  // Director brief card
   html += '<div class="sb-section">';
-  html += '<div class="sb-section-header" onclick="toggleSection(\'secDirectorBody\')" style="cursor:pointer"><span>📋 导演分析</span><span class="sb-accordion-arrow">▾</span></div>';
-  html += '<div class="sb-section-body" id="secDirectorBody">';
+  html += '<div class="sb-section-header"><span>📋 导演分析</span></div>';
+  html += '<div class="sb-section-body">';
   html += '<div class="sb-director-brief">';
-  html += '<p><span class="ds-label">核心创意：</span>' + escapeHtml(db.coreIdea || '') + '</p>';
-  html += '<p><span class="ds-label">目标情绪：</span>' + escapeHtml(db.targetEmotion || '') + '</p>';
-  html += '<p><span class="ds-label">钩子类型：</span>' + escapeHtml(db.hookType || '') + '</p>';
-  html += '<p><span class="ds-label">视频风格：</span>' + escapeHtml(db.videoStyle || '') + '</p>';
-  html += '</div></div></div>';
 
-  // 2. Rhythm map (collapsed)
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header" onclick="toggleSection(\'secRhythmBody\')" style="cursor:pointer"><span>📈 节奏地图</span><span class="sb-accordion-arrow">▸</span></div>';
-  html += '<div class="sb-section-body" id="secRhythmBody" style="display:none">';
-  if (rhythmMap.length) {
-    html += '<div class="sb-rhythm-bar">';
-    rhythmMap.forEach(function(r, i) {
-      html += '<div class="sb-rhythm-segment" style="flex:1;background:' + (colors[i % colors.length]) + '" title="' + escapeHtml((r.tempo || '') + ' - ' + (r.purpose || '')) + '">' + escapeHtml(r.label || r.timeRange || '') + '</div>';
-    });
-    html += '</div>';
-    html += '<div style="display:flex;font-size:.68rem;color:#8a8278;margin-top:6px;gap:8px;flex-wrap:wrap">';
-    rhythmMap.forEach(function(r) {
-      html += '<span style="background:#f5f1eb;padding:2px 8px;border-radius:6px">' + escapeHtml(r.timeRange || '') + ' ' + escapeHtml(r.tempo || '') + ' · ' + escapeHtml(r.purpose || '') + '</span>';
-    });
-    html += '</div>';
-  }
-  html += '</div></div>';
+  html += '<div class="da-field"><span class="da-label">💡 核心创意</span>';
+  html += '<p>' + escapeHtml(db.coreIdea || '') + '</p></div>';
 
-  // 3. Emotion curve (collapsed)
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header" onclick="toggleSection(\'secEmotionBody\')" style="cursor:pointer"><span>🎭 情绪曲线</span><span class="sb-accordion-arrow">▸</span></div>';
-  html += '<div class="sb-section-body" id="secEmotionBody" style="display:none">';
-  if (emotionCurve.length) {
-    html += '<div class="sb-emotion-curve">';
-    emotionCurve.forEach(function(e) {
-      var h = (e.intensity || 5) * 7;
-      html += '<div class="sb-emotion-bar" style="height:' + h + 'px;background:#5b9a8b" title="' + escapeHtml((e.emotion || '') + ' - ' + (e.trigger || '')) + '"><span class="emotion-label">' + escapeHtml((e.emotion || '') + ' ' + (e.intensity || '')) + '</span></div>';
-    });
-    html += '</div>';
-  }
-  html += '</div></div>';
+  html += '<div class="da-field"><span class="da-label">🪝 钩子设计</span>';
+  html += '<p>' + escapeHtml(db.hookDesign || '') + '</p></div>';
 
-  // 4. Audience reaction (collapsed)
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header" onclick="toggleSection(\'secAudienceBody\')" style="cursor:pointer"><span>👥 观众分析</span><span class="sb-accordion-arrow">▸</span></div>';
-  html += '<div class="sb-section-body" id="secAudienceBody" style="display:none">';
-  html += '<div class="sb-audience">';
-  html += '<div class="audience-item"><span class="audience-label">目标人群：</span>' + escapeHtml(ar.targetAudience || '') + '</div>';
-  html += '<div class="audience-item"><span class="audience-label">痛点：</span>' + escapeHtml(ar.painPoint || '') + '</div>';
-  html += '<div class="audience-item"><span class="audience-label">看之前：</span>' + escapeHtml(ar.beforeWatching || '') + '</div>';
-  html += '<div class="audience-item"><span class="audience-label">看之后：</span>' + escapeHtml(ar.afterWatching || '') + '</div>';
-  if (ar.whyItWorks && ar.whyItWorks.length) {
-    html += '<div class="audience-item"><span class="audience-label">为什么有效：</span>';
-    ar.whyItWorks.forEach(function(w) { html += '<div style="padding-left:12px">• ' + escapeHtml(w) + '</div>'; });
-    html += '</div>';
-  }
+  html += '<div class="da-field"><span class="da-label">🎨 情绪基调</span>';
+  html += '<p>' + escapeHtml(db.emotionalTone || '') + '</p></div>';
+
+  html += '<div class="da-field"><span class="da-label">📸 视觉参考</span>';
+  html += '<p>' + escapeHtml(db.visualReference || '') + '</p></div>';
+
+  html += '<div class="da-field"><span class="da-label">🖼 关键画面</span>';
+  html += '<ol style="margin:4px 0 0 16px;font-size:.82rem;line-height:1.7">';
+  kf.forEach(function(f) {
+    html += '<li>' + escapeHtml(f) + '</li>';
+  });
+  html += '</ol></div>';
+
   html += '</div></div></div>';
 
   board.innerHTML = html;
