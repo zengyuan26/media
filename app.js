@@ -1425,24 +1425,68 @@ function collectStreamJson(text) {
   for (var k = closeBrackets; k < openBrackets; k++) fixed2 += ']';
   try { JSON.parse(fixed2); return fixed2; } catch(e) {}
 
-  // Strategy 4: find the last valid complete key:value and truncate there, then close
-  // Try progressively shorter substrings
+  // Strategy 4: fix missing quotes on property names
+  // Matches patterns like "type": or "  type": (missing opening quote) in JSON
+  var fixed3 = fixed2.replace(/([,\{\[\s\n\r]+)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
+  try { JSON.parse(fixed3); return fixed3; } catch(e) {}
+
+  // Strategy 5: try removing the last malformed shot (common AI error at end)
+  var lastShotMatch = fixed2.match(/\n\s*\}\s*\]\s*\}/);
+  if (lastShotMatch) {
+    // Find the position of "shots": [ and try to extract valid shots array
+    var shotsStart = fixed2.indexOf('"shots"');
+    if (shotsStart > 0) {
+      var arrayStart = fixed2.indexOf('[', shotsStart);
+      if (arrayStart > 0) {
+        // Try to find each complete shot object and rebuild
+        var shotsOnly = '';
+        var depth = 0, inStr = false, esc2 = false;
+        var shotStart = -1, validShots = [];
+        for (var p = arrayStart + 1; p < fixed2.length; p++) {
+          if (esc2) { esc2 = false; continue; }
+          if (fixed2[p] === '\\') { esc2 = true; continue; }
+          if (fixed2[p] === '"') { inStr = !inStr; }
+          if (inStr) continue;
+          if (fixed2[p] === '{') {
+            if (depth === 0) shotStart = p;
+            depth++;
+          } else if (fixed2[p] === '}') {
+            depth--;
+            if (depth === 0 && shotStart >= 0) {
+              var shotJson = fixed2.slice(shotStart, p + 1);
+              // Try to parse this single shot
+              try { JSON.parse(shotJson); validShots.push(shotJson); } catch(e) {}
+              shotStart = -1;
+            }
+          }
+        }
+        if (validShots.length > 0) {
+          var rebuilt = fixed2.slice(0, arrayStart + 1) + '\n' + validShots.join(',\n') + '\n]' + fixed2.slice(fixed2.lastIndexOf(']') + 1);
+          rebuilt = rebuilt.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+          try { JSON.parse(rebuilt); return rebuilt; } catch(e) {}
+          // Try as bare array
+          var bareArray = '[' + validShots.join(',') + ']';
+          try { JSON.parse(bareArray); return bareArray; } catch(e) {}
+        }
+      }
+    }
+  }
+
+  // Strategy 6: find the last valid complete key:value and truncate there, then close
   for (var pos = fixed2.length - 1; pos > start + 50; pos--) {
     if (fixed2[pos] === ',' || fixed2[pos] === '{' || fixed2[pos] === '[') {
       var attempt = fixed2.slice(0, pos + 1);
-      // Close structures
       var ob = (attempt.match(/\{/g) || []).length;
       var cb = (attempt.match(/\}/g) || []).length;
       var obk = (attempt.match(/\[/g) || []).length;
       var cbk = (attempt.match(/\]/g) || []).length;
-      // Check if inside a string
       var s = false, esc = false;
       for (var ii = 0; ii < attempt.length; ii++) {
         if (esc) { esc = false; continue; }
         if (attempt[ii] === '\\') { esc = true; continue; }
         if (attempt[ii] === '"') s = !s;
       }
-      if (s) continue; // skip if inside string
+      if (s) continue;
       for (var jj = cb; jj < ob; jj++) attempt += '}';
       for (var kk = cbk; kk < obk; kk++) attempt += ']';
       attempt = attempt.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
