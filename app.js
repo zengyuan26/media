@@ -1018,8 +1018,9 @@ async function generateShots() {
   isGenerating = true;
   updateStopButton();
 
-  // Show loading in shots area
-  document.getElementById('sbDirectorBody').insertAdjacentHTML('afterend',
+  // Show loading at bottom of board
+  var board = document.getElementById('sbBoard');
+  board.insertAdjacentHTML('beforeend',
     '<div id="sbShotsLoading" style="text-align:center;padding:40px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🎥</div><div>AI 正在生成分镜脚本…</div></div>');
 
   try {
