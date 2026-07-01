@@ -1018,37 +1018,43 @@ async function generateShots() {
   isGenerating = true;
   updateStopButton();
 
-  // Show loading at bottom of board
+  // Switch to loading page immediately
   var board = document.getElementById('sbBoard');
-  board.insertAdjacentHTML('beforeend',
-    '<div id="sbShotsLoading" style="text-align:center;padding:40px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🎥</div><div>AI 正在生成分镜脚本…</div></div>');
+  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成分镜脚本…</div><div style="font-size:.72rem">基于导演分析逐镜拆解</div></div>';
 
   try {
     var systemPrompt = buildShotsSystemPrompt();
     var userPrompt = '请根据以上导演分析生成分镜脚本。';
     var streamText = await doStoryboardApiCall(systemPrompt, userPrompt);
-    console.log('[generateShots] streamText length:', streamText.length);
+    console.log('[generateShots] raw text:', streamText.slice(0, 300));
+
     var jsonText = collectStreamJson(streamText);
-    if (!jsonText) throw new Error('未能解析分镜JSON');
+    if (!jsonText) {
+      console.log('[generateShots] PARSE FAILED, raw:', streamText);
+      throw new Error('未能解析分镜JSON（查看Console看原始返回）');
+    }
+    console.log('[generateShots] parsed jsonText:', jsonText.slice(0, 200));
+
     var data = JSON.parse(jsonText);
-    // Handle both {"shots": [...]} and bare [...]
     var shots = Array.isArray(data) ? data : (data.shots || []);
-    if (!Array.isArray(shots) || shots.length === 0) throw new Error('分镜数据为空');
-    console.log('[generateShots] parsed ' + shots.length + ' shots');
+    if (!Array.isArray(shots) || shots.length === 0) throw new Error('分镜数据为空，返回了' + JSON.stringify(data).slice(0, 100));
 
     currentDirectorAnalysis.shots = shots;
     normalizeShots(currentDirectorAnalysis);
     currentStoryboard = { storyboard: currentDirectorAnalysis };
     updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
 
-    // Switch to shots page
     renderShotsPage();
   } catch(e) {
-    var loadingEl2 = document.getElementById('sbShotsLoading');
-    if (loadingEl2) loadingEl2.remove();
-    document.getElementById('sbBoard').insertAdjacentHTML('beforeend',
-      '<div style="text-align:center;padding:20px;color:#e57373">分镜生成失败：' + escapeHtml(e.message || '') +
-      '<br><button class="dialog-btn primary" onclick="generateShots()" style="margin-top:12px">🔄 重试</button></div>');
+    console.error('[generateShots] error:', e.message || e);
+    board.innerHTML =
+      '<div style="text-align:center;padding:60px 20px;color:#e57373">' +
+      '<div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>' +
+      '<div style="font-weight:600;margin-bottom:8px">分镜生成失败</div>' +
+      '<div style="font-size:.78rem;margin-bottom:20px;color:#8a8278">' + escapeHtml(e.message || '未知错误') + '</div>' +
+      '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px">← 返回导演分析</button>' +
+      '<button class="dialog-btn primary" onclick="generateShots()">🔄 重试</button>' +
+      '</div>';
   }
 
   isGenerating = false;
@@ -1282,10 +1288,11 @@ async function generateStoryboard() {
   isGenerating = true;
   updateStopButton();
 
-  // Hide interview, show loading in board area
+  // Switch to loading page
   document.getElementById('sbInterview').style.display = 'none';
-  document.getElementById('sbBoard').style.display = 'flex';
-  document.getElementById('sbBoard').innerHTML = '<div style="text-align:center;padding:60px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🎬</div><div>AI 正在生成导演分镜表…</div></div>';
+  var board = document.getElementById('sbBoard');
+  board.style.display = 'flex';
+  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎬</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在分析…</div><div style="font-size:.72rem">拆解视频结构，提炼导演创意</div></div>';
 
   try {
     var systemPrompt = buildDirectorSystemPrompt();
@@ -1301,11 +1308,13 @@ async function generateStoryboard() {
     renderRecords();
   } catch(e) {
     updateRecord(activeRecordId, { status: 'failed' });
+    console.error('[generateStoryboard] error:', e.message || e);
     document.getElementById('sbBoard').innerHTML =
-      '<div style="text-align:center;padding:40px 20px;color:#e57373">' +
-      '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
-      '<div>生成失败：' + escapeHtml(e.message || '未知错误') + '</div>' +
-      '<button class="dialog-btn primary" onclick="resetToInterview()" style="margin-top:16px">🔄 重新开始</button>' +
+      '<div style="text-align:center;padding:60px 20px;color:#e57373">' +
+      '<div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>' +
+      '<div style="font-weight:600;margin-bottom:4px">分析失败</div>' +
+      '<div style="font-size:.78rem;margin-bottom:20px;color:#8a8278">' + escapeHtml(e.message || '未知错误') + '</div>' +
+      '<button class="dialog-btn primary" onclick="resetToInterview()">🔄 重新开始</button>' +
       '</div>';
     renderRecords();
   }
