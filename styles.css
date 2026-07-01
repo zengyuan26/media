@@ -273,45 +273,12 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .shot-editor-chips{display:flex;gap:6px;flex-wrap:wrap}
 
 /* ============================================================
-   ONBOARDING
-   ============================================================ */
-.obo-page{position:fixed;inset:0;z-index:210;background:#f7f3ed;display:flex;align-items:center;justify-content:center}
-.obo-page.hidden{display:none}
-.obo-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  width:440px;max-width:92vw;padding:40px 20px;text-align:center;gap:24px}
-.obo-steps{display:flex;align-items:center;gap:0}
-.obo-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:.82rem;font-weight:700;background:#ede8e1;color:#8a8278}
-.obo-dot.active{background:#5b9a8b;color:#fff}
-.obo-dot.done{background:#dceee8;color:#5b9a8b}
-.obo-line{width:60px;height:2px;background:#ede8e1}
-.obo-line.done{background:#5b9a8b}
-.obo-panels{position:relative;width:100%;overflow:hidden}
-.obo-panel{display:none;flex-direction:column;align-items:center;gap:16px}
-.obo-panel.active{display:flex;animation:fadeSlideIn .3s ease}
-@keyframes fadeSlideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-.obo-icon{font-size:3rem}
-.obo-title{font-size:1.2rem;font-weight:700;color:#2d2a26}
-.obo-desc{font-size:.8rem;color:#8a8278}
-.obo-field{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left}
-.obo-label{font-size:.72rem;color:#8a8278;font-weight:600}
-.obo-input{width:100%;font-size:.85rem;padding:12px;text-align:center}
-.obo-nav{display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px}
-.obo-nav-btn{padding:12px 28px;border-radius:10px;border:1.5px solid #e0dcd3;
-  background:#fff;cursor:pointer;font-size:.82rem;font-weight:600}
-.obo-nav-btn.primary{background:#5b9a8b;color:#fff;border-color:#5b9a8b}
-.obo-dots-mob{display:none;gap:8px}
-
-/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (max-width:768px) {
   html{font-size:17px}
   .dialog{max-width:100vw;border-radius:0;max-height:100vh}
   .settings-dialog{max-width:100vw;border-radius:0}
-  .obo-inner{padding:24px 16px}
-  .obo-line{display:none}
-  .obo-dots-mob{display:flex}
   .sb-interview-inner{max-width:100%}
   .sb-shot-card-header{font-size:.74rem}
   .shot-editor-panel{border-radius:14px 14px 0 0;max-height:90vh}

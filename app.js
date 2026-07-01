@@ -346,56 +346,12 @@ function deleteSceneFromManager(id) {
 }
 
 // ============================================================
-// ONBOARDING
-// ============================================================
-function showOnboarding() {
-  if (localStorage.getItem('zimeiti-v3-onboarding-done') === '1') return;
-  document.getElementById('oboCharClothing').value = '';
-  document.getElementById('oboCharName').value = '';
-  document.querySelectorAll('#oboCharGender .chip').forEach(function(c) { c.classList.remove('active'); });
-  document.getElementById('onboardingPage').classList.remove('hidden');
-}
-
-function oboNext() {
-  var genderEl = document.querySelector('#oboCharGender .chip.active');
-  var gender = genderEl ? genderEl.dataset.value : '';
-  var clothing = document.getElementById('oboCharClothing').value.trim();
-  if (!gender) { document.querySelectorAll('#oboCharGender .chip').forEach(function(c) { c.style.borderColor = '#e57373'; }); return; }
-  if (!clothing) { document.getElementById('oboCharClothing').style.borderColor = '#e57373'; return; }
-  var ch = {
-    id: generateId(), name: document.getElementById('oboCharName').value.trim() || '主角',
-    type: 'protagonist', gender: gender, clothing: clothing,
-    age: '', hair: '', build: '', features: '', relationship: ''
-  };
-  characterProfiles.push(ch);
-  saveCharacterProfiles();
-  if (typeof sbSaveCharacter !== 'undefined') sbSaveCharacter(ch).catch(function(e) {});
-  finishOnboarding();
-}
-
-async function finishOnboarding() {
-  document.getElementById('onboardingPage').classList.add('hidden');
-  localStorage.setItem('zimeiti-v3-onboarding-done', '1');
-  if (typeof sbUser !== 'undefined' && sbUser) {
-    try { await sbSaveProfile(); } catch(e) {}
-  }
-  applyAllSettings();
-  renderCharacterList();
-  updateAccountUI();
-  switchTab('tabStoryboard');
-  initInterview();
-}
-
-// ============================================================
 // LOGIN / AUTH
 // ============================================================
 function dismissLoginPage() {
   document.getElementById('loginPage').classList.add('hidden');
-  showOnboarding();
-  if (document.getElementById('onboardingPage').classList.contains('hidden')) {
-    switchTab('tabStoryboard');
-    initInterview();
-  }
+  switchTab('tabStoryboard');
+  initInterview();
 }
 
 async function doLoginOrRegister(mode) {
@@ -428,7 +384,6 @@ async function doLoginOrRegister(mode) {
     settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     characterProfiles = [];
     sceneProfiles = [];
-    if (mode !== 'register') localStorage.removeItem('zimeiti-v3-onboarding-done');
     await loadAllFromCloud();
     applyAllSettings();
     renderCharacterList(); updateAccountUI();
@@ -1686,14 +1641,6 @@ function bindEvents() {
   // Stop button
   document.getElementById('btnStop').addEventListener('click', stopGeneration);
 
-  // Onboarding
-  document.getElementById('btnOboNext').addEventListener('click', oboNext);
-  document.querySelector('#oboCharGender').addEventListener('click', function(e) {
-    var chip = e.target.closest('.chip');
-    if (!chip) return;
-    this.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); c.style.borderColor = ''; });
-    chip.classList.add('active');
-  });
 }
 
 // ============================================================
