@@ -77,6 +77,10 @@ ALTER TABLE scenes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_configs ENABLE ROW LEVEL SECURITY;
 
 -- Allow anon access (we use anon key with custom auth, not Supabase auth JWT)
+DROP POLICY IF EXISTS "Allow all on profiles" ON profiles;
+DROP POLICY IF EXISTS "Allow all on characters" ON characters;
+DROP POLICY IF EXISTS "Allow all on scenes" ON scenes;
+DROP POLICY IF EXISTS "Allow all on api_configs" ON api_configs;
 CREATE POLICY "Allow all on profiles" ON profiles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on characters" ON characters FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on scenes" ON scenes FOR ALL USING (true) WITH CHECK (true);
