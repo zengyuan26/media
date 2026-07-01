@@ -244,7 +244,7 @@ function renderCharManagerList() {
   var html = '';
   characterProfiles.forEach(function(ch) {
     html += '<div class="mgr-item">';
-    html += '<div class="mgr-item-avatar">' + (ch.type === 'protagonist' ? '👤' : '👥') + '</div>';
+    html += '<div class="mgr-item-avatar">' + (ch.gender === '男' ? '👨' : '👩') + '</div>';
     html += '<div class="mgr-item-info"><div class="mgr-item-name">' + escapeHtml(ch.name || '未命名') + '</div>';
     html += '<div class="mgr-item-detail">' + [ch.gender, ch.clothing].filter(Boolean).join(' · ') + '</div></div>';
     html += '<div class="mgr-item-actions">';
@@ -264,26 +264,56 @@ function deleteCharacterFromManager(id) {
   renderCharManagerList();
 }
 
+// Random character generation data
+var RANDOM_CHAR = {
+  clothing_m: ['白色T恤+深蓝牛仔裤', '灰色连帽卫衣+黑色工装裤', '藏青衬衫+卡其休闲裤', '黑色高领毛衣+深灰西裤', '军绿夹克+黑色牛仔裤', '浅蓝牛仔外套+白T+黑裤', '棕色皮夹克+深蓝牛仔', '灰白条纹衬衫+藏青西裤'],
+  clothing_f: ['白色雪纺衬衫+卡其阔腿裤', '碎花连衣裙+米色开衫', '黑色高领衫+格纹短裙', '粉色卫衣+白色直筒裤', '浅蓝衬衫+深蓝A字裙', '米色风衣+白色T恤+牛仔裤', '酒红针织衫+黑色半身裙', '白衬衫+驼色烟管裤'],
+  age: ['22岁', '25岁', '28岁', '30岁', '32岁', '35岁', '38岁', '40岁', '45岁', '26岁', '27岁'],
+  hair_m: ['黑色短发·清爽碎盖', '黑色短发·三七分', '深棕短发·纹理烫', '黑色短发·寸头', '深棕中短发·微分', '黑色短发·背头'],
+  hair_f: ['黑色齐肩发·内扣', '深棕长发·大波浪', '黑色长发·直发及腰', '浅棕短发·锁骨卷', '黑色中长发·低马尾', '深棕短发·波波头'],
+  build: ['身高170，偏瘦', '身高165，匀称', '身高175，标准', '身高160，娇小', '身高180，高挑', '身高168，偏瘦', '身高172，标准', '身高163，匀称'],
+  features: ['银色细框眼镜', '右手腕银手链', '左耳单颗耳钉', '黑色方框眼镜', '颈间细项链', '左手腕皮质手环', '无框眼镜·书卷气', '嘴角一颗小痣', '鼻梁细微雀斑', '右手无名指银色戒指']
+};
+
+function randomizeCharacter() {
+  var genderEl = document.querySelector('#charEditGender .chip.active');
+  var gender = genderEl ? genderEl.dataset.value : '男';
+  var isMale = gender === '男';
+  var suffix = isMale ? 'm' : 'f';
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  document.getElementById('charEditClothing').value = pick(RANDOM_CHAR['clothing_' + suffix]);
+  document.getElementById('charEditAge').value = pick(RANDOM_CHAR.age);
+  document.getElementById('charEditHair').value = pick(RANDOM_CHAR['hair_' + suffix]);
+  document.getElementById('charEditBuild').value = pick(RANDOM_CHAR.build);
+  document.getElementById('charEditFeatures').value = pick(RANDOM_CHAR.features);
+
+  // Flash the random button
+  var btn = document.getElementById('btnRandomChar');
+  if (btn) { btn.textContent = '🎲 重新随机'; }
+}
+
 function openCharacterEditor(charId) {
   editingCharId = charId || null;
   var ch = charId ? findCharById(charId) : null;
   document.getElementById('charEditorTitle').textContent = ch ? '编辑形象' : '新建形象';
   document.getElementById('charEditName').value = ch ? ch.name : '';
-  document.getElementById('charEditClothing').value = ch ? ch.clothing : '';
+  document.getElementById('charEditClothing').value = ch ? ch.clothing || '' : '';
   document.getElementById('charEditAge').value = ch ? ch.age || '' : '';
   document.getElementById('charEditHair').value = ch ? ch.hair || '' : '';
   document.getElementById('charEditBuild').value = ch ? ch.build || '' : '';
   document.getElementById('charEditFeatures').value = ch ? ch.features || '' : '';
-  document.getElementById('charEditRelationship').value = ch ? ch.relationship || '' : '';
 
-  var type = ch ? ch.type : 'protagonist';
-  document.querySelectorAll('#charEditType .chip').forEach(function(c) { c.classList.toggle('active', c.dataset.value === type); });
   var gender = ch ? ch.gender : '';
   document.querySelectorAll('#charEditGender .chip').forEach(function(c) { c.classList.toggle('active', c.dataset.value === gender); });
-  updateCharEditorTypeFields();
 
   document.getElementById('btnCharDelete').style.display = ch ? 'block' : 'none';
+  document.getElementById('btnRandomChar').textContent = ch ? '🎲 重新随机' : '🎲 一键生成形象';
   document.getElementById('charEditorOverlay').classList.add('open');
+
+  // Auto random for new character
+  if (!ch) randomizeCharacter();
 }
 
 function closeCharacterEditor() {
@@ -291,34 +321,25 @@ function closeCharacterEditor() {
   editingCharId = null;
 }
 
-function updateCharEditorTypeFields() {
-  var activeType = document.querySelector('#charEditType .chip.active');
-  var isSupporting = activeType && activeType.dataset.value === 'supporting';
-  document.getElementById('charEditRelationshipField').style.display = isSupporting ? 'block' : 'none';
-}
-
 function saveCharacterFromDialog() {
-  var name = document.getElementById('charEditName').value.trim() || '未命名';
-  var typeEl = document.querySelector('#charEditType .chip.active');
-  var type = typeEl ? typeEl.dataset.value : 'protagonist';
+  var name = document.getElementById('charEditName').value.trim();
   var genderEl = document.querySelector('#charEditGender .chip.active');
   var gender = genderEl ? genderEl.dataset.value : '';
-  var clothing = document.getElementById('charEditClothing').value.trim();
 
+  if (!name) { alert('请填写形象名称'); return; }
   if (!gender) { alert('请选择性别'); return; }
-  if (!clothing) { alert('请填写服装'); return; }
 
   var ch = {
     id: editingCharId || generateId(),
     name: name,
-    type: type,
+    type: 'protagonist', // default, no longer user-selectable
     gender: gender,
-    clothing: clothing,
+    clothing: document.getElementById('charEditClothing').value.trim(),
     age: document.getElementById('charEditAge').value.trim(),
     hair: document.getElementById('charEditHair').value.trim(),
     build: document.getElementById('charEditBuild').value.trim(),
     features: document.getElementById('charEditFeatures').value.trim(),
-    relationship: document.getElementById('charEditRelationship').value.trim()
+    relationship: ''
   };
 
   if (editingCharId) {
@@ -2129,15 +2150,6 @@ function bindEvents() {
   });
   document.querySelectorAll('#seCameraMov .chip').forEach(function(c) {
     c.addEventListener('click', function() { this.classList.toggle('active'); });
-  });
-
-  // Char editor type chips
-  document.querySelectorAll('#charEditType .chip').forEach(function(c) {
-    c.addEventListener('click', function() {
-      document.querySelectorAll('#charEditType .chip').forEach(function(x) { x.classList.remove('active'); });
-      this.classList.add('active');
-      updateCharEditorTypeFields();
-    });
   });
 
   // Char editor gender chips

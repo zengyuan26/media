@@ -246,46 +246,42 @@
     </div>
     <div class="dialog-body">
       <div class="me-field">
-        <label class="me-label">形象名称</label>
-        <input class="me-input" id="charEditName" placeholder="例如：主角-日常、配角-顾客">
-      </div>
-      <div class="me-field">
-        <label class="me-label">类型</label>
-        <div class="chip-row" id="charEditType">
-          <div class="chip active" data-value="protagonist">👤 主角</div>
-          <div class="chip" data-value="supporting">👥 配角</div>
-        </div>
+        <label class="me-label">形象名称 <span class="field-required">*必填</span></label>
+        <input class="me-input" id="charEditName" placeholder="例如：主持人、路人甲、咖啡师">
       </div>
       <div class="me-field">
         <label class="me-label">性别 <span class="field-required">*必填</span></label>
         <div class="chip-row" id="charEditGender">
-          <div class="chip" data-value="男">男</div>
-          <div class="chip" data-value="女">女</div>
+          <div class="chip" data-value="男">👨 男</div>
+          <div class="chip" data-value="女">👩 女</div>
         </div>
       </div>
-      <div class="me-field">
-        <label class="me-label">服装 <span class="field-required">*必填</span></label>
-        <input class="me-input" id="charEditClothing" placeholder="例如：白色棉麻衬衫+深蓝围裙">
+
+      <!-- Random generate button -->
+      <div style="text-align:center;padding:6px 0">
+        <button class="dialog-btn secondary" id="btnRandomChar" onclick="randomizeCharacter()" style="font-size:.78rem;width:100%">🎲 一键生成形象</button>
+        <span style="font-size:.65rem;color:#a09888;display:block;margin-top:4px">可单独修改每项，再次点击重新随机</span>
       </div>
-      <div class="me-field" id="charEditRelationshipField" style="display:none">
-        <label class="me-label">与主角关系</label>
-        <input class="me-input" id="charEditRelationship" placeholder="例如：顾客、路人、朋友、专家">
+
+      <div class="me-field">
+        <label class="me-label">服装</label>
+        <input class="me-input" id="charEditClothing" placeholder="点击上方按钮随机生成">
       </div>
       <div class="me-field">
         <label class="me-label">年龄</label>
-        <input class="me-input" id="charEditAge" placeholder="例如：28岁">
+        <input class="me-input" id="charEditAge" placeholder="随机生成">
       </div>
       <div class="me-field">
         <label class="me-label">发型</label>
-        <input class="me-input" id="charEditHair" placeholder="例如：黑色齐肩短发">
+        <input class="me-input" id="charEditHair" placeholder="随机生成">
       </div>
       <div class="me-field">
         <label class="me-label">体型</label>
-        <input class="me-input" id="charEditBuild" placeholder="例如：身高165，偏瘦">
+        <input class="me-input" id="charEditBuild" placeholder="随机生成">
       </div>
       <div class="me-field">
         <label class="me-label">标志特征</label>
-        <input class="me-input" id="charEditFeatures" placeholder="例如：银色细框眼镜，右手腕银手链">
+        <input class="me-input" id="charEditFeatures" placeholder="随机生成">
       </div>
     </div>
     <div class="dialog-footer">
