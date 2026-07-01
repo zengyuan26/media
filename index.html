@@ -45,7 +45,6 @@
 
         <div class="sb-interview-nav">
           <button class="sb-nav-btn secondary" id="btnPrevQ" disabled>← 上一步</button>
-          <button class="sb-nav-btn secondary" id="btnSkipQ">跳过</button>
           <button class="sb-nav-btn primary" id="btnNextQ">下一步 →</button>
         </div>
 
@@ -112,6 +111,12 @@
         </div>
       </div>
 
+      <!-- 生成记录 -->
+      <div class="me-card-box">
+        <div class="me-section-head"><span>📋 生成记录</span></div>
+        <div id="sbRecordList" style="font-size:.76rem;color:#a09888;text-align:center;padding:12px 0">暂无记录</div>
+      </div>
+
       <!-- 设置入口 -->
       <div class="me-card-box" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="document.getElementById('settingsOverlay').classList.add('open')">
         <span style="font-weight:600;font-size:.85rem">⚙ 设置</span>
@@ -169,10 +174,7 @@
         <div id="meCustomModelField" style="display:none;margin-top:6px">
           <input type="text" class="me-input" id="meCustomModel" placeholder="输入 model ID">
         </div>
-        <div style="margin-top:10px">
-          <input type="tel" class="me-input" id="mePhone" placeholder="手机号（找回密码用）" style="font-size:.78rem">
-        </div>
-        <button class="dialog-btn primary" id="btnSaveApiConfig" style="margin-top:4px;width:100%">💾 保存 API 配置</button>
+        <button class="dialog-btn primary" id="btnSaveApiConfig" style="margin-top:10px;width:100%">💾 保存 API 配置</button>
         <span id="apiConfigSaveHint" style="display:block;font-size:.72rem;color:#5b9a8b;text-align:center;height:18px"></span>
       </div>
       <button class="me-reset-btn" id="btnLogout" style="margin-top:4px;color:#e57373">退出登录</button>

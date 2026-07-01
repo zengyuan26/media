@@ -102,6 +102,7 @@ function init() {
   }
   loadCharacterProfiles();
   loadSceneProfiles();
+  loadRecords();
   applyAllSettings();
   bindEvents();
   renderCharacterList();
@@ -124,6 +125,7 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById(tabId).classList.add('active');
   document.querySelector('.tab-item[data-tab="' + tabId + '"]').classList.add('active');
+  if (tabId === 'tabMe') renderRecords();
 }
 
 // ============================================================
@@ -562,14 +564,105 @@ function prevQuestion() {
   }
 }
 
-function skipQuestion() {
-  interviewAnswers[interviewStep] = { question: INTERVIEW_QUESTIONS[interviewStep], answer: '' };
-  interviewStep++;
+// ============================================================
+// GENERATION RECORDS
+// ============================================================
+var generationRecords = [];
+
+function loadRecords() {
+  try { var r = JSON.parse(localStorage.getItem('zimeiti-v3-records')); if (Array.isArray(r)) generationRecords = r; } catch(e) {}
+}
+
+function saveRecords() {
+  try { localStorage.setItem('zimeiti-v3-records', JSON.stringify(generationRecords)); } catch(e) {}
+}
+
+function createRecord(answers) {
+  var title = '';
+  for (var i = 0; i < answers.length; i++) {
+    if (answers[i] && answers[i].answer) { title = answers[i].answer.slice(0, 40); break; }
+  }
+  var record = {
+    id: generateId(),
+    title: title || '(空描述)',
+    interviewAnswers: JSON.parse(JSON.stringify(answers)),
+    status: 'generating',
+    createdAt: new Date().toISOString(),
+    storyboard: null
+  };
+  generationRecords.unshift(record);
+  if (generationRecords.length > 20) generationRecords = generationRecords.slice(0, 20);
+  saveRecords();
+  return record;
+}
+
+function updateRecord(id, updates) {
+  var idx = generationRecords.findIndex(function(r) { return r.id === id; });
+  if (idx < 0) return;
+  Object.keys(updates).forEach(function(k) { generationRecords[idx][k] = updates[k]; });
+  saveRecords();
+}
+
+function renderRecords() {
+  var container = document.getElementById('sbRecordList');
+  if (!container) return;
+  if (!generationRecords.length) {
+    container.innerHTML = '<div style="font-size:.76rem;color:#a09888;text-align:center;padding:12px 0">暂无记录</div>';
+    return;
+  }
+  var html = '';
+  generationRecords.forEach(function(r) {
+    var icon = r.status === 'completed' ? '✅' : '⏳';
+    var statusText = r.status === 'completed' ? '已完成' : r.status === 'failed' ? '失败' : '进行中';
+    var date = new Date(r.createdAt);
+    var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+    html += '<div class="mgr-item" onclick="resumeRecord(\'' + r.id + '\')" style="cursor:pointer">';
+    html += '<div class="mgr-item-avatar">' + icon + '</div>';
+    html += '<div class="mgr-item-info"><div class="mgr-item-name">' + escapeHtml(r.title) + '</div>';
+    html += '<div class="mgr-item-detail">' + dateStr + ' · ' + statusText + '</div></div>';
+    html += '<div class="mgr-item-actions"><button onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')" style="color:#e57373">删除</button></div>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function resumeRecord(id) {
+  var record = generationRecords.find(function(r) { return r.id === id; });
+  if (!record) return;
+
+  if (record.status === 'completed' && record.storyboard) {
+    // View completed storyboard
+    if (!confirm('该记录已完成，查看生成的故事板？')) return;
+    currentStoryboard = JSON.parse(JSON.stringify(record.storyboard));
+    document.getElementById('sbInterview').style.display = 'none';
+    document.getElementById('sbBoard').style.display = 'flex';
+    renderStoryboard();
+    switchTab('tabStoryboard');
+    return;
+  }
+
+  // Resume incomplete record
+  if (!confirm('恢复这条记录，继续问答？')) return;
+  interviewAnswers = JSON.parse(JSON.stringify(record.interviewAnswers));
+  interviewStep = interviewAnswers.length;
+  // If all questions were answered, go straight to generate
   if (interviewStep >= INTERVIEW_QUESTIONS.length) {
+    switchTab('tabStoryboard');
     generateStoryboard();
   } else {
+    currentStoryboard = null;
+    document.getElementById('sbInterview').style.display = 'flex';
+    document.getElementById('sbBoard').style.display = 'none';
+    switchTab('tabStoryboard');
     renderInterview();
   }
+}
+
+function deleteRecord(id) {
+  if (!confirm('删除这条记录？')) return;
+  generationRecords = generationRecords.filter(function(r) { return r.id !== id; });
+  saveRecords();
+  renderRecords();
 }
 
 // ============================================================
@@ -758,9 +851,10 @@ function buildStoryboardPrompt() {
     '\n请根据以上信息，输出完整的导演分镜表JSON。';
 }
 
+var activeRecordId = null;  // current generating record
+
 async function generateStoryboard() {
   if (currentStoryboard) {
-    // Regenerating: keep interview answers in case user wants to change
     if (!confirm('已有故事板，重新生成会覆盖当前内容。确定？')) return;
   }
 
@@ -772,6 +866,14 @@ async function generateStoryboard() {
     setTimeout(function() { hint.remove(); }, 3000);
     return;
   }
+
+  // Create record before generating
+  var answersToSave = [];
+  for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+    answersToSave.push(interviewAnswers[i] || { question: INTERVIEW_QUESTIONS[i], answer: '' });
+  }
+  var record = createRecord(answersToSave);
+  activeRecordId = record.id;
 
   isGenerating = true;
   updateStopButton();
@@ -788,18 +890,25 @@ async function generateStoryboard() {
     var jsonText = collectStreamJson(streamText);
     if (!jsonText) throw new Error('未能从AI响应中解析JSON');
     currentStoryboard = JSON.parse(jsonText);
+    // Update record as completed
+    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
     renderStoryboard();
+    renderRecords();
   } catch(e) {
+    // Mark record as failed so user can resume
+    updateRecord(activeRecordId, { status: 'failed' });
     document.getElementById('sbBoard').innerHTML =
       '<div style="text-align:center;padding:40px 20px;color:#e57373">' +
       '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
       '<div>生成失败：' + escapeHtml(e.message || '未知错误') + '</div>' +
       '<button class="dialog-btn primary" onclick="resetToInterview()" style="margin-top:16px">🔄 重新开始</button>' +
       '</div>';
+    renderRecords();
   }
 
   isGenerating = false;
   updateStopButton();
+  activeRecordId = null;
 }
 
 function collectStreamJson(text) {
@@ -808,14 +917,65 @@ function collectStreamJson(text) {
   // Try to find the outermost JSON object
   var start = cleaned.indexOf('{');
   var end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) return null;
+  if (start === -1 || end === -1 || start >= end) return null;
   var jsonText = cleaned.slice(start, end + 1);
-  // Quick validation
-  try { JSON.parse(jsonText); return jsonText; } catch(e) {
-    // Try to fix trailing commas
-    var fixed = jsonText.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-    try { JSON.parse(fixed); return fixed; } catch(e2) { return null; }
+
+  // Strategy 1: direct parse
+  try { JSON.parse(jsonText); return jsonText; } catch(e) {}
+
+  // Strategy 2: fix trailing commas
+  var fixed = jsonText.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+  try { JSON.parse(fixed); return fixed; } catch(e) {}
+
+  // Strategy 3: fix unclosed strings (truncated response) — close braces
+  var fixed2 = jsonText;
+  // Count open vs close braces/brackets
+  var openBraces = (fixed2.match(/\{/g) || []).length;
+  var closeBraces = (fixed2.match(/\}/g) || []).length;
+  var openBrackets = (fixed2.match(/\[/g) || []).length;
+  var closeBrackets = (fixed2.match(/\]/g) || []).length;
+  // Close unclosed strings first
+  var inString = false;
+  var escaped = false;
+  var chars = fixed2.split('');
+  for (var i = 0; i < chars.length; i++) {
+    if (escaped) { escaped = false; continue; }
+    if (chars[i] === '\\') { escaped = true; continue; }
+    if (chars[i] === '"') { inString = !inString; }
   }
+  // If inside a string, close it
+  if (inString) fixed2 += '"';
+  // Close remaining braces/brackets
+  for (var j = closeBraces; j < openBraces; j++) fixed2 += '}';
+  for (var k = closeBrackets; k < openBrackets; k++) fixed2 += ']';
+  try { JSON.parse(fixed2); return fixed2; } catch(e) {}
+
+  // Strategy 4: find the last valid complete key:value and truncate there, then close
+  // Try progressively shorter substrings
+  for (var pos = fixed2.length - 1; pos > start + 50; pos--) {
+    if (fixed2[pos] === ',' || fixed2[pos] === '{' || fixed2[pos] === '[') {
+      var attempt = fixed2.slice(0, pos + 1);
+      // Close structures
+      var ob = (attempt.match(/\{/g) || []).length;
+      var cb = (attempt.match(/\}/g) || []).length;
+      var obk = (attempt.match(/\[/g) || []).length;
+      var cbk = (attempt.match(/\]/g) || []).length;
+      // Check if inside a string
+      var s = false, esc = false;
+      for (var ii = 0; ii < attempt.length; ii++) {
+        if (esc) { esc = false; continue; }
+        if (attempt[ii] === '\\') { esc = true; continue; }
+        if (attempt[ii] === '"') s = !s;
+      }
+      if (s) continue; // skip if inside string
+      for (var jj = cb; jj < ob; jj++) attempt += '}';
+      for (var kk = cbk; kk < obk; kk++) attempt += ']';
+      attempt = attempt.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      try { JSON.parse(attempt); return attempt; } catch(e) {}
+    }
+  }
+
+  return null;
 }
 
 async function doStoryboardApiCall(systemPrompt, userPrompt) {
@@ -874,6 +1034,11 @@ function stopGeneration() {
   if (abortController) { abortController.abort(); abortController = null; }
   isGenerating = false;
   updateStopButton();
+  if (activeRecordId) {
+    updateRecord(activeRecordId, { status: 'failed' });
+    renderRecords();
+    activeRecordId = null;
+  }
 }
 
 // ============================================================
@@ -1426,14 +1591,7 @@ function bindEvents() {
     settings.endpoint = document.getElementById('meEndpoint').value.trim();
     settings.model = document.getElementById('meModel').value;
     settings.customModel = document.getElementById('meCustomModel').value.trim();
-    var phone = document.getElementById('mePhone').value.trim();
     saveSettingsToStorage();
-    if (typeof sbUser !== 'undefined' && sbUser && phone) {
-      // Save phone to profile
-      if (/^\d{11}$/.test(phone)) {
-        sbSaveProfile().catch(function(e) {});
-      }
-    }
     if (typeof sbSaveApiConfig !== 'undefined') sbSaveApiConfig();
     var hint = document.getElementById('apiConfigSaveHint');
     hint.textContent = '✓ 已保存'; hint.style.color = '#5b9a8b';
@@ -1482,7 +1640,6 @@ function bindEvents() {
   // Interview buttons
   document.getElementById('btnNextQ').addEventListener('click', nextQuestion);
   document.getElementById('btnPrevQ').addEventListener('click', prevQuestion);
-  document.getElementById('btnSkipQ').addEventListener('click', skipQuestion);
   document.getElementById('sbAnswer').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); nextQuestion(); }
   });
