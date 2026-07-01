@@ -956,7 +956,8 @@ function buildShotsSystemPrompt() {
     '钩子设计：' + (db.hookDesign || '') + '\n' +
     '情绪基调：' + (db.emotionalTone || '') + '\n' +
     '视觉参考：' + (db.visualReference || '') + '\n' +
-    '关键画面：' + ((db.keyFrames || []).join(' / ')) + '\n\n' +
+    '关键画面：' + ((db.keyFrames || []).join(' / ')) + '\n' +
+    (keyProps ? '关键道具（必须出现在镜头中）：' + keyProps + '\n' : '') + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
     '拉镜：缓拉 dolly out（逐渐远离）/ 急拉 whip out（快速后退）\n' +
@@ -1179,17 +1180,7 @@ function renderGallerySlide() {
   var shots = da.shots || [];
   if (!container || !shots.length) return;
 
-  // Render current shot card
   container.innerHTML = renderOneShotCard(shots[galleryIndex], galleryIndex);
-
-  // Continuity below the card
-  var contEl = document.getElementById('sbContinuityInfo');
-  if (contEl && galleryIndex > 0 && shots[galleryIndex].continuity) {
-    contEl.innerHTML = renderContinuityBar(shots[galleryIndex].continuity);
-    contEl.style.display = 'block';
-  } else if (contEl) {
-    contEl.style.display = 'none';
-  }
 
   // Update dots
   if (dots) {
@@ -1198,6 +1189,12 @@ function renderGallerySlide() {
       dotsHtml += '<span class="gallery-dot' + (i === galleryIndex ? ' active' : '') + '" onclick="goGallery(' + i + ')"></span>';
     }
     dots.innerHTML = dotsHtml;
+  }
+
+  // Update emotion flow items
+  for (var i = 0; i < shots.length; i++) {
+    var item = document.getElementById('emotionItem' + i);
+    if (item) item.classList.toggle('active', i === galleryIndex);
   }
 
   if (counter) counter.textContent = '第 ' + (galleryIndex + 1) + '/' + shots.length + ' 镜';
@@ -1219,7 +1216,18 @@ function renderShotsPage() {
   html += '<div class="sb-shots-header">';
   html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 导演分析</button>';
   html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center">🎥 ' + escapeHtml(da.title || '分镜') + '</span>';
-  html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + '</span>';
+  html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + shots.length + '镜</span>';
+  html += '</div>';
+
+  // Emotion flow strip
+  html += '<div class="emotion-flow">';
+  shots.forEach(function(shot, i) {
+    html += '<span class="emotion-flow-item' + (i === 0 ? ' active' : '') + '" onclick="goGallery(' + i + ')" id="emotionItem' + i + '">' + escapeHtml(shot.emotionBeat || '第'+(i+1)+'镜') + '</span>';
+    if (i < shots.length - 1) {
+      var trans = (shot.continuity && shot.continuity.transition) ? shot.continuity.transition : '→';
+      html += '<span class="emotion-flow-arrow">' + escapeHtml(trans) + '</span>';
+    }
+  });
   html += '</div>';
 
   // Gallery navigation
@@ -1230,7 +1238,7 @@ function renderShotsPage() {
   html += '</div>';
 
   // Counter + dots
-  html += '<div style="text-align:center;padding:6px 0">';
+  html += '<div style="text-align:center;padding:4px 0">';
   html += '<span id="sbGalleryCounter" style="font-size:.72rem;color:#8a8278">第 1/' + shots.length + ' 镜</span>';
   html += '</div>';
   html += '<div class="gallery-dots" id="sbGalleryDots">';
@@ -1239,23 +1247,20 @@ function renderShotsPage() {
   }
   html += '</div>';
 
-  // Continuity info
-  html += '<div id="sbContinuityInfo" style="display:' + (shots.length > 1 && shots[0].continuity ? 'block' : 'none') + '">';
-  if (shots.length > 1 && shots[0].continuity) {
-    html += renderContinuityBar(shots[0].continuity);
-  }
+  // Primary actions
+  html += '<div class="sb-actions-bar" style="border-top:1px solid #f0ece4;padding-top:10px">';
+  html += '<button class="sb-action-btn" onclick="replaceAllCharacters()">🔄 换角色</button>';
+  html += '<button class="sb-action-btn" onclick="replaceAllScenes()">🏠 换场景</button>';
+  html += '<button class="sb-action-btn" onclick="replaceKeyProps()">📦 换道具</button>';
+  html += '<button class="sb-action-btn primary" onclick="generateShots()">🎬 重新生成</button>';
+  html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">···</button>';
   html += '</div>';
 
-  // Actions
-  html += '<div class="sb-actions-bar">';
-  html += '<button class="dialog-btn secondary" onclick="openShotEditor(galleryIndex)" style="font-size:.7rem;padding:8px 6px">✏️ 编辑</button>';
-  html += '<button class="dialog-btn secondary" onclick="deleteShot(galleryIndex)" style="font-size:.7rem;padding:8px 6px">🗑 删除</button>';
-  html += '<button class="dialog-btn secondary" onclick="addShot()" style="font-size:.7rem;padding:8px 6px">+ 新增</button>';
-  html += '<button class="dialog-btn secondary" onclick="replaceAllCharacters()" style="font-size:.7rem;padding:8px 6px">🔄 形象</button>';
-  html += '<button class="dialog-btn secondary" onclick="replaceAllScenes()" style="font-size:.7rem;padding:8px 6px">🔄 场景</button>';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="font-size:.7rem;padding:8px 6px">🔄 重来</button>';
-  html += '<button class="dialog-btn primary" onclick="exportStoryboardPrompts()" style="font-size:.7rem;padding:8px 6px">📋 提示词</button>';
-  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()" style="font-size:.7rem;padding:8px 6px">📋 JSON</button>';
+  // Export
+  html += '<div style="display:flex;gap:6px;padding:6px 0 10px;justify-content:flex-end">';
+  html += '<button class="dialog-btn secondary" onclick="exportStoryboardPrompts()" style="font-size:.65rem;padding:6px 10px">📋 提示词</button>';
+  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()" style="font-size:.65rem;padding:6px 10px">📋 JSON</button>';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="font-size:.65rem;padding:6px 10px">🔄 重新开始</button>';
   html += '</div>';
 
   board.innerHTML = html;
@@ -1582,25 +1587,52 @@ function stopGeneration() {
 }
 
 function renderOneShotCard(shot, index) {
-  var subjects = (shot.subjects || []).map(function(s) { return s.characterName || '未知'; }).join(', ');
-  var camera = shot.camera ? (shot.camera.movement || '') : '';
+  var subjects = shot.subjects || [];
+  var chars = subjects.map(function(s) { return s.characterName || '?'; }).join(' → ');
+  var scene = shot.scene || {};
   var dialogue = shot.dialogue || '';
+  var emotionBeat = shot.emotionBeat || '';
 
   var html = '<div class="sb-shot-card">';
+
+  // Header: shot number + duration + shot type
   html += '<div class="sb-shot-card-header">';
   html += '<span class="shot-num">' + (index + 1) + '</span>';
-  html += '<span>' + escapeHtml(shot.duration || '') + '</span>';
-  html += '<span style="color:#8a8278">' + escapeHtml(shot.shotType || '') + '</span>';
-  if (shot.emotionBeat) html += '<span style="font-size:.72rem">' + escapeHtml(shot.emotionBeat) + '</span>';
+  html += '<span style="font-size:.72rem">' + escapeHtml(shot.duration || '') + '</span>';
+  html += '<span class="shot-type-tag">' + escapeHtml(shot.shotType || '中景') + '</span>';
   html += '</div>';
 
+  // Body
   html += '<div class="sb-shot-card-body">';
-  html += '<div class="sb-shot-row"><span class="shot-icon">👤</span><span>' + escapeHtml(subjects || '(未指定)') + '</span></div>';
-  html += '<div class="sb-shot-row"><span class="shot-icon">🎥</span><span>' + escapeHtml(camera || '(未指定)') + '</span></div>';
-  if (dialogue) html += '<div class="sb-shot-dialogue">💬 ' + escapeHtml(dialogue) + '</div>';
+
+  // Characters row
+  html += '<div class="shot-info-row">';
+  html += '<span class="shot-info-icon">👤</span>';
+  html += '<span class="shot-info-text">' + escapeHtml(chars || '(未指定)') + '</span>';
   html += '</div>';
 
+  // Scene row
+  html += '<div class="shot-info-row">';
+  html += '<span class="shot-info-icon">🏠</span>';
+  html += '<span class="shot-info-text">' + escapeHtml((scene.sceneName || scene.environment || '未指定') + ' · ' + (scene.atmosphere || '')) + '</span>';
   html += '</div>';
+
+  // Dialogue row
+  if (dialogue) {
+    html += '<div class="shot-dialogue-bubble">' + escapeHtml(dialogue) + '</div>';
+  }
+
+  // Emotion beat tag
+  if (emotionBeat) {
+    html += '<div class="shot-emotion-tag">🎭 ' + escapeHtml(emotionBeat) + '</div>';
+  }
+
+  // Action summary (small)
+  if (shot.action) {
+    html += '<div class="shot-action-summary">' + escapeHtml(shot.action) + '</div>';
+  }
+
+  html += '</div></div>';
 
   return html;
 }
@@ -1870,6 +1902,17 @@ function replaceAllCharacters() {
   });
 
   rerenderBoard();
+}
+
+var keyProps = '';
+
+function replaceKeyProps() {
+  var current = keyProps || '';
+  var input = prompt('输入要植入的关键道具（产品/物品）：\n例如：桶装水、某品牌手机、定制杯子\n多个用逗号分隔', current);
+  if (input === null) return; // cancel
+  keyProps = input.trim();
+  if (keyProps && !confirm('已设置道具：' + keyProps + '\n\n重新生成分镜来植入道具？')) return;
+  if (keyProps) generateShots();
 }
 
 function replaceAllScenes() {

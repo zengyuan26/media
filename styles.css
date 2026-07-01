@@ -231,27 +231,40 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 
 /* Shot cards */
 .sb-shot-list{display:flex;flex-direction:column;gap:4px}
-.sb-shot-card{border:1.5px solid #ede8e1;border-radius:12px;overflow:hidden;background:#fff}
+.sb-shot-card{border:1.5px solid #ede8e1;border-radius:14px;overflow:hidden;background:#fff;
+  box-shadow:0 2px 12px rgba(0,0,0,.04)}
 .sb-shot-card-header{
-  display:flex;align-items:center;gap:10px;padding:10px 14px;
-  background:#faf8f5;border-bottom:1px solid #f0ece4;font-size:.78rem;font-weight:600
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:#faf8f5;border-bottom:1px solid #f0ece4;font-size:.76rem;font-weight:600
 }
 .sb-shot-card-header .shot-num{background:#5b9a8b;color:#fff;width:26px;height:26px;
   border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0}
-.sb-shot-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
-.sb-shot-row{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#5d5850}
-.sb-shot-row .shot-icon{font-size:.95rem;flex-shrink:0;width:20px;text-align:center}
-.sb-shot-dialogue{
-  background:#faf8f5;border-left:3px solid #5b9a8b;padding:8px 12px;
-  border-radius:0 8px 8px 0;font-size:.78rem;color:#5b9a8b;font-weight:500;margin-top:4px
+.shot-type-tag{font-size:.68rem;color:#8a8278;background:#f0ece4;padding:2px 8px;border-radius:6px}
+.sb-shot-card-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+.shot-info-row{display:flex;align-items:flex-start;gap:8px}
+.shot-info-icon{font-size:1rem;flex-shrink:0;width:22px;text-align:center;line-height:1.4}
+.shot-info-text{font-size:.8rem;color:#5d5850;line-height:1.4}
+.shot-dialogue-bubble{
+  background:#eef7f4;border-left:3px solid #5b9a8b;padding:10px 14px;
+  border-radius:0 10px 10px 0;font-size:.88rem;color:#2d2a26;font-weight:600;margin-top:2px
 }
-.sb-shot-card-actions{display:flex;gap:4px;padding:8px 14px;border-top:1px solid #f0ece4}
-.sb-shot-card-actions button{
-  font-size:.7rem;padding:5px 12px;border-radius:8px;border:1px solid #e0dcd3;
-  background:#fff;cursor:pointer;color:#8a8278;transition:all .12s
-}
-.sb-shot-card-actions button:hover{background:#f5f1eb}
-.sb-shot-card-actions .sb-shot-edit{color:#5b9a8b;border-color:#5b9a8b}
+.shot-emotion-tag{font-size:.7rem;color:#5b9a8b;background:#eef7f4;padding:3px 10px;border-radius:10px;display:inline-block;align-self:flex-start}
+.shot-action-summary{font-size:.7rem;color:#a09888;line-height:1.5;padding-top:4px;border-top:1px dashed #f0ece4}
+
+/* Emotion flow strip */
+.emotion-flow{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:6px 0;flex-shrink:0;
+  -webkit-overflow-scrolling:touch}
+.emotion-flow-item{font-size:.65rem;padding:4px 10px;border-radius:10px;background:#f5f1eb;
+  color:#8a8278;white-space:nowrap;cursor:pointer;transition:all .15s;flex-shrink:0}
+.emotion-flow-item.active{background:#5b9a8b;color:#fff;font-weight:600}
+.emotion-flow-arrow{font-size:.55rem;color:#d0cbc3;flex-shrink:0}
+
+/* Action buttons */
+.sb-action-btn{font-size:.72rem;padding:8px 12px;border-radius:10px;border:1.5px solid #e0dcd3;
+  background:#fff;cursor:pointer;font-weight:600;color:#5d5850;transition:all .15s;flex:1;text-align:center}
+.sb-action-btn:hover{background:#f5f1eb;border-color:#5b9a8b}
+.sb-action-btn.primary{background:#5b9a8b;color:#fff;border-color:#5b9a8b}
+.sb-action-btn.primary:hover{background:#4a8a7b}
 
 /* Continuity bar (between two shot cards) */
 .sb-continuity-bar{
