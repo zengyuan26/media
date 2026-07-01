@@ -1027,9 +1027,13 @@ async function generateShots() {
   board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成分镜脚本…</div><div style="font-size:.72rem">基于导演分析逐镜拆解</div></div>';
 
   try {
+    console.log('[generateShots] building prompts...');
     var systemPrompt = buildShotsSystemPrompt();
+    console.log('[generateShots] systemPrompt length:', systemPrompt.length);
     var userPrompt = '请根据以上导演分析生成分镜脚本。';
+    console.log('[generateShots] calling API...');
     var streamText = await doStoryboardApiCall(systemPrompt, userPrompt);
+    console.log('[generateShots] API returned, length:', streamText.length);
     console.log('[generateShots] raw text:', streamText.slice(0, 300));
 
     var jsonText = collectStreamJson(streamText);
@@ -1389,6 +1393,8 @@ function collectStreamJson(text) {
 
 async function doStoryboardApiCall(systemPrompt, userPrompt) {
   abortController = new AbortController();
+  var model = settings.model === 'custom' ? settings.customModel : settings.model;
+  console.log('[doStoryboardApiCall] endpoint:', settings.endpoint, 'model:', model);
   var messages = [
     { role: 'system', content: '[System Prompt]\n' + systemPrompt },
     { role: 'user', content: userPrompt }
@@ -1398,7 +1404,7 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
     body: JSON.stringify({
-      model: settings.model === 'custom' ? settings.customModel : settings.model,
+      model: model,
       messages: messages,
       stream: true,
       temperature: 0.7,
@@ -1406,6 +1412,7 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
     }),
     signal: abortController.signal
   });
+  console.log('[doStoryboardApiCall] response status:', resp.status);
 
   if (!resp.ok) {
     var errText = await resp.text();
