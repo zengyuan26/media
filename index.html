@@ -319,6 +319,26 @@
 </div>
 
 <!-- ============================================================
+     PICKER OVERLAY (换角色/换场景)
+     ============================================================ -->
+<div class="overlay" id="pickerOverlay" onclick="if(event.target===this)closePicker()">
+  <div class="dialog settings-dialog">
+    <div class="dialog-header">
+      <span class="dialog-title" id="pickerTitle">选择</span>
+      <button class="btn-icon" onclick="closePicker()">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div id="pickerCurrent" style="margin-bottom:12px">
+        <div style="font-size:.72rem;color:#8a8278;margin-bottom:6px">当前使用：</div>
+        <div id="pickerCurrentList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+      <div style="font-size:.72rem;color:#8a8278;margin-bottom:6px">选择替换为：</div>
+      <div id="pickerList" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      LOGIN PAGE
      ============================================================ -->
 <div class="overlay" id="loginPage" style="background:#f7f3ed">

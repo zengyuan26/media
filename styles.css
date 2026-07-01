@@ -142,6 +142,15 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .mgr-item-actions{display:flex;gap:6px}
 .mgr-item-actions button{font-size:.72rem;padding:4px 10px;border-radius:8px;border:1px solid #e0dcd3;background:#fff;cursor:pointer}
 
+/* Picker overlay */
+.picker-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  border:1.5px solid #ede8e1;cursor:pointer;transition:all .15s}
+.picker-item:hover{border-color:#5b9a8b;background:#faf8f5}
+.picker-avatar{font-size:1.3rem;width:32px;text-align:center;flex-shrink:0}
+.picker-name{font-size:.82rem;font-weight:600;color:#2d2a26}
+.picker-detail{font-size:.68rem;color:#8a8278;margin-top:2px}
+.picker-tag{font-size:.7rem;padding:4px 10px;border-radius:8px;background:#f0ece4}
+
 /* ============================================================
    STORYBOARD — INTERVIEW
    ============================================================ */

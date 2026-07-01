@@ -2000,11 +2000,54 @@ function addShot() {
 // ============================================================
 // GLOBAL OPERATIONS
 // ============================================================
-function replaceAllCharacters() {
-  if (!characterProfiles.length) { alert('请先在「我的」中创建形象'); return; }
-  var sb = currentStoryboard.storyboard || currentStoryboard;
+// ============================================================
+// PICKER (visual character/scene selector)
+// ============================================================
+var pickerMode = '';      // 'char' or 'scene'
+var pickerFromName = '';  // which item to replace
 
-  // Collect character names used (by characterName, AI uses descriptive names)
+function closePicker() {
+  document.getElementById('pickerOverlay').classList.remove('open');
+}
+
+function pickChar(fromName) {
+  pickerFromName = fromName;
+  pickerMode = 'char';
+  if (!characterProfiles.length) { alert('请先在「我的」中创建形象'); return; }
+
+  document.getElementById('pickerTitle').textContent = '🔄 换角色';
+  var currentList = document.getElementById('pickerCurrentList');
+  currentList.innerHTML = '<span class="picker-tag selected" style="background:#5b9a8b;color:#fff">' + escapeHtml(fromName) + '</span>';
+
+  var list = document.getElementById('pickerList');
+  list.innerHTML = '<div class="picker-item" onclick="confirmPickChar(\'\', \'清除（不指定角色）\')" style="color:#e57373">✕ 清除角色</div>' +
+    characterProfiles.map(function(c) {
+      return '<div class="picker-item" onclick="confirmPickChar(\'' + c.id + '\', \'' + escapeHtml(c.name) + '\')">' +
+        '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
+        '<div><div class="picker-name">' + escapeHtml(c.name) + '</div>' +
+        '<div class="picker-detail">' + escapeHtml([c.gender, c.age, c.clothing].filter(Boolean).join(' · ')) + '</div></div>' +
+        '</div>';
+    }).join('');
+
+  document.getElementById('pickerOverlay').classList.add('open');
+}
+
+function confirmPickChar(id, name) {
+  closePicker();
+  var sb = (currentStoryboard.storyboard || currentStoryboard);
+  (sb.shots || []).forEach(function(shot) {
+    (shot.subjects || []).forEach(function(s) {
+      if ((s.characterName || '') === pickerFromName || (s.characterName || '').indexOf(pickerFromName) >= 0) {
+        s.characterId = id;
+        s.characterName = name || '';
+      }
+    });
+  });
+  rerenderBoard();
+}
+
+function replaceAllCharacters() {
+  var sb = currentStoryboard.storyboard || currentStoryboard;
   var usedNames = [];
   var seen = {};
   sb.shots.forEach(function(shot) {
@@ -2013,35 +2056,23 @@ function replaceAllCharacters() {
       if (!seen[key]) { seen[key] = true; usedNames.push(key); }
     });
   });
-
   if (!usedNames.length) { alert('当前分镜中没有角色'); return; }
 
-  // Step 1: pick which character to replace
-  var fromName = prompt('替换哪个角色？\n\n当前使用的角色：\n' + usedNames.map(function(n) { return '- ' + n; }).join('\n') + '\n\n输入角色名称：');
-  if (!fromName) return;
+  // If only one character, go straight to picker
+  if (usedNames.length === 1) { pickChar(usedNames[0]); return; }
 
-  var matchKey = usedNames.find(function(n) { return n === fromName || n.indexOf(fromName) >= 0; });
-  if (!matchKey) { alert('未找到匹配的角色'); return; }
-
-  // Step 2: pick replacement
-  var toList = characterProfiles.map(function(c) { return c.name; }).join('\n');
-  var toName = prompt('替换为哪个形象？\n\n可用形象：\n' + toList + '\n\n输入形象名称：');
-  if (!toName) return;
-  var toChar = characterProfiles.find(function(c) { return c.name === toName || c.name.indexOf(toName) >= 0; });
-  if (!toChar) { alert('未找到该形象'); return; }
-
-  // Replace all matching
-  sb.shots.forEach(function(shot) {
-    (shot.subjects || []).forEach(function(s) {
-      var key = s.characterName || '';
-      if (key === matchKey || key.indexOf(fromName) >= 0) {
-        s.characterId = toChar.id;
-        s.characterName = toChar.name;
-      }
-    });
-  });
-
-  rerenderBoard();
+  // Show which character to replace first
+  document.getElementById('pickerTitle').textContent = '🔄 替换哪个角色？';
+  document.getElementById('pickerCurrentList').innerHTML = '';
+  var list = document.getElementById('pickerList');
+  list.innerHTML = usedNames.map(function(n) {
+    return '<div class="picker-item" onclick="pickChar(\'' + escapeHtml(n) + '\')">' +
+      '<span class="picker-avatar">👤</span>' +
+      '<div class="picker-name">' + escapeHtml(n) + '</div>' +
+      '<span style="color:#5b9a8b;font-size:.7rem">替换 →</span>' +
+      '</div>';
+  }).join('');
+  document.getElementById('pickerOverlay').classList.add('open');
 }
 
 var keyProps = '';
@@ -2055,41 +2086,36 @@ function replaceKeyProps() {
   if (keyProps) generateShots();
 }
 
-function replaceAllScenes() {
+function pickScene(fromName) {
+  pickerFromName = fromName;
+  pickerMode = 'scene';
   if (!sceneProfiles.length) { alert('请先在「我的」中创建场景'); return; }
-  var sb = currentStoryboard.storyboard || currentStoryboard;
 
-  // Collect scene names used (by sceneName, since AI uses descriptive names not IDs)
-  var usedNames = [];
-  var seen = {};
-  sb.shots.forEach(function(shot) {
-    var s = shot.scene || {};
-    var key = s.sceneName || s.environment || '未命名场景';
-    if (!seen[key]) { seen[key] = true; usedNames.push(key); }
-  });
+  document.getElementById('pickerTitle').textContent = '🏠 换场景';
+  var currentList = document.getElementById('pickerCurrentList');
+  currentList.innerHTML = '<span class="picker-tag selected" style="background:#5b9a8b;color:#fff">' + escapeHtml(fromName) + '</span>';
 
-  if (!usedNames.length) { alert('当前分镜中没有场景信息'); return; }
+  var list = document.getElementById('pickerList');
+  list.innerHTML = sceneProfiles.map(function(s) {
+    return '<div class="picker-item" onclick="confirmPickScene(\'' + s.id + '\', \'' + escapeHtml(s.name) + '\')">' +
+      '<span class="picker-avatar">🏠</span>' +
+      '<div><div class="picker-name">' + escapeHtml(s.name) + '</div>' +
+      '<div class="picker-detail">' + escapeHtml([s.environment, s.atmosphere, s.lighting].filter(Boolean).join(' | ') + '') + '</div></div>' +
+      '</div>';
+  }).join('');
 
-  // Step 1: pick which scene to replace
-  var fromName = prompt('替换哪个场景？\n\n当前使用的场景：\n' + usedNames.map(function(n) { return '- ' + n; }).join('\n') + '\n\n输入场景名称：');
-  if (!fromName) return;
+  document.getElementById('pickerOverlay').classList.add('open');
+}
 
-  // Find matching scene in shots
-  var matchKey = usedNames.find(function(n) { return n === fromName || n.indexOf(fromName) >= 0; });
-  if (!matchKey) { alert('未找到匹配的场景'); return; }
-
-  // Step 2: pick replacement scene
-  var toList = sceneProfiles.map(function(s) { return s.name; }).join('\n');
-  var toName = prompt('替换为哪个场景？\n\n可用场景：\n' + toList + '\n\n输入场景名称：');
-  if (!toName) return;
-  var toScene = sceneProfiles.find(function(s) { return s.name === toName || s.name.indexOf(toName) >= 0; });
-  if (!toScene) { alert('未找到该场景'); return; }
-
-  // Replace all matching shots
-  sb.shots.forEach(function(shot) {
+function confirmPickScene(id, name) {
+  closePicker();
+  var toScene = sceneProfiles.find(function(s) { return s.id === id; });
+  if (!toScene) return;
+  var sb = (currentStoryboard.storyboard || currentStoryboard);
+  (sb.shots || []).forEach(function(shot) {
     var s = shot.scene || {};
     var key = s.sceneName || s.environment || '';
-    if (key === matchKey || key.indexOf(fromName) >= 0) {
+    if (key === pickerFromName || key.indexOf(pickerFromName) >= 0) {
       shot.scene = {
         sceneId: toScene.id,
         sceneName: toScene.name,
@@ -2098,8 +2124,33 @@ function replaceAllScenes() {
       };
     }
   });
-
   rerenderBoard();
+}
+
+function replaceAllScenes() {
+  var sb = currentStoryboard.storyboard || currentStoryboard;
+  var usedNames = [];
+  var seen = {};
+  sb.shots.forEach(function(shot) {
+    var s = shot.scene || {};
+    var key = s.sceneName || s.environment || '未命名场景';
+    if (!seen[key]) { seen[key] = true; usedNames.push(key); }
+  });
+  if (!usedNames.length) { alert('当前分镜中没有场景信息'); return; }
+
+  if (usedNames.length === 1) { pickScene(usedNames[0]); return; }
+
+  document.getElementById('pickerTitle').textContent = '🏠 替换哪个场景？';
+  document.getElementById('pickerCurrentList').innerHTML = '';
+  var list = document.getElementById('pickerList');
+  list.innerHTML = usedNames.map(function(n) {
+    return '<div class="picker-item" onclick="pickScene(\'' + escapeHtml(n) + '\')">' +
+      '<span class="picker-avatar">🏠</span>' +
+      '<div class="picker-name">' + escapeHtml(n) + '</div>' +
+      '<span style="color:#5b9a8b;font-size:.7rem">替换 →</span>' +
+      '</div>';
+  }).join('');
+  document.getElementById('pickerOverlay').classList.add('open');
 }
 
 function resetToInterview() {
