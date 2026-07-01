@@ -1075,6 +1075,28 @@ function buildDirectorSystemPrompt() {
     '- 纯 JSON 输出，不要 ```json``` 包裹';
 }
 
+function buildCharAssignHint() {
+  // Extract character assignments from current shots to maintain consistency on regenerate
+  var sb = (currentStoryboard.storyboard || currentStoryboard) || currentDirectorAnalysis;
+  var shots = sb.shots || [];
+  var assigned = {};
+  shots.forEach(function(shot) {
+    (shot.subjects || []).forEach(function(s) {
+      if (s.characterId && s.characterName) {
+        assigned[s.characterName] = s.characterId;
+      }
+    });
+  });
+  var keys = Object.keys(assigned);
+  if (!keys.length) return '';
+  var lines = keys.map(function(name) {
+    var ch = findCharById(assigned[name]);
+    if (ch) return '- ' + name + ' → 使用形象库中的 "' + ch.name + '"（' + (ch.gender || '') + '，' + (ch.clothing || '') + '）';
+    return '- ' + name + ' → 保持';
+  }).join('\n');
+  return '\n## 当前角色分配（请保持一致）\n' + lines + '\n';
+}
+
 // Phase 2: shots based on confirmed director analysis
 function buildShotsSystemPrompt() {
   var da = currentDirectorAnalysis || {};
@@ -1096,7 +1118,8 @@ function buildShotsSystemPrompt() {
     '视觉参考：' + (db.visualReference || '') + '\n' +
     '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n' +
     (keyProps ? '关键道具（必须出现在镜头中）：' + keyProps + '\n' : '') +
-    (currentDialect !== '普通话' ? '对话语言风格：' + currentDialect + '（台词必须用' + currentDialect + '表达）\n' : '') + '\n' +
+    (currentDialect !== '普通话' ? '对话语言风格：' + currentDialect + '（台词必须用' + currentDialect + '表达）\n' : '') +
+    buildCharAssignHint() + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
     '拉镜：缓拉 dolly out（逐渐远离）/ 急拉 whip out（快速后退）\n' +
@@ -2041,12 +2064,17 @@ function pickChar(fromName) {
 
 function confirmPickChar(id, name) {
   closePicker();
+  var toChar = findCharById(id);
   var sb = (currentStoryboard.storyboard || currentStoryboard);
   (sb.shots || []).forEach(function(shot) {
     (shot.subjects || []).forEach(function(s) {
       if ((s.characterName || '') === pickerFromName || (s.characterName || '').indexOf(pickerFromName) >= 0) {
         s.characterId = id;
         s.characterName = name || '';
+        // Also pull in character details
+        if (toChar) {
+          s.additionalDesc = [toChar.gender, toChar.age, toChar.clothing, toChar.features].filter(Boolean).join('，');
+        }
       }
     });
   });
