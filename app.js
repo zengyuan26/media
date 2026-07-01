@@ -764,12 +764,12 @@ function resumeRecord(id) {
   if (!record) return;
 
   if (record.status === 'completed' && record.storyboard) {
-    // View completed storyboard
     if (!confirm('该记录已完成，查看生成的故事板？')) return;
     currentStoryboard = JSON.parse(JSON.stringify(record.storyboard));
+    currentDirectorAnalysis = currentStoryboard.storyboard || currentStoryboard;
     document.getElementById('sbInterview').style.display = 'none';
     document.getElementById('sbBoard').style.display = 'flex';
-    renderStoryboard();
+    rerenderBoard();
     switchTab('tabStoryboard');
     return;
   }
@@ -912,40 +912,64 @@ function toggleVoiceInput() {
 // ============================================================
 // STORYBOARD — GENERATION
 // ============================================================
-function buildStoryboardSystemPrompt() {
+// Phase 1: director analysis only
+function buildDirectorSystemPrompt() {
+  return '你是短视频导演助手。根据用户对爆款视频的描述，输出导演分析 JSON。\n\n' +
+    '## 输出格式（所有字段必填）\n\n' +
+    '{\n' +
+    '  "directorAnalysis": {\n' +
+    '    "title": "吸引人的标题（必填）",\n' +
+    '    "totalDuration": "预估总时长，如 30s（必填）",\n' +
+    '    "directorBrief": {\n' +
+    '      "coreIdea": "核心创意一句话（必填）",\n' +
+    '      "targetEmotion": "希望观众经历的情绪变化（必填）",\n' +
+    '      "hookType": "钩子类型（必填）",\n' +
+    '      "videoStyle": "视觉风格（必填）"\n' +
+    '    },\n' +
+    '    "rhythmMap": [\n' +
+    '      {"timeRange": "时间段", "label": "节奏标签", "tempo": "快/中/慢", "purpose": "目的"}\n' +
+    '    ],\n' +
+    '    "emotionCurve": [\n' +
+    '      {"timeRange": "时间段", "emotion": "情绪描述", "intensity": 1-10, "trigger": "触发原因"}\n' +
+    '    ],\n' +
+    '    "audienceReaction": {\n' +
+    '      "targetAudience": "目标人群（必填）",\n' +
+    '      "painPoint": "痛点（必填）",\n' +
+    '      "beforeWatching": "看之前的认知状态（必填）",\n' +
+    '      "afterWatching": "看之后的变化（必填）",\n' +
+    '      "whyItWorks": ["有效原因"]\n' +
+    '    }\n' +
+    '  }\n' +
+    '}\n\n' +
+    '## 硬性要求\n' +
+    '- 每个字段必须填写具体内容，不得为空、不得写"待定"或"无"\n' +
+    '- rhythmMap 至少 3 段，覆盖全片时长\n' +
+    '- emotionCurve 至少 3 个节点，intensity 填数字 1-10\n' +
+    '- 纯 JSON 输出，不要 ```json``` 包裹';
+}
+
+// Phase 2: shots based on confirmed director analysis
+function buildShotsSystemPrompt() {
+  var da = currentDirectorAnalysis || {};
+  var db = da.directorBrief || {};
   var charList = characterProfiles.map(function(c) {
-    return '- ' + c.id + ': ' + c.name + ' (' + c.type + ', ' + [c.gender, c.clothing, c.age, c.hair, c.build, c.features].filter(Boolean).join(', ') + ')';
+    return '- ' + c.id + ': ' + c.name + ' (' + c.type + ', ' + [c.gender, c.clothing].filter(Boolean).join(', ') + ')';
   }).join('\n');
   var sceneList = sceneProfiles.map(function(s) {
     return '- ' + s.id + ': ' + s.name + ' (' + (s.description || '') + ')';
   }).join('\n');
 
-  return '你是短视频导演助手。根据用户对爆款视频的描述，输出完整的导演分镜表 JSON。\n\n' +
-    '## 输出格式（所有字段必填，不得省略）\n\n' +
+  return '你是短视频导演助手。根据已确认的导演分析，生成分镜脚本 JSON。\n\n' +
+    '## 已确认的导演分析\n' +
+    '标题：' + (da.title || '') + '\n' +
+    '总时长：' + (da.totalDuration || '') + '\n' +
+    '核心创意：' + (db.coreIdea || '') + '\n' +
+    '目标情绪：' + (db.targetEmotion || '') + '\n' +
+    '钩子类型：' + (db.hookType || '') + '\n' +
+    '视觉风格：' + (db.videoStyle || '') + '\n' +
+    '目标人群：' + ((da.audienceReaction || {}).targetAudience || '') + '\n\n' +
+    '## 输出格式\n' +
     '{\n' +
-    '  "title": "吸引人的标题",\n' +
-    '  "totalDuration": "预估总时长，如 30s",\n' +
-    '  "directorBrief": {\n' +
-    '    "coreIdea": "核心创意（必填）",\n' +
-    '    "targetEmotion": "希望观众经历的情绪变化，如 好奇→惊讶→认同（必填）",\n' +
-    '    "hookType": "钩子类型（必填）",\n' +
-    '    "videoStyle": "视觉风格（必填）"\n' +
-    '  },\n' +
-    '  "rhythmMap": [\n' +
-    '    {"timeRange": "时间段", "label": "节奏标签", "tempo": "快/中/慢", "purpose": "目的"}\n' +
-    '    // 至少3段，覆盖全片\n' +
-    '  ],\n' +
-    '  "emotionCurve": [\n' +
-    '    {"timeRange": "时间段", "emotion": "情绪emoji+文字", "intensity": 1-10, "trigger": "触发原因"}\n' +
-    '    // 至少3个节点，对应 rhythmMap\n' +
-    '  ],\n' +
-    '  "audienceReaction": {\n' +
-    '    "targetAudience": "目标人群（必填）",\n' +
-    '    "painPoint": "痛点（必填）",\n' +
-    '    "beforeWatching": "看之前的认知状态（必填）",\n' +
-    '    "afterWatching": "看之后的变化（必填）",\n' +
-    '    "whyItWorks": ["有效原因1", "有效原因2"]\n' +
-    '  },\n' +
     '  "shots": [\n' +
     '    {\n' +
     '      "id": "shot_1",\n' +
@@ -953,30 +977,249 @@ function buildStoryboardSystemPrompt() {
     '      "shotType": "景别（远景/全景/中景/近景/特写）",\n' +
     '      "subjects": [{"characterId": "", "characterName": "角色描述", "position": "位置", "direction": "朝向", "additionalDesc": "表情/状态"}],\n' +
     '      "action": "具体动作（必填）",\n' +
-    '      "scene": {"sceneId": "", "sceneName": "场景", "environment": "环境描述", "atmosphere": "氛围"},' +
-    '      "lighting": {"type": "光影类型", "direction": "方向"},\n' +
-    '      "camera": {"movement": "运镜方式", "focalLength": "焦段", "angle": "角度"},\n' +
+    '      "scene": {"sceneId": "", "sceneName": "场景", "environment": "环境", "atmosphere": "氛围"},\n' +
+    '      "lighting": {"type": "光影", "direction": "方向"},\n' +
+    '      "camera": {"movement": "运镜", "focalLength": "焦段", "angle": "角度"},\n' +
     '      "style": {"visualStyle": "视觉风格"},\n' +
     '      "quality": {"resolution": "4K", "fps": 60},\n' +
-    '      "dialogue": "台词（如有，必填）",\n' +
-    '      "emotionBeat": "情绪节点",\n' +
-    '      "continuity": {"transition": "切换方式", "carryOver": ["延续元素"], "newElements": ["新元素"], "eyeLine": "视线衔接", "actionLink": "动作因果", "emotionLink": "情绪变化", "cameraLink": "运镜衔接"}\n' +
+    '      "dialogue": "台词",\n' +
+    '      "emotionBeat": "情绪节点"\n' +
     '    }\n' +
-    '    // 至少4个镜头，每个镜头每个字段必须填写具体内容\n' +
     '  ]\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- directorBrief 的 4 个字段全部必填，不得为空\n' +
-    '- rhythmMap 至少 3 段\n' +
-    '- emotionCurve 至少 3 个节点，intensity 填数字 1-10\n' +
-    '- audienceReaction 的 5 个字段全部必填，不得为空\n' +
-    '- shots 至少 4 个，每个镜头必须填：shotType / subjects / action / scene / lighting / camera / style / quality / dialogue（无台词则填 ""）/ emotionBeat\n' +
-    '- 第 2 镜起每镜必须填 continuity（transition 必填，其余至少填一项）\n' +
-    '- 每个字段写具体内容，不要写"待定"、"无"、"..."等占位符\n' +
+    '- 至少 4 个镜头，每个镜头的 action/dialogue 必须填写具体内容\n' +
+    '- 第 2 镜起每镜必填 continuity：{"transition":"硬切/叠化/甩镜头","carryOver":["延续元素"],"newElements":["新元素"],"eyeLine":"视线衔接","actionLink":"动作因果","emotionLink":"情绪变化","cameraLink":"运镜衔接"}\n' +
     '- 纯 JSON 输出，不要 ```json``` 包裹\n\n' +
     '## 可用资源\n' +
     '角色库：\n' + (charList || '（空）') + '\n' +
     '场景库：\n' + (sceneList || '（空）') + '\n';
+}
+
+// Phase 1 normalize
+function normalizeDirectorAnalysis(data) {
+  var da = data;
+  da.title = da.title || '精彩短视频';
+  da.totalDuration = da.totalDuration || '30s';
+  var db = da.directorBrief = da.directorBrief || {};
+  db.coreIdea = db.coreIdea || da.title || '精彩短视频';
+  db.targetEmotion = db.targetEmotion || '好奇→认同→行动';
+  db.hookType = db.hookType || '悬念型';
+  db.videoStyle = db.videoStyle || '现代简约';
+  if (!Array.isArray(da.rhythmMap) || da.rhythmMap.length === 0) {
+    da.rhythmMap = [
+      { timeRange: '0-5s', label: '钩子', tempo: '快速', purpose: '抓住注意力' },
+      { timeRange: '5-20s', label: '展开', tempo: '中速', purpose: '传递信息' },
+      { timeRange: '20-30s', label: '收尾', tempo: '中速', purpose: '促成行动' }
+    ];
+  }
+  if (!Array.isArray(da.emotionCurve) || da.emotionCurve.length === 0) {
+    da.emotionCurve = [
+      { timeRange: '0-5s', emotion: '😱 惊讶', intensity: 9, trigger: '开头钩子' },
+      { timeRange: '5-20s', emotion: '🤔 好奇', intensity: 6, trigger: '信息展开' },
+      { timeRange: '20-30s', emotion: '😊 认同', intensity: 7, trigger: '价值确认' }
+    ];
+  }
+  var ar = da.audienceReaction = da.audienceReaction || {};
+  ar.targetAudience = ar.targetAudience || '短视频用户';
+  ar.painPoint = ar.painPoint || '信息获取效率低';
+  ar.beforeWatching = ar.beforeWatching || '对话题了解有限';
+  ar.afterWatching = ar.afterWatching || '获得新认知或情感共鸣';
+  ar.whyItWorks = Array.isArray(ar.whyItWorks) && ar.whyItWorks.length ? ar.whyItWorks : ['内容有针对性', '表达方式吸引人'];
+}
+
+// Phase 2: generate shots after director confirmed
+async function generateShots() {
+  if (!settings.apiKey) return;
+
+  isGenerating = true;
+  updateStopButton();
+
+  // Show loading in shots area
+  document.getElementById('sbDirectorBody').insertAdjacentHTML('afterend',
+    '<div id="sbShotsLoading" style="text-align:center;padding:40px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🎥</div><div>AI 正在生成分镜脚本…</div></div>');
+
+  try {
+    var systemPrompt = buildShotsSystemPrompt();
+    var userPrompt = '请根据以上导演分析生成分镜脚本。';
+    var streamText = await doStoryboardApiCall(systemPrompt, userPrompt);
+    var jsonText = collectStreamJson(streamText);
+    if (!jsonText) throw new Error('未能解析分镜JSON');
+    var data = JSON.parse(jsonText);
+    var shots = data.shots || [];
+    if (!Array.isArray(shots) || shots.length === 0) throw new Error('分镜数据为空');
+
+    currentDirectorAnalysis.shots = shots;
+    normalizeShots(currentDirectorAnalysis);
+    currentStoryboard = { storyboard: currentDirectorAnalysis };
+    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
+
+    // Remove loading, render shots
+    var loadingEl = document.getElementById('sbShotsLoading');
+    if (loadingEl) loadingEl.remove();
+    renderShotsSection();
+  } catch(e) {
+    var loadingEl2 = document.getElementById('sbShotsLoading');
+    if (loadingEl2) loadingEl2.remove();
+    document.getElementById('sbBoard').insertAdjacentHTML('beforeend',
+      '<div style="text-align:center;padding:20px;color:#e57373">分镜生成失败：' + escapeHtml(e.message || '') +
+      '<br><button class="dialog-btn primary" onclick="generateShots()" style="margin-top:12px">🔄 重试</button></div>');
+  }
+
+  isGenerating = false;
+  updateStopButton();
+}
+
+function normalizeShots(da) {
+  (da.shots || []).forEach(function(shot, i) {
+    shot.id = shot.id || ('shot_' + (i + 1));
+    shot.duration = shot.duration || '';
+    shot.shotType = shot.shotType || '中景';
+    shot.subjects = Array.isArray(shot.subjects) && shot.subjects.length ? shot.subjects : [{ characterId: '', characterName: '', position: '', direction: '', additionalDesc: '' }];
+    shot.action = shot.action || '';
+    shot.scene = shot.scene || { sceneId: '', sceneName: '', environment: '', atmosphere: '' };
+    shot.lighting = shot.lighting || { type: '', direction: '' };
+    shot.camera = shot.camera || { movement: '', focalLength: '', angle: '' };
+    shot.style = shot.style || { visualStyle: '' };
+    shot.quality = shot.quality || { resolution: '4K', fps: 60 };
+    shot.dialogue = shot.dialogue || '';
+    shot.emotionBeat = shot.emotionBeat || '';
+    if (i > 0 && !shot.continuity) {
+      shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
+    }
+  });
+}
+
+// ============================================================
+// STORYBOARD — RENDER (Phase 1: Director Review)
+// ============================================================
+function renderDirectorReview() {
+  var board = document.getElementById('sbBoard');
+  var da = currentDirectorAnalysis;
+  if (!da || !board) return;
+  var db = da.directorBrief || {};
+  var ar = da.audienceReaction || {};
+
+  var html = '';
+
+  // Title
+  html += '<div style="text-align:center;padding:8px 0 4px"><span style="font-size:1.1rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+
+  // Director brief
+  html += '<div class="sb-section"><div class="sb-section-header"><span>📋 导演分析</span></div><div class="sb-section-body">';
+  html += '<div class="sb-director-brief">';
+  html += '<p><span class="ds-label">核心创意：</span>' + escapeHtml(db.coreIdea || '') + '</p>';
+  html += '<p><span class="ds-label">目标情绪：</span>' + escapeHtml(db.targetEmotion || '') + '</p>';
+  html += '<p><span class="ds-label">钩子类型：</span>' + escapeHtml(db.hookType || '') + '</p>';
+  html += '<p><span class="ds-label">视频风格：</span>' + escapeHtml(db.videoStyle || '') + '</p>';
+  html += '</div></div></div>';
+
+  // Rhythm map
+  var rhythmMap = da.rhythmMap || [];
+  html += '<div class="sb-section"><div class="sb-section-header"><span>📈 节奏地图</span></div><div class="sb-section-body">';
+  if (rhythmMap.length) {
+    var colors = ['#5b9a8b','#6bae9e','#7dc2b1','#8fd6c4','#a1ead7'];
+    html += '<div class="sb-rhythm-bar">';
+    rhythmMap.forEach(function(r, i) {
+      html += '<div class="sb-rhythm-segment" style="flex:1;background:' + (colors[i % colors.length]) + '" title="' + escapeHtml((r.tempo || '') + ' - ' + (r.purpose || '')) + '">' + escapeHtml(r.label || r.timeRange || '') + '</div>';
+    });
+    html += '</div>';
+    html += '<div style="display:flex;font-size:.68rem;color:#8a8278;margin-top:6px;gap:8px;flex-wrap:wrap">';
+    rhythmMap.forEach(function(r) {
+      html += '<span style="background:#f5f1eb;padding:2px 8px;border-radius:6px">' + escapeHtml(r.timeRange || '') + ' ' + escapeHtml(r.tempo || '') + ' · ' + escapeHtml(r.purpose || '') + '</span>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  // Emotion curve
+  var emotionCurve = da.emotionCurve || [];
+  html += '<div class="sb-section"><div class="sb-section-header"><span>🎭 情绪曲线</span></div><div class="sb-section-body">';
+  if (emotionCurve.length) {
+    html += '<div class="sb-emotion-curve">';
+    emotionCurve.forEach(function(e) {
+      var h = (e.intensity || 5) * 7;
+      html += '<div class="sb-emotion-bar" style="height:' + h + 'px;background:#5b9a8b" title="' + escapeHtml((e.emotion || '') + ' - ' + (e.trigger || '')) + '"><span class="emotion-label">' + escapeHtml((e.emotion || '') + ' ' + (e.intensity || '')) + '</span></div>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  // Audience reaction
+  html += '<div class="sb-section"><div class="sb-section-header"><span>👥 观众分析</span></div><div class="sb-section-body">';
+  html += '<div class="sb-audience">';
+  html += '<div class="audience-item"><span class="audience-label">目标人群：</span>' + escapeHtml(ar.targetAudience || '') + '</div>';
+  html += '<div class="audience-item"><span class="audience-label">痛点：</span>' + escapeHtml(ar.painPoint || '') + '</div>';
+  html += '<div class="audience-item"><span class="audience-label">看之前：</span>' + escapeHtml(ar.beforeWatching || '') + '</div>';
+  html += '<div class="audience-item"><span class="audience-label">看之后：</span>' + escapeHtml(ar.afterWatching || '') + '</div>';
+  if (ar.whyItWorks && ar.whyItWorks.length) {
+    html += '<div class="audience-item"><span class="audience-label">为什么有效：</span>';
+    ar.whyItWorks.forEach(function(w) { html += '<div style="padding-left:12px">• ' + escapeHtml(w) + '</div>'; });
+    html += '</div>';
+  }
+  html += '</div></div></div>';
+
+  // Confirm button
+  html += '<div style="text-align:center;padding:12px 0">';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:10px">🔄 重新来</button>';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.9rem;padding:12px 32px">确认，生成分镜 ✨</button>';
+  html += '</div>';
+
+  board.innerHTML = html;
+  board.style.display = 'flex';
+}
+
+function rerenderBoard() {
+  renderDirectorReview();
+  if (currentDirectorAnalysis && currentDirectorAnalysis.shots && currentDirectorAnalysis.shots.length > 0) {
+    renderShotsSection();
+  }
+}
+
+// Render shots section (appended after director review)
+function renderShotsSection() {
+  var board = document.getElementById('sbBoard');
+  var da = currentDirectorAnalysis;
+  if (!da || !board) return;
+  var shots = da.shots || [];
+
+  // Remove confirm button area (last child of board)
+  var lastChild = board.lastElementChild;
+  if (lastChild && lastChild.tagName === 'DIV' && lastChild.style.textAlign === 'center') {
+    lastChild.remove();
+  }
+
+  var html = '';
+
+  // Shot cards
+  html += '<div class="sb-section"><div class="sb-section-header"><span>🎥 分镜脚本</span></div>';
+  html += '<div class="sb-section-body"><div class="sb-shot-list" id="sbShotList">';
+
+  shots.forEach(function(shot, i) {
+    html += renderOneShotCard(shot, i);
+    if (i < shots.length - 1 && shot.continuity) {
+      html += renderContinuityBar(shot.continuity);
+    }
+  });
+
+  html += '</div>';
+  html += '<button class="sb-add-shot-btn" id="btnSbAddShot">+ 新增镜头</button>';
+  html += '</div></div>';
+
+  // Actions
+  html += '<div class="sb-actions-bar">';
+  html += '<button class="dialog-btn secondary" onclick="replaceAllCharacters()">🔄 替换形象</button>';
+  html += '<button class="dialog-btn secondary" onclick="replaceAllScenes()">🔄 替换场景</button>';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()">🔄 重新生成</button>';
+  html += '<button class="dialog-btn primary" onclick="exportStoryboardPrompts()">📋 复制提示词</button>';
+  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()">📋 复制JSON</button>';
+  html += '</div>';
+
+  board.insertAdjacentHTML('beforeend', html);
+
+  // Bind add shot button
+  var addBtn = document.getElementById('btnSbAddShot');
+  if (addBtn) addBtn.onclick = addShot;
 }
 
 function buildStoryboardPrompt() {
@@ -1036,7 +1279,9 @@ function buildStoryboardPrompt() {
 }
 
 var activeRecordId = null;  // current generating record
+var currentDirectorAnalysis = null;  // phase 1 result, before shots
 
+// Phase 1: generate director analysis only
 async function generateStoryboard() {
   if (currentStoryboard) {
     if (!confirm('已有故事板，重新生成会覆盖当前内容。确定？')) return;
@@ -1068,19 +1313,18 @@ async function generateStoryboard() {
   document.getElementById('sbBoard').innerHTML = '<div style="text-align:center;padding:60px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🎬</div><div>AI 正在生成导演分镜表…</div></div>';
 
   try {
-    var systemPrompt = buildStoryboardSystemPrompt();
+    var systemPrompt = buildDirectorSystemPrompt();
     var userPrompt = buildStoryboardPrompt();
     var streamText = await doStoryboardApiCall(systemPrompt, userPrompt);
     var jsonText = collectStreamJson(streamText);
     if (!jsonText) throw new Error('未能从AI响应中解析JSON');
-    currentStoryboard = JSON.parse(jsonText);
-    normalizeStoryboard(currentStoryboard);
-    // Update record as completed
-    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
-    renderStoryboard();
+    var data = JSON.parse(jsonText);
+    currentDirectorAnalysis = data.directorAnalysis || data;
+    normalizeDirectorAnalysis(currentDirectorAnalysis);
+    currentStoryboard = { storyboard: currentDirectorAnalysis };  // partial, shots not yet generated
+    renderDirectorReview();
     renderRecords();
   } catch(e) {
-    // Mark record as failed so user can resume
     updateRecord(activeRecordId, { status: 'failed' });
     document.getElementById('sbBoard').innerHTML =
       '<div style="text-align:center;padding:40px 20px;color:#e57373">' +
@@ -1224,183 +1468,6 @@ function stopGeneration() {
     renderRecords();
     activeRecordId = null;
   }
-}
-
-function normalizeStoryboard(data) {
-  var sb = data.storyboard || data;
-  if (!sb) return;
-
-  // Ensure directorBrief
-  var db = sb.directorBrief = sb.directorBrief || {};
-  db.coreIdea = db.coreIdea || sb.title || '精彩短视频';
-  db.targetEmotion = db.targetEmotion || '好奇→认同→行动';
-  db.hookType = db.hookType || '根据内容推断';
-  db.videoStyle = db.videoStyle || '现代简约';
-
-  // Ensure rhythmMap
-  if (!Array.isArray(sb.rhythmMap) || sb.rhythmMap.length === 0) {
-    sb.rhythmMap = [{ timeRange: '0-10s', label: '开场', tempo: '中速', purpose: '引入主题' }];
-  }
-
-  // Ensure emotionCurve
-  if (!Array.isArray(sb.emotionCurve) || sb.emotionCurve.length === 0) {
-    sb.emotionCurve = [{ timeRange: '0-10s', emotion: '😐 中性', intensity: 5, trigger: '开场' }];
-  }
-
-  // Ensure audienceReaction
-  var ar = sb.audienceReaction = sb.audienceReaction || {};
-  ar.targetAudience = ar.targetAudience || '短视频用户';
-  ar.painPoint = ar.painPoint || '信息获取效率低';
-  ar.beforeWatching = ar.beforeWatching || '对话题了解有限';
-  ar.afterWatching = ar.afterWatching || '获得新认知或情感共鸣';
-  ar.whyItWorks = Array.isArray(ar.whyItWorks) && ar.whyItWorks.length ? ar.whyItWorks : ['内容有针对性', '表达方式吸引人'];
-
-  // Ensure shots
-  if (!Array.isArray(sb.shots) || sb.shots.length === 0) {
-    sb.shots = [{
-      id: 'shot_1', duration: '0-10s', shotType: '中景',
-      subjects: [{ characterId: '', characterName: '主角', position: '画面中央', direction: '面朝镜头', additionalDesc: '' }],
-      action: '进行中',
-      scene: { sceneId: '', sceneName: '通用场景', environment: '', atmosphere: '' },
-      lighting: { type: '自然光', direction: '正面' },
-      camera: { movement: '固定', focalLength: '50mm', angle: '平视' },
-      style: { visualStyle: '现代简约' },
-      quality: { resolution: '4K', fps: 60 },
-      dialogue: '',
-      emotionBeat: '😐 中性'
-    }];
-  }
-
-  // Ensure each shot has required fields
-  (sb.shots || []).forEach(function(shot, i) {
-    shot.id = shot.id || ('shot_' + (i + 1));
-    shot.duration = shot.duration || '';
-    shot.shotType = shot.shotType || '中景';
-    shot.subjects = Array.isArray(shot.subjects) && shot.subjects.length ? shot.subjects : [{ characterId: '', characterName: '', position: '', direction: '', additionalDesc: '' }];
-    shot.action = shot.action || '';
-    shot.scene = shot.scene || { sceneId: '', sceneName: '', environment: '', atmosphere: '' };
-    shot.lighting = shot.lighting || { type: '', direction: '' };
-    shot.camera = shot.camera || { movement: '', focalLength: '', angle: '' };
-    shot.style = shot.style || { visualStyle: '' };
-    shot.quality = shot.quality || { resolution: '4K', fps: 60 };
-    shot.dialogue = shot.dialogue || '';
-    shot.emotionBeat = shot.emotionBeat || '';
-    if (i > 0 && !shot.continuity) {
-      shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
-    }
-  });
-}
-
-// ============================================================
-// STORYBOARD — RENDER
-// ============================================================
-function renderStoryboard() {
-  var board = document.getElementById('sbBoard');
-  var sb = currentStoryboard.storyboard || currentStoryboard;
-  if (!sb) return;
-
-  var title = sb.title || '未命名';
-  var db = sb.directorBrief || {};
-  var ar = sb.audienceReaction || {};
-
-  var html = '';
-
-  // Director section
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header" id="btnToggleDirector"><span>🎬 导演分析 — ' + escapeHtml(title) + '</span><span class="sb-section-toggle">▾</span></div>';
-  html += '<div class="sb-section-body" id="sbDirectorBody">';
-
-  // Director brief
-  html += '<div class="sb-director-brief">';
-  html += '<p><span class="ds-label">核心创意：</span>' + escapeHtml(db.coreIdea || '') + '</p>';
-  html += '<p><span class="ds-label">目标情绪：</span>' + escapeHtml(db.targetEmotion || '') + '</p>';
-  html += '<p><span class="ds-label">钩子类型：</span>' + escapeHtml(db.hookType || '') + '</p>';
-  html += '<p><span class="ds-label">视频风格：</span>' + escapeHtml(db.videoStyle || '') + '</p>';
-  html += '</div>';
-
-  // Rhythm map
-  var rhythmMap = sb.rhythmMap || [];
-  if (rhythmMap.length) {
-    var colors = ['#5b9a8b','#6bae9e','#7dc2b1','#8fd6c4','#a1ead7'];
-    html += '<div class="sb-rhythm-bar">';
-    rhythmMap.forEach(function(r, i) {
-      var pct = r.timeRange || '';
-      html += '<div class="sb-rhythm-segment" style="flex:1;background:' + (colors[i % colors.length]) + '" title="' + escapeHtml(pct + ': ' + (r.tempo || '') + ' - ' + (r.purpose || '')) + '">' + escapeHtml(r.label || pct) + '</div>';
-    });
-    html += '</div>';
-  }
-
-  // Emotion curve
-  var emotionCurve = sb.emotionCurve || [];
-  if (emotionCurve.length) {
-    html += '<div class="sb-emotion-curve">';
-    emotionCurve.forEach(function(e) {
-      var h = (e.intensity || 5) * 7;
-      html += '<div class="sb-emotion-bar" style="height:' + h + 'px;background:#5b9a8b" title="' + escapeHtml((e.timeRange || '') + ': ' + (e.emotion || '') + ' - ' + (e.trigger || '')) + '"><span class="emotion-label">' + escapeHtml(e.timeRange || '') + '</span></div>';
-    });
-    html += '</div>';
-  }
-
-  // Audience reaction
-  html += '<div class="sb-audience">';
-  html += '<div class="audience-item"><span class="audience-label">目标人群：</span>' + escapeHtml(ar.targetAudience || '') + '</div>';
-  html += '<div class="audience-item"><span class="audience-label">痛点：</span>' + escapeHtml(ar.painPoint || '') + '</div>';
-  html += '<div class="audience-item"><span class="audience-label">看之前：</span>' + escapeHtml(ar.beforeWatching || '') + '</div>';
-  html += '<div class="audience-item"><span class="audience-label">看之后：</span>' + escapeHtml(ar.afterWatching || '') + '</div>';
-  if (ar.whyItWorks && ar.whyItWorks.length) {
-    html += '<div class="audience-item"><span class="audience-label">为什么有效：</span>';
-    ar.whyItWorks.forEach(function(w) { html += '<div style="padding-left:12px">• ' + escapeHtml(w) + '</div>'; });
-    html += '</div>';
-  }
-  html += '</div>';
-
-  html += '</div></div>'; // end director section
-
-  // Shot cards
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header"><span>🎥 分镜脚本</span></div>';
-  html += '<div class="sb-section-body"><div class="sb-shot-list" id="sbShotList">';
-
-  var shots = sb.shots || [];
-  shots.forEach(function(shot, i) {
-    html += renderOneShotCard(shot, i);
-    // Continuity bar between shots (skip after last)
-    if (i < shots.length - 1 && shot.continuity) {
-      html += renderContinuityBar(shot.continuity);
-    }
-  });
-
-  html += '</div>';
-  html += '<button class="sb-add-shot-btn" id="btnSbAddShot">+ 新增镜头</button>';
-  html += '</div></div>';
-
-  // Actions
-  html += '<div class="sb-actions-bar">';
-  html += '<button class="dialog-btn secondary" onclick="replaceAllCharacters()">🔄 替换形象</button>';
-  html += '<button class="dialog-btn secondary" onclick="replaceAllScenes()">🔄 替换场景</button>';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()">🔄 重新生成</button>';
-  html += '<button class="dialog-btn primary" onclick="exportStoryboardPrompts()">📋 复制提示词</button>';
-  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()">📋 复制JSON</button>';
-  html += '</div>';
-
-  board.innerHTML = html;
-
-  // Bind director toggle
-  var toggleBtn = document.getElementById('btnToggleDirector');
-  if (toggleBtn) {
-    toggleBtn.onclick = function() {
-      var body = document.getElementById('sbDirectorBody');
-      var arrow = this.querySelector('.sb-section-toggle');
-      if (body.style.display === 'none') { body.style.display = 'block'; if (arrow) arrow.textContent = '▾'; }
-      else { body.style.display = 'none'; if (arrow) arrow.textContent = '▸'; }
-    };
-  }
-
-  // Bind add shot button
-  var addBtn = document.getElementById('btnSbAddShot');
-  if (addBtn) addBtn.onclick = addShot;
-
-  board.style.display = 'flex';
 }
 
 function renderOneShotCard(shot, index) {
@@ -1610,7 +1677,7 @@ function saveShot() {
   }
 
   closeShotEditor();
-  renderStoryboard();
+  rerenderBoard();
 }
 
 function deleteShot(index) {
@@ -1618,7 +1685,7 @@ function deleteShot(index) {
   var sb = currentStoryboard.storyboard || currentStoryboard;
   sb.shots.splice(index, 1);
   // Remove continuity from the first remaining shot if it becomes shot 0
-  renderStoryboard();
+  rerenderBoard();
 }
 
 function moveShot(index, direction) {
@@ -1628,7 +1695,7 @@ function moveShot(index, direction) {
   var tmp = sb.shots[index];
   sb.shots[index] = sb.shots[newIdx];
   sb.shots[newIdx] = tmp;
-  renderStoryboard();
+  rerenderBoard();
 }
 
 function addShot() {
@@ -1652,7 +1719,7 @@ function addShot() {
     newShot.continuity = { transition: '硬切 cut', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
   }
   sb.shots.push(newShot);
-  renderStoryboard();
+  rerenderBoard();
   // Open editor for the new shot
   setTimeout(function() { openShotEditor(sb.shots.length - 1); }, 100);
 }
@@ -1697,7 +1764,7 @@ function replaceAllCharacters() {
     });
   });
 
-  renderStoryboard();
+  rerenderBoard();
 }
 
 function replaceAllScenes() {
@@ -1732,7 +1799,7 @@ function replaceAllScenes() {
     }
   });
 
-  renderStoryboard();
+  rerenderBoard();
 }
 
 function resetToInterview() {
