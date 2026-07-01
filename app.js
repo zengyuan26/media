@@ -1400,7 +1400,6 @@ function renderShotsPage() {
   // Export
   html += '<div style="display:flex;gap:6px;padding:6px 0 10px;justify-content:flex-end">';
   html += '<button class="dialog-btn secondary" onclick="exportStoryboardPrompts()" style="font-size:.65rem;padding:6px 10px">📋 提示词</button>';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="font-size:.65rem;padding:6px 10px">🔄 重新开始</button>';
   html += '</div>';
 
   board.innerHTML = html;
