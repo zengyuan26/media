@@ -156,6 +156,7 @@ function init() {
   loadCharacterProfiles();
   loadSceneProfiles();
   loadRecords();
+  loadDialects();
   applyAllSettings();
   bindEvents();
   renderCharacterList();
@@ -222,6 +223,8 @@ function updateAccountUI() {
   renderCharacterList();
   var sceneEl = document.getElementById('sceneCount');
   if (sceneEl) sceneEl.textContent = sceneProfiles.length + '个';
+  var dialectEl = document.getElementById('dialectName');
+  if (dialectEl) dialectEl.textContent = currentDialect;
 }
 
 function openCharacterManager() {
@@ -1092,7 +1095,8 @@ function buildShotsSystemPrompt() {
     '情绪基调：' + (db.emotionalTone || '') + '\n' +
     '视觉参考：' + (db.visualReference || '') + '\n' +
     '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n' +
-    (keyProps ? '关键道具（必须出现在镜头中）：' + keyProps + '\n' : '') + '\n' +
+    (keyProps ? '关键道具（必须出现在镜头中）：' + keyProps + '\n' : '') +
+    (currentDialect !== '普通话' ? '对话语言风格：' + currentDialect + '（台词必须用' + currentDialect + '表达）\n' : '') + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
     '拉镜：缓拉 dolly out（逐渐远离）/ 急拉 whip out（快速后退）\n' +
@@ -1388,6 +1392,7 @@ function renderShotsPage() {
   html += '<button class="sb-action-btn" onclick="replaceAllCharacters()">🔄 换角色</button>';
   html += '<button class="sb-action-btn" onclick="replaceAllScenes()">🏠 换场景</button>';
   html += '<button class="sb-action-btn" onclick="replaceKeyProps()">📦 换道具</button>';
+  html += '<button class="sb-action-btn" onclick="pickDialect()">🗣 换方言</button>';
   html += '<button class="sb-action-btn primary" onclick="generateShots()">🎬 重新生成</button>';
   html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">···</button>';
   html += '</div>';
@@ -1395,7 +1400,6 @@ function renderShotsPage() {
   // Export
   html += '<div style="display:flex;gap:6px;padding:6px 0 10px;justify-content:flex-end">';
   html += '<button class="dialog-btn secondary" onclick="exportStoryboardPrompts()" style="font-size:.65rem;padding:6px 10px">📋 提示词</button>';
-  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()" style="font-size:.65rem;padding:6px 10px">📋 JSON</button>';
   html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="font-size:.65rem;padding:6px 10px">🔄 重新开始</button>';
   html += '</div>';
 
@@ -2075,6 +2079,73 @@ function replaceAllCharacters() {
       '</div>';
   }).join('');
   document.getElementById('pickerOverlay').classList.add('open');
+}
+
+// ============================================================
+// DIALECTS
+// ============================================================
+var DEFAULT_DIALECTS = ['普通话', '重庆话', '武汉话', '河南话', '粤语', '东北话', '英语'];
+var dialects = [];
+var currentDialect = '普通话';
+
+function loadDialects() {
+  try { var d = JSON.parse(localStorage.getItem('zimeiti-v3-dialects')); if (Array.isArray(d)) dialects = d; } catch(e) {}
+  if (!dialects.length) dialects = DEFAULT_DIALECTS.slice();
+}
+function saveDialects() {
+  try { localStorage.setItem('zimeiti-v3-dialects', JSON.stringify(dialects)); } catch(e) {}
+}
+
+function pickDialect() {
+  document.getElementById('pickerTitle').textContent = '🗣 选择方言';
+  document.getElementById('pickerCurrentList').innerHTML = '<span class="picker-tag selected" style="background:#5b9a8b;color:#fff">当前：' + escapeHtml(currentDialect) + '</span>';
+
+  var list = document.getElementById('pickerList');
+  list.innerHTML = dialects.map(function(d) {
+    var sel = d === currentDialect ? ' style="border-color:#5b9a8b;background:#eef7f4"' : '';
+    return '<div class="picker-item"' + sel + ' onclick="confirmDialect(\'' + escapeHtml(d) + '\')">' +
+      '<span class="picker-avatar">🗣</span>' +
+      '<div class="picker-name">' + escapeHtml(d) + '</div>' +
+      (d === currentDialect ? '<span style="color:#5b9a8b;font-size:.7rem">✓ 当前</span>' : '') +
+      '</div>';
+  }).join('') +
+  '<div style="border-top:1px dashed #e0dcd3;margin-top:6px;padding-top:6px">' +
+  '<div style="display:flex;gap:6px">' +
+  '<input class="me-input" id="newDialectName" placeholder="自定义方言…" style="flex:1;font-size:.75rem">' +
+  '<button class="dialog-btn primary" onclick="addDialect()" style="font-size:.72rem;padding:6px 12px">+ 添加</button>' +
+  '</div>' +
+  '<div style="font-size:.65rem;color:#8a8278;margin-top:4px">点击已有方言可删除</div>' +
+  '</div>';
+
+  document.getElementById('pickerOverlay').classList.add('open');
+}
+
+function confirmDialect(name) {
+  if (name === currentDialect) {
+    if (name === '普通话') { closePicker(); return; }
+    if (confirm('删除方言"' + name + '"？')) {
+      dialects = dialects.filter(function(d) { return d !== name; });
+      currentDialect = '普通话';
+      saveDialects();
+      updateAccountUI();
+    }
+    closePicker();
+    return;
+  }
+  currentDialect = name;
+  updateAccountUI();
+  closePicker();
+}
+
+function addDialect() {
+  var input = document.getElementById('newDialectName');
+  var name = (input || {}).value ? input.value.trim() : '';
+  if (!name) return;
+  if (dialects.indexOf(name) >= 0) { alert('该方言已存在'); return; }
+  dialects.push(name);
+  saveDialects();
+  input.value = '';
+  pickDialect(); // refresh list
 }
 
 var keyProps = '';
