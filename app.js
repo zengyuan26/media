@@ -27,12 +27,65 @@ var DEFAULT_SETTINGS = {
 };
 
 var INTERVIEW_QUESTIONS = [
-  '这个视频一开头是什么画面？前3秒你看到了什么？有哪些特别抓人眼球的地方？',
-  '视频里有谁？几个人？各自穿着打扮什么样？有什么标志性特征？',
-  '他们在做什么动作？从头到尾情节是怎么变化的？每一步发生了什么？',
-  '在什么地方拍的？环境氛围怎么样？光线、时间、背景有什么特点？',
-  '你记住了哪句台词？或者大致讲了什么话？语气是什么样的？',
-  '你觉得这个视频最打动人的地方是什么？为什么你会记住它？你觉得观众看完会有什么反应？'
+  {
+    id: 'type', type: 'single',
+    question: '这是什么类型的视频？',
+    options: [
+      { value: '带货', icon: '🛒', label: '带货' },
+      { value: '知识', icon: '📖', label: '知识' },
+      { value: '搞笑', icon: '😂', label: '搞笑' },
+      { value: '剧情', icon: '🎭', label: '剧情' },
+      { value: '励志', icon: '💪', label: '励志' },
+      { value: '生活技巧', icon: '🍳', label: '生活技巧' },
+      { value: '其他', icon: '✨', label: '其他' }
+    ]
+  },
+  {
+    id: 'opening', type: 'single',
+    question: '开头前3秒怎么抓住人？',
+    options: [
+      { value: '视觉冲击', icon: '😱', label: '视觉冲击' },
+      { value: '抛问题', icon: '❓', label: '抛问题' },
+      { value: '数据对比', icon: '📊', label: '数据对比' },
+      { value: '制造冲突', icon: '😡', label: '制造冲突' },
+      { value: '音乐卡点', icon: '🎵', label: '音乐卡点' },
+      { value: '对话直入', icon: '🗣', label: '对话直入' }
+    ],
+    supplement: '补充：开头大致什么画面？（选填）'
+  },
+  {
+    id: 'characters', type: 'single',
+    question: '视频里有谁？',
+    options: [
+      { value: '一个人', icon: '👤', label: '一个人' },
+      { value: '两个人', icon: '👥', label: '两个人' },
+      { value: '多人', icon: '👨‍👩‍👧', label: '多人' },
+      { value: '没有人物', icon: '🐱', label: '没有人物' }
+    ],
+    supplement: '补充：大概什么样的穿着打扮？（选填）'
+  },
+  {
+    id: 'scene', type: 'double',
+    question: '在哪拍的？什么感觉？',
+    optionsA: [
+      { value: '居家', icon: '🏠', label: '居家' },
+      { value: '办公', icon: '🏢', label: '办公' },
+      { value: '户外', icon: '🌳', label: '户外' },
+      { value: '商铺', icon: '🛒', label: '商铺' },
+      { value: '餐厅', icon: '🍽', label: '餐厅' }
+    ],
+    optionsB: [
+      { value: '欢快', icon: '☀️', label: '欢快' },
+      { value: '温馨', icon: '🌙', label: '温馨' },
+      { value: '紧张', icon: '⚡', label: '紧张' },
+      { value: '随意', icon: '😌', label: '随意' }
+    ]
+  },
+  {
+    id: 'content', type: 'free',
+    question: '视频里发生了什么？',
+    placeholder: '描述从头到尾发生了什么，或直接粘贴视频文案/解说词…'
+  }
 ];
 
 // ============================================================
@@ -454,7 +507,7 @@ async function loadAllFromCloud() {
 // INTERVIEW
 // ============================================================
 function initInterview() {
-  if (currentStoryboard) return; // already have a storyboard
+  if (currentStoryboard) return;
   interviewStep = 0;
   interviewAnswers = [];
   renderInterview();
@@ -466,7 +519,6 @@ function renderInterview() {
   if (!el || !board) return;
 
   if (interviewStep >= INTERVIEW_QUESTIONS.length) {
-    // All questions answered, generate
     generateStoryboard();
     return;
   }
@@ -474,34 +526,123 @@ function renderInterview() {
   el.style.display = 'flex';
   board.style.display = 'none';
 
-  document.getElementById('sbQuestion').textContent = INTERVIEW_QUESTIONS[interviewStep];
-
-  // Restore previous answer if going back
+  var q = INTERVIEW_QUESTIONS[interviewStep];
   var prev = interviewAnswers[interviewStep];
-  document.getElementById('sbAnswer').value = prev ? prev.answer : '';
 
+  // Progress dots
+  var dotsHtml = '';
+  for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+    var cls = 'dot';
+    if (i < interviewStep && interviewAnswers[i] && interviewAnswers[i].answer) cls += ' done';
+    if (i === interviewStep) cls += ' active';
+    dotsHtml += '<span class="' + cls + '"></span>';
+  }
+  document.getElementById('sbProgressDots').innerHTML = dotsHtml;
+
+  // Question text
+  document.getElementById('sbQuestion').textContent = q.question;
+
+  // Show/hide sections based on question type
+  var choiceGrid = document.getElementById('sbChoiceGrid');
+  var choiceGridB = document.getElementById('sbChoiceGridB');
+  var supplement = document.getElementById('sbSupplement');
+  var freeInput = document.getElementById('sbFreeInput');
+
+  if (q.type === 'free') {
+    choiceGrid.style.display = 'none';
+    choiceGridB.style.display = 'none';
+    supplement.style.display = 'none';
+    freeInput.style.display = 'flex';
+    var ta = document.getElementById('sbAnswer');
+    ta.placeholder = q.placeholder || '';
+    ta.value = prev && prev.answer ? prev.answer : '';
+  } else if (q.type === 'double') {
+    choiceGrid.style.display = 'flex';
+    choiceGridB.style.display = 'flex';
+    supplement.style.display = 'none';
+    freeInput.style.display = 'none';
+    renderChoiceCards(choiceGrid, q.optionsA, prev, 'a');
+    renderChoiceCards(choiceGridB, q.optionsB, prev, 'b');
+  } else {
+    // single
+    choiceGrid.style.display = 'flex';
+    choiceGridB.style.display = 'none';
+    freeInput.style.display = 'none';
+    if (q.supplement) {
+      supplement.style.display = 'block';
+      document.getElementById('sbSupplementLabel').textContent = q.supplement;
+      document.getElementById('sbSupplementInput').value = prev && prev.supplement ? prev.supplement : '';
+    } else {
+      supplement.style.display = 'none';
+    }
+    renderChoiceCards(choiceGrid, q.options, prev, 'main');
+  }
+
+  // Navigation
   document.getElementById('btnPrevQ').disabled = interviewStep === 0;
-  document.getElementById('btnNextQ').textContent = interviewStep >= INTERVIEW_QUESTIONS.length - 1 ? '✨ 生成故事板' : '下一步 →';
-
-  renderInterviewProgress();
+  if (interviewStep >= INTERVIEW_QUESTIONS.length - 1) {
+    document.getElementById('btnNextQ').textContent = '✨ 生成故事板';
+  } else {
+    document.getElementById('btnNextQ').textContent = '下一题 →';
+  }
 }
 
-function renderInterviewProgress() {
-  var container = document.getElementById('sbProgress');
-  if (!container) return;
-  var html = '<div class="sb-progress-list">';
-  for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
-    var cls = interviewAnswers[i] && interviewAnswers[i].answer ? 'done' : '';
-    var label = interviewAnswers[i] && interviewAnswers[i].answer ? '✓' : (i + 1);
-    html += '<span class="sb-progress-item ' + cls + '">' + label + ' 第' + (i + 1) + '题</span>';
-  }
-  html += '</div>';
-  container.innerHTML = html;
+function renderChoiceCards(grid, options, prevAnswer, key) {
+  var prevVal = prevAnswer && prevAnswer.answer ? prevAnswer.answer[key] || prevAnswer.answer : '';
+  var html = '';
+  options.forEach(function(opt) {
+    var selected = prevVal === opt.value ? ' selected' : '';
+    html += '<div class="sb-choice-card' + selected + '" data-key="' + key + '" data-value="' + opt.value + '" onclick="selectChoice(this)">';
+    html += '<span class="card-icon">' + opt.icon + '</span>';
+    html += '<span class="card-label">' + opt.label + '</span>';
+    html += '</div>';
+  });
+  grid.innerHTML = html;
+}
+
+function selectChoice(card) {
+  var grid = card.parentElement;
+  // Deselect all in same grid
+  grid.querySelectorAll('.sb-choice-card').forEach(function(c) { c.classList.remove('selected'); });
+  card.classList.add('selected');
 }
 
 function nextQuestion() {
-  var answer = document.getElementById('sbAnswer').value.trim();
-  interviewAnswers[interviewStep] = { question: INTERVIEW_QUESTIONS[interviewStep], answer: answer };
+  var q = INTERVIEW_QUESTIONS[interviewStep];
+  var answer;
+
+  if (q.type === 'free') {
+    var text = document.getElementById('sbAnswer').value.trim();
+    if (!text) return;
+    answer = text;
+  } else if (q.type === 'double') {
+    var selA = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
+    var selB = document.querySelector('#sbChoiceGridB .sb-choice-card.selected');
+    if (!selA || !selB) return;
+    answer = { a: selA.dataset.value, b: selB.dataset.value };
+  } else {
+    // single
+    var sel = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
+    if (!sel) return;
+    answer = sel.dataset.value;
+    // Also save supplement if present
+    var supp = document.getElementById('sbSupplementInput').value.trim();
+    interviewAnswers[interviewStep] = {
+      question: q.question,
+      answer: answer,
+      supplement: supp || ''
+    };
+    interviewStep++;
+    if (interviewStep >= INTERVIEW_QUESTIONS.length) {
+      generateStoryboard();
+    } else {
+      renderInterview();
+    }
+    return;
+  }
+
+  // For free and double types, save answer directly
+  interviewAnswers[interviewStep] = { question: q.question, answer: answer };
   interviewStep++;
   if (interviewStep >= INTERVIEW_QUESTIONS.length) {
     generateStoryboard();
@@ -512,8 +653,29 @@ function nextQuestion() {
 
 function prevQuestion() {
   // Save current answer before going back
-  var answer = document.getElementById('sbAnswer').value.trim();
-  interviewAnswers[interviewStep] = { question: INTERVIEW_QUESTIONS[interviewStep], answer: answer };
+  var q = INTERVIEW_QUESTIONS[interviewStep];
+  if (q.type === 'free') {
+    var text = document.getElementById('sbAnswer').value.trim();
+    interviewAnswers[interviewStep] = { question: q.question, answer: text };
+  } else if (q.type === 'double') {
+    var selA = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
+    var selB = document.querySelector('#sbChoiceGridB .sb-choice-card.selected');
+    interviewAnswers[interviewStep] = {
+      question: q.question,
+      answer: {
+        a: selA ? selA.dataset.value : '',
+        b: selB ? selB.dataset.value : ''
+      }
+    };
+  } else {
+    var sel = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
+    var supp = document.getElementById('sbSupplementInput').value.trim();
+    interviewAnswers[interviewStep] = {
+      question: q.question,
+      answer: sel ? sel.dataset.value : '',
+      supplement: supp || ''
+    };
+  }
   if (interviewStep > 0) {
     interviewStep--;
     renderInterview();
@@ -798,13 +960,59 @@ function buildStoryboardSystemPrompt() {
 }
 
 function buildStoryboardPrompt() {
-  var qa = '';
-  interviewAnswers.forEach(function(a, i) {
-    if (a && a.answer) qa += 'Q: ' + a.question + '\nA: ' + a.answer + '\n\n';
+  var type = '', opening = '', openingSupp = '', characters = '', charSupp = '';
+  var scene = '', mood = '', content = '';
+
+  interviewAnswers.forEach(function(a) {
+    if (!a) return;
+    var q = INTERVIEW_QUESTIONS.find(function(x) { return x.question === a.question; });
+    if (!q) return;
+
+    switch (q.id) {
+      case 'type':
+        type = typeof a.answer === 'string' ? a.answer : '';
+        break;
+      case 'opening':
+        opening = typeof a.answer === 'string' ? a.answer : '';
+        openingSupp = a.supplement || '';
+        break;
+      case 'characters':
+        characters = typeof a.answer === 'string' ? a.answer : '';
+        charSupp = a.supplement || '';
+        break;
+      case 'scene':
+        if (a.answer && typeof a.answer === 'object') {
+          scene = a.answer.a || '';
+          mood = a.answer.b || '';
+        }
+        break;
+      case 'content':
+        content = typeof a.answer === 'string' ? a.answer : '';
+        break;
+    }
   });
 
-  return '## 用户描述的爆款视频（问答形式）\n\n' + qa +
-    '\n请根据以上信息，输出完整的导演分镜表JSON。';
+  // Build natural language summary
+  var info = [];
+  info.push('视频类型：' + (type || '未知'));
+  info.push('开头钩子：' + (opening || '未知') + (openingSupp ? '（画面补充：' + openingSupp + '）' : ''));
+  info.push('人物情况：' + (characters || '未知') + (charSupp ? '（穿着打扮：' + charSupp + '）' : ''));
+  info.push('场景：' + (scene || '未知') + ' | 氛围：' + (mood || '未知'));
+
+  var lines = info.join('\n');
+
+  if (content) {
+    lines += '\n\n视频内容描述（用户自由输入）：\n' + content;
+  }
+
+  lines += '\n\n## 重要约束\n';
+  lines += '- 视频风格和节奏必须匹配' + (type || '通用') + '类短视频的特点\n';
+  lines += '- 场景设定为' + (scene || '通用场景') + '，氛围' + (mood || '中性') + '\n';
+  lines += '- 人物数量：' + (characters || '根据内容推断') + '\n';
+  lines += '- 开场hook方式：' + (opening || '根据内容自由设计') + '\n';
+  if (content) lines += '- 从用户描述中提取具体情节、画面、台词，不要凭空编造\n';
+
+  return '## 用户对爆款视频的描述\n\n' + lines + '\n\n请根据以上信息，输出完整的导演分镜表JSON。';
 }
 
 var activeRecordId = null;  // current generating record
@@ -1598,7 +1806,8 @@ function bindEvents() {
   // Interview buttons
   document.getElementById('btnNextQ').addEventListener('click', nextQuestion);
   document.getElementById('btnPrevQ').addEventListener('click', prevQuestion);
-  document.getElementById('sbAnswer').addEventListener('keydown', function(e) {
+  var sbAnswerEl = document.getElementById('sbAnswer');
+  if (sbAnswerEl) sbAnswerEl.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); nextQuestion(); }
   });
 

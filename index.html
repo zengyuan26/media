@@ -32,23 +32,38 @@
     <!-- 阶段A: 问答收集区 -->
     <div class="sb-interview" id="sbInterview">
       <div class="sb-interview-inner">
-        <div class="sb-interview-avatar">🤖</div>
-        <div class="sb-interview-question" id="sbQuestion">准备开始分析爆款视频</div>
 
-        <div class="sb-interview-answer">
-          <textarea class="sb-interview-textarea" id="sbAnswer" rows="4" placeholder="用语音或文字回答…"></textarea>
+        <!-- 进度点 -->
+        <div class="sb-progress-dots" id="sbProgressDots"></div>
+
+        <!-- 问题 -->
+        <div class="sb-interview-question" id="sbQuestion"></div>
+
+        <!-- 卡片选择区 -->
+        <div class="sb-choice-grid" id="sbChoiceGrid"></div>
+        <div class="sb-choice-grid" id="sbChoiceGridB" style="margin-top:8px"></div>
+
+        <!-- 可选补充 -->
+        <div class="sb-supplement" id="sbSupplement" style="display:none">
+          <label class="sb-supplement-label" id="sbSupplementLabel"></label>
+          <textarea class="sb-interview-textarea" id="sbSupplementInput" rows="2"></textarea>
+        </div>
+
+        <!-- 自由输入区 -->
+        <div class="sb-free-input" id="sbFreeInput" style="display:none">
+          <textarea class="sb-interview-textarea" id="sbAnswer" rows="6" placeholder="描述从头到尾发生了什么，或粘贴视频文案/解说词…"></textarea>
           <div class="sb-interview-toolbar">
             <button class="sb-voice-btn" id="btnVoice" title="语音输入">🎤</button>
             <span class="sb-voice-hint" id="voiceHint">点击麦克风开始说话</span>
           </div>
         </div>
 
+        <!-- 导航 -->
         <div class="sb-interview-nav">
-          <button class="sb-nav-btn secondary" id="btnPrevQ" disabled>← 上一步</button>
-          <button class="sb-nav-btn primary" id="btnNextQ">下一步 →</button>
+          <button class="sb-nav-btn secondary" id="btnPrevQ" disabled>← 上一题</button>
+          <button class="sb-nav-btn primary" id="btnNextQ">下一题 →</button>
         </div>
 
-        <div class="sb-interview-progress" id="sbProgress"></div>
       </div>
     </div>
 
