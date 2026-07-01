@@ -1027,21 +1027,22 @@ async function generateShots() {
     var systemPrompt = buildShotsSystemPrompt();
     var userPrompt = '请根据以上导演分析生成分镜脚本。';
     var streamText = await doStoryboardApiCall(systemPrompt, userPrompt);
+    console.log('[generateShots] streamText length:', streamText.length);
     var jsonText = collectStreamJson(streamText);
     if (!jsonText) throw new Error('未能解析分镜JSON');
     var data = JSON.parse(jsonText);
-    var shots = data.shots || [];
+    // Handle both {"shots": [...]} and bare [...]
+    var shots = Array.isArray(data) ? data : (data.shots || []);
     if (!Array.isArray(shots) || shots.length === 0) throw new Error('分镜数据为空');
+    console.log('[generateShots] parsed ' + shots.length + ' shots');
 
     currentDirectorAnalysis.shots = shots;
     normalizeShots(currentDirectorAnalysis);
     currentStoryboard = { storyboard: currentDirectorAnalysis };
     updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
 
-    // Remove loading, render shots
-    var loadingEl = document.getElementById('sbShotsLoading');
-    if (loadingEl) loadingEl.remove();
-    renderShotsSection();
+    // Switch to shots page
+    renderShotsPage();
   } catch(e) {
     var loadingEl2 = document.getElementById('sbShotsLoading');
     if (loadingEl2) loadingEl2.remove();
@@ -1140,26 +1141,29 @@ function renderDirectorReview() {
 }
 
 function rerenderBoard() {
-  renderDirectorReview();
   if (currentDirectorAnalysis && currentDirectorAnalysis.shots && currentDirectorAnalysis.shots.length > 0) {
-    renderShotsSection();
+    renderShotsPage();
+  } else {
+    renderDirectorReview();
   }
 }
 
-// Render shots section (appended after director review)
-function renderShotsSection() {
+// Standalone shots page
+function renderShotsPage() {
   var board = document.getElementById('sbBoard');
   var da = currentDirectorAnalysis;
   if (!da || !board) return;
   var shots = da.shots || [];
-
-  // Remove confirm button area (last child of board)
-  var lastChild = board.lastElementChild;
-  if (lastChild && lastChild.tagName === 'DIV' && lastChild.style.textAlign === 'center') {
-    lastChild.remove();
-  }
+  var db = da.directorBrief || {};
 
   var html = '';
+
+  // Compact header
+  html += '<div class="sb-shots-header">';
+  html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview();board.scrollTop=0" style="font-size:.72rem;padding:6px 14px">← 返回导演分析</button>';
+  html += '<span style="font-weight:700;font-size:.88rem">🎥 ' + escapeHtml(da.title || '分镜脚本') + '</span>';
+  html += '<span style="font-size:.68rem;color:#8a8278">' + shots.length + '镜 · ' + escapeHtml(da.totalDuration || '') + '</span>';
+  html += '</div>';
 
   // Shot cards
   html += '<div class="sb-section"><div class="sb-section-header"><span>🎥 分镜脚本</span></div>';
@@ -1185,9 +1189,10 @@ function renderShotsSection() {
   html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()">📋 复制JSON</button>';
   html += '</div>';
 
-  board.insertAdjacentHTML('beforeend', html);
+  board.innerHTML = html;
+  board.style.display = 'flex';
 
-  // Bind add shot button
+  // Bind add shot
   var addBtn = document.getElementById('btnSbAddShot');
   if (addBtn) addBtn.onclick = addShot;
 }
@@ -1311,11 +1316,16 @@ async function generateStoryboard() {
 }
 
 function collectStreamJson(text) {
+  console.log('[collectStreamJson] raw text (' + text.length + ' chars):', text.slice(0, 200) + '...');
   // Remove markdown code fence
   var cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-  // Try to find the outermost JSON object
-  var start = cleaned.indexOf('{');
-  var end = cleaned.lastIndexOf('}');
+  // Try to find the outermost JSON object or array
+  var startObj = cleaned.indexOf('{');
+  var startArr = cleaned.indexOf('[');
+  var start = startObj === -1 ? startArr : (startArr === -1 ? startObj : Math.min(startObj, startArr));
+  var endObj = cleaned.lastIndexOf('}');
+  var endArr = cleaned.lastIndexOf(']');
+  var end = Math.max(endObj, endArr);
   if (start === -1 || end === -1 || start >= end) return null;
   var jsonText = cleaned.slice(start, end + 1);
 
