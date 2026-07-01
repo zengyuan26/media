@@ -379,7 +379,7 @@ function saveCharacterFromDialog() {
     characterProfiles.push(ch);
   }
   saveCharacterProfiles();
-  if (typeof sbSaveCharacter !== 'undefined') sbSaveCharacter(ch);
+  if (typeof sbSaveCharacter !== 'undefined') sbSaveCharacter(ch).catch(function(e) { console.error('save char failed:', e); });
   closeCharacterEditor();
   renderCharManagerList();
 }
@@ -481,7 +481,7 @@ function addSceneFromManager() {
   };
   sceneProfiles.push(s);
   saveSceneProfiles();
-  if (typeof sbSaveScene !== 'undefined') sbSaveScene(s);
+  if (typeof sbSaveScene !== 'undefined') sbSaveScene(s).catch(function(e) { console.error('save scene failed:', e); });
   document.getElementById('newSceneName').value = '';
   document.getElementById('newSceneEnv').value = '';
   document.getElementById('newSceneAtmo').value = '';
@@ -533,23 +533,33 @@ async function doLoginOrRegister(mode) {
     } else {
       await sbSignIn(email, pass);
     }
-    // Backup current API config before resetting
+    // Backup current data before resetting
     var prevApiKey = settings.apiKey;
     var prevEndpoint = settings.endpoint;
     var prevModel = settings.model;
     var prevCustomModel = settings.customModel;
+    var prevChars = characterProfiles.slice();
+    var prevScenes = sceneProfiles.slice();
 
     settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     characterProfiles = [];
     sceneProfiles = [];
     await loadAllFromCloud();
 
-    // If cloud didn't restore API config, keep previous values
+    // If cloud didn't restore data, keep local values
     if (!settings.apiKey && prevApiKey) {
       settings.apiKey = prevApiKey;
       settings.endpoint = prevEndpoint;
       settings.model = prevModel;
       settings.customModel = prevCustomModel;
+    }
+    if (!characterProfiles.length && prevChars.length) {
+      characterProfiles = prevChars;
+      saveCharacterProfiles();
+    }
+    if (!sceneProfiles.length && prevScenes.length) {
+      sceneProfiles = prevScenes;
+      saveSceneProfiles();
     }
 
     applyAllSettings();
