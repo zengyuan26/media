@@ -151,7 +151,7 @@ async function sbLoadScenes() {
   var _a;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('scenes').select('*').eq('user_id', sbUser.id).order('created_at'));
   if (r.data) {
-    sceneProfiles = r.data.map(function(s) { return { id: s.id, name: s.name, description: s.description || '' }; });
+    sceneProfiles = r.data.map(function(s) { return { id: s.id, name: s.name, description: s.description || '', environment: s.environment || '', atmosphere: s.atmosphere || '', lighting: s.lighting || '' }; });
     saveSceneProfiles();
   }
 }
@@ -163,7 +163,10 @@ async function sbSaveScene(s) {
     id: s.id && s.id.length > 20 ? s.id : undefined,
     user_id: sbUser.id,
     name: s.name,
-    description: s.description || ''
+    description: s.description || '',
+    environment: s.environment || '',
+    atmosphere: s.atmosphere || '',
+    lighting: s.lighting || ''
   }));
   await sbLoadScenes();
 }

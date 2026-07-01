@@ -227,9 +227,15 @@
     <div class="dialog-body" id="sceneManagerList">
       <div style="font-size:.76rem;color:#a09888;text-align:center;padding:24px 0">还没有场景</div>
     </div>
-    <div style="padding:12px 20px;border-top:1.5px solid #ede8e1;display:flex;flex-direction:column;gap:10px">
-      <input class="me-input" id="newSceneName2" placeholder="场景名称：例如 厨房、办公室">
-      <input class="me-input" id="newSceneDesc2" placeholder="场景描述：例如 明亮的开放式厨房">
+    <div style="padding:12px 20px;border-top:1.5px solid #ede8e1;display:flex;flex-direction:column;gap:8px">
+      <input class="me-input" id="newSceneName" placeholder="场景名称：例如 厨房、办公室、公园" style="font-weight:600">
+      <div style="display:flex;gap:6px">
+        <button class="dialog-btn secondary" onclick="randomScene()" style="flex:1;font-size:.72rem">🎲 随机</button>
+        <button class="dialog-btn secondary" onclick="aiGenerateScene()" id="btnAiScene" style="flex:1;font-size:.72rem">✨ AI 生成</button>
+      </div>
+      <input class="me-input" id="newSceneEnv" placeholder="环境描述：例如 开放式厨房·大理石台面·暖色灯光">
+      <input class="me-input" id="newSceneAtmo" placeholder="氛围：例如 温馨·烟火气·放松">
+      <input class="me-input" id="newSceneLight" placeholder="光影：例如 暖色顶光·窗户自然光补光">
       <button class="dialog-btn primary" onclick="addSceneFromManager()" style="width:100%">+ 添加场景</button>
     </div>
   </div>

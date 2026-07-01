@@ -376,6 +376,46 @@ function closeSceneManager() {
   document.getElementById('sceneManagerOverlay').classList.remove('open');
 }
 
+// Scene random generation data
+var RANDOM_SCENE = {
+  env: ['简约现代风·干净整洁·自然光充足', '温馨居家风·柔和的灯光·生活气息', '工业风·水泥墙面·暖色吊灯', '日式简约·木质元素·柔和光线', '复古风格·暖色调·斑驳光影', '极简白墙·明亮通透·无影灯'],
+  atmo: ['安静·专注', '温馨·放松', '活力·热闹', '浪漫·暧昧', '沉稳·专业', '轻松·愉快', '神秘·紧张'],
+  light: ['暖色顶光 + 侧面窗户自然光', '冷色LED灯·均匀照明', '暖黄吊灯·局部阴影', '自然光从窗户45°照射', '侧逆光·轮廓柔和发光', '顶灯漫射·无硬阴影']
+};
+
+function randomScene() {
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  document.getElementById('newSceneEnv').value = pick(RANDOM_SCENE.env);
+  document.getElementById('newSceneAtmo').value = pick(RANDOM_SCENE.atmo);
+  document.getElementById('newSceneLight').value = pick(RANDOM_SCENE.light);
+}
+
+async function aiGenerateScene() {
+  var name = document.getElementById('newSceneName').value.trim();
+  if (!name) { alert('请先输入场景名称'); return; }
+  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+
+  var btn = document.getElementById('btnAiScene');
+  btn.textContent = '⏳ 生成中...';
+  btn.disabled = true;
+
+  try {
+    var prompt = '请描述一个"' + name + '"场景的拍摄环境。输出纯JSON：\n{"environment":"环境描述（1-2句话，包括空间特征和关键物品）","atmosphere":"氛围（2-4字+感受）","lighting":"光影特点（光源类型+方向+效果）"}';
+    var text = await doStoryboardApiCall('你是影视场景设计师。输出纯JSON，不要markdown包裹。', prompt);
+    var jsonText = collectStreamJson(text);
+    if (!jsonText) throw new Error('解析失败');
+    var data = JSON.parse(jsonText);
+    document.getElementById('newSceneEnv').value = data.environment || '';
+    document.getElementById('newSceneAtmo').value = data.atmosphere || '';
+    document.getElementById('newSceneLight').value = data.lighting || '';
+  } catch(e) {
+    alert('AI生成失败，改用随机：' + (e.message || ''));
+    randomScene();
+  }
+  btn.textContent = '✨ AI 生成';
+  btn.disabled = false;
+}
+
 function renderSceneManagerList() {
   var container = document.getElementById('sceneManagerList');
   if (!container) return;
@@ -389,7 +429,7 @@ function renderSceneManagerList() {
     html += '<div class="mgr-item">';
     html += '<div class="mgr-item-avatar">🏠</div>';
     html += '<div class="mgr-item-info"><div class="mgr-item-name">' + escapeHtml(s.name || '未命名') + '</div>';
-    html += '<div class="mgr-item-detail">' + escapeHtml(s.description || '') + '</div></div>';
+    html += '<div class="mgr-item-detail">' + escapeHtml([s.environment, s.atmosphere].filter(Boolean).join(' · ') || s.description || '') + '</div></div>';
     html += '<div class="mgr-item-actions">';
     html += '<button onclick="deleteSceneFromManager(\'' + s.id + '\')" style="color:#e57373">删除</button>';
     html += '</div></div>';
@@ -399,15 +439,23 @@ function renderSceneManagerList() {
 }
 
 function addSceneFromManager() {
-  var name = document.getElementById('newSceneName2').value.trim();
-  var desc = document.getElementById('newSceneDesc2').value.trim();
+  var name = document.getElementById('newSceneName').value.trim();
   if (!name) { alert('请输入场景名称'); return; }
-  var s = { id: generateId(), name: name, description: desc };
+  var s = {
+    id: generateId(),
+    name: name,
+    description: '',
+    environment: document.getElementById('newSceneEnv').value.trim(),
+    atmosphere: document.getElementById('newSceneAtmo').value.trim(),
+    lighting: document.getElementById('newSceneLight').value.trim()
+  };
   sceneProfiles.push(s);
   saveSceneProfiles();
   if (typeof sbSaveScene !== 'undefined') sbSaveScene(s);
-  document.getElementById('newSceneName2').value = '';
-  document.getElementById('newSceneDesc2').value = '';
+  document.getElementById('newSceneName').value = '';
+  document.getElementById('newSceneEnv').value = '';
+  document.getElementById('newSceneAtmo').value = '';
+  document.getElementById('newSceneLight').value = '';
   renderSceneManagerList();
 }
 
@@ -966,7 +1014,7 @@ function buildShotsSystemPrompt() {
     return '- ' + c.id + ': ' + c.name + ' (' + c.type + ', ' + [c.gender, c.clothing].filter(Boolean).join(', ') + ')';
   }).join('\n');
   var sceneList = sceneProfiles.map(function(s) {
-    return '- ' + s.id + ': ' + s.name + ' (' + (s.description || '') + ')';
+    return '- ' + s.id + ': ' + s.name + ' (' + [s.environment, s.atmosphere, s.lighting].filter(Boolean).join(' | ') + ')';
   }).join('\n');
 
   return '你是短视频导演助手。根据已确认的导演分析，生成分镜脚本 JSON。\n\n' +
