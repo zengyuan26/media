@@ -1149,53 +1149,115 @@ function rerenderBoard() {
   }
 }
 
-// Standalone shots page
+// Shot gallery state
+var galleryIndex = 0;
+
+function changeGallery(dir) {
+  var shots = (currentDirectorAnalysis || {}).shots || [];
+  var newIdx = galleryIndex + dir;
+  if (newIdx < 0 || newIdx >= shots.length) return;
+  galleryIndex = newIdx;
+  renderGallerySlide();
+}
+
+function goGallery(idx) {
+  var shots = (currentDirectorAnalysis || {}).shots || [];
+  if (idx < 0 || idx >= shots.length) return;
+  galleryIndex = idx;
+  renderGallerySlide();
+}
+
+function renderGallerySlide() {
+  var container = document.getElementById('sbShotCard');
+  var dots = document.getElementById('sbGalleryDots');
+  var counter = document.getElementById('sbGalleryCounter');
+  var prevBtn = document.getElementById('sbGalleryPrev');
+  var nextBtn = document.getElementById('sbGalleryNext');
+  var da = currentDirectorAnalysis || {};
+  var shots = da.shots || [];
+  if (!container || !shots.length) return;
+
+  // Render current shot card
+  container.innerHTML = renderOneShotCard(shots[galleryIndex], galleryIndex);
+
+  // Continuity below the card
+  var contEl = document.getElementById('sbContinuityInfo');
+  if (contEl && galleryIndex > 0 && shots[galleryIndex].continuity) {
+    contEl.innerHTML = renderContinuityBar(shots[galleryIndex].continuity);
+    contEl.style.display = 'block';
+  } else if (contEl) {
+    contEl.style.display = 'none';
+  }
+
+  // Update dots
+  if (dots) {
+    var dotsHtml = '';
+    for (var i = 0; i < shots.length; i++) {
+      dotsHtml += '<span class="gallery-dot' + (i === galleryIndex ? ' active' : '') + '" onclick="goGallery(' + i + ')"></span>';
+    }
+    dots.innerHTML = dotsHtml;
+  }
+
+  if (counter) counter.textContent = '第 ' + (galleryIndex + 1) + '/' + shots.length + ' 镜';
+  if (prevBtn) prevBtn.disabled = galleryIndex === 0;
+  if (nextBtn) nextBtn.disabled = galleryIndex >= shots.length - 1;
+}
+
+// Standalone shots page with gallery
 function renderShotsPage() {
   var board = document.getElementById('sbBoard');
   var da = currentDirectorAnalysis;
   if (!da || !board) return;
   var shots = da.shots || [];
-  var db = da.directorBrief || {};
+  galleryIndex = 0;
 
   var html = '';
 
-  // Compact header
+  // Header
   html += '<div class="sb-shots-header">';
-  html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview();board.scrollTop=0" style="font-size:.72rem;padding:6px 14px">← 返回导演分析</button>';
-  html += '<span style="font-weight:700;font-size:.88rem">🎥 ' + escapeHtml(da.title || '分镜脚本') + '</span>';
-  html += '<span style="font-size:.68rem;color:#8a8278">' + shots.length + '镜 · ' + escapeHtml(da.totalDuration || '') + '</span>';
+  html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 导演分析</button>';
+  html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center">🎥 ' + escapeHtml(da.title || '分镜') + '</span>';
+  html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + '</span>';
   html += '</div>';
 
-  // Shot cards
-  html += '<div class="sb-section"><div class="sb-section-header"><span>🎥 分镜脚本</span></div>';
-  html += '<div class="sb-section-body"><div class="sb-shot-list" id="sbShotList">';
-
-  shots.forEach(function(shot, i) {
-    html += renderOneShotCard(shot, i);
-    if (i < shots.length - 1 && shot.continuity) {
-      html += renderContinuityBar(shot.continuity);
-    }
-  });
-
+  // Gallery navigation
+  html += '<div class="gallery-nav">';
+  html += '<button class="gallery-arrow" id="sbGalleryPrev" onclick="changeGallery(-1)" disabled>◀</button>';
+  html += '<div class="gallery-viewport" id="sbShotCard">' + renderOneShotCard(shots[0], 0) + '</div>';
+  html += '<button class="gallery-arrow" id="sbGalleryNext" onclick="changeGallery(1)" ' + (shots.length < 2 ? 'disabled' : '') + '>▶</button>';
   html += '</div>';
-  html += '<button class="sb-add-shot-btn" id="btnSbAddShot">+ 新增镜头</button>';
-  html += '</div></div>';
+
+  // Counter + dots
+  html += '<div style="text-align:center;padding:6px 0">';
+  html += '<span id="sbGalleryCounter" style="font-size:.72rem;color:#8a8278">第 1/' + shots.length + ' 镜</span>';
+  html += '</div>';
+  html += '<div class="gallery-dots" id="sbGalleryDots">';
+  for (var i = 0; i < shots.length; i++) {
+    html += '<span class="gallery-dot' + (i === 0 ? ' active' : '') + '" onclick="goGallery(' + i + ')"></span>';
+  }
+  html += '</div>';
+
+  // Continuity info
+  html += '<div id="sbContinuityInfo" style="display:' + (shots.length > 1 && shots[0].continuity ? 'block' : 'none') + '">';
+  if (shots.length > 1 && shots[0].continuity) {
+    html += renderContinuityBar(shots[0].continuity);
+  }
+  html += '</div>';
 
   // Actions
   html += '<div class="sb-actions-bar">';
-  html += '<button class="dialog-btn secondary" onclick="replaceAllCharacters()">🔄 替换形象</button>';
-  html += '<button class="dialog-btn secondary" onclick="replaceAllScenes()">🔄 替换场景</button>';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()">🔄 重新生成</button>';
-  html += '<button class="dialog-btn primary" onclick="exportStoryboardPrompts()">📋 复制提示词</button>';
-  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()">📋 复制JSON</button>';
+  html += '<button class="dialog-btn secondary" onclick="openShotEditor(galleryIndex)" style="font-size:.7rem;padding:8px 6px">✏️ 编辑</button>';
+  html += '<button class="dialog-btn secondary" onclick="deleteShot(galleryIndex)" style="font-size:.7rem;padding:8px 6px">🗑 删除</button>';
+  html += '<button class="dialog-btn secondary" onclick="addShot()" style="font-size:.7rem;padding:8px 6px">+ 新增</button>';
+  html += '<button class="dialog-btn secondary" onclick="replaceAllCharacters()" style="font-size:.7rem;padding:8px 6px">🔄 形象</button>';
+  html += '<button class="dialog-btn secondary" onclick="replaceAllScenes()" style="font-size:.7rem;padding:8px 6px">🔄 场景</button>';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="font-size:.7rem;padding:8px 6px">🔄 重来</button>';
+  html += '<button class="dialog-btn primary" onclick="exportStoryboardPrompts()" style="font-size:.7rem;padding:8px 6px">📋 提示词</button>';
+  html += '<button class="dialog-btn secondary" onclick="exportStoryboardJson()" style="font-size:.7rem;padding:8px 6px">📋 JSON</button>';
   html += '</div>';
 
   board.innerHTML = html;
   board.style.display = 'flex';
-
-  // Bind add shot
-  var addBtn = document.getElementById('btnSbAddShot');
-  if (addBtn) addBtn.onclick = addShot;
 }
 
 function buildStoryboardPrompt() {
