@@ -1,28 +1,9 @@
-const { app, BrowserWindow } = require('electron');
-const path = require('path');
-
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 800,
-    minHeight: 600,
-    title: '自媒体创作助手',
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  });
-  win.setMenuBarVisibility(false);
-  win.loadFile('index.html');
+try {
+  var e = require('electron');
+  console.log('electron typeof:', typeof e);
+  console.log('electron keys:', Object.keys(e).slice(0, 15));
+  process.exit(0);
+} catch(err) {
+  console.log('require error:', err.message);
+  process.exit(1);
 }
-
-app.whenReady().then(createWindow);
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
