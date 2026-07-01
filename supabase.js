@@ -53,7 +53,6 @@ async function sbLoadProfile() {
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').select('*').eq('id', sbUser.id).single());
   if (!r || r.error || !r.data) return null;
   var p = r.data;
-  settings.bizName = (_b = p.biz_name) !== null && _b !== void 0 ? _b : '';
   if (p.onboarding_done) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
   return p;
 }
@@ -63,7 +62,6 @@ async function sbSaveProfile() {
   var _a;
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').upsert({
     id: sbUser.id,
-    biz_name: settings.bizName,
     onboarding_done: localStorage.getItem('zimeiti-v3-onboarding-done') === '1',
     updated_at: new Date().toISOString()
   }));

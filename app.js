@@ -23,8 +23,7 @@ var DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.deepseek.com/v1',
   model: 'deepseek-chat',
-  customModel: '',
-  bizName: ''
+  customModel: ''
 };
 
 var INTERVIEW_QUESTIONS = [
@@ -125,9 +124,6 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById(tabId).classList.add('active');
   document.querySelector('.tab-item[data-tab="' + tabId + '"]').classList.add('active');
-  if (tabId === 'tabMe') {
-    document.getElementById('meBizName').value = settings.bizName || '';
-  }
 }
 
 // ============================================================
@@ -135,7 +131,6 @@ function switchTab(tabId) {
 // ============================================================
 function applyAllSettings() {
   var el;
-  el = document.getElementById('meBizName'); if (el) el.value = settings.bizName || '';
   el = document.getElementById('meApiKey'); if (el) el.value = settings.apiKey || '';
   el = document.getElementById('meEndpoint'); if (el) el.value = settings.endpoint || '';
   el = document.getElementById('meModel'); if (el) { el.value = settings.model; updateCustomModel(); }
@@ -351,70 +346,28 @@ function deleteSceneFromManager(id) {
 // ============================================================
 // ONBOARDING
 // ============================================================
-var oboStep = 1;
-var oboTotal = 2;
-
 function showOnboarding() {
-  if (localStorage.getItem('zimeiti-v3-onboarding-done') === '1' || settings.bizName) {
-    if (settings.bizName) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
-    return;
-  }
-  oboStep = 1;
-  document.getElementById('oboBizName').value = '';
+  if (localStorage.getItem('zimeiti-v3-onboarding-done') === '1') return;
   document.getElementById('oboCharClothing').value = '';
   document.getElementById('oboCharName').value = '';
   document.querySelectorAll('#oboCharGender .chip').forEach(function(c) { c.classList.remove('active'); });
   document.getElementById('onboardingPage').classList.remove('hidden');
-  updateOboUI();
-}
-
-function updateOboUI() {
-  document.querySelectorAll('#oboSteps .obo-dot').forEach(function(d, i) {
-    d.classList.remove('active', 'done');
-    if (i + 1 < oboStep) d.classList.add('done');
-    if (i + 1 === oboStep) d.classList.add('active');
-  });
-  document.querySelectorAll('#oboSteps .obo-line').forEach(function(l, i) { l.classList.toggle('done', i + 1 < oboStep); });
-  document.querySelectorAll('#oboDotsMob .obo-dot-m').forEach(function(d, i) { d.classList.toggle('active', i + 1 === oboStep); });
-  document.querySelectorAll('.obo-panel').forEach(function(p) { p.classList.remove('active'); });
-  var panel = document.getElementById('oboPanel' + oboStep);
-  if (panel) panel.classList.add('active');
-
-  document.getElementById('btnOboPrev').style.visibility = oboStep === 1 ? 'hidden' : 'visible';
-  document.getElementById('btnOboNext').textContent = oboStep >= oboTotal ? '✨ 开始使用' : '下一步 →';
 }
 
 function oboNext() {
-  if (oboStep === 1) {
-    var bizName = document.getElementById('oboBizName').value.trim();
-    if (!bizName) { document.getElementById('oboBizName').style.borderColor = '#e57373'; return; }
-    document.getElementById('oboBizName').style.borderColor = '';
-    settings.bizName = bizName;
-    saveSettingsToStorage();
-  }
-  if (oboStep === 2) {
-    var genderEl = document.querySelector('#oboCharGender .chip.active');
-    var gender = genderEl ? genderEl.dataset.value : '';
-    var clothing = document.getElementById('oboCharClothing').value.trim();
-    if (!gender) { document.querySelectorAll('#oboCharGender .chip').forEach(function(c) { c.style.borderColor = '#e57373'; }); return; }
-    if (!clothing) { document.getElementById('oboCharClothing').style.borderColor = '#e57373'; return; }
-    var ch = {
-      id: generateId(), name: document.getElementById('oboCharName').value.trim() || '主角',
-      type: 'protagonist', gender: gender, clothing: clothing,
-      age: '', hair: '', build: '', features: '', relationship: ''
-    };
-    characterProfiles.push(ch);
-    saveCharacterProfiles();
-  }
-  if (oboStep >= oboTotal) { finishOnboarding(); return; }
-  oboStep++;
-  updateOboUI();
-}
-
-function oboPrev() {
-  if (oboStep <= 1) return;
-  oboStep--;
-  updateOboUI();
+  var genderEl = document.querySelector('#oboCharGender .chip.active');
+  var gender = genderEl ? genderEl.dataset.value : '';
+  var clothing = document.getElementById('oboCharClothing').value.trim();
+  if (!gender) { document.querySelectorAll('#oboCharGender .chip').forEach(function(c) { c.style.borderColor = '#e57373'; }); return; }
+  if (!clothing) { document.getElementById('oboCharClothing').style.borderColor = '#e57373'; return; }
+  var ch = {
+    id: generateId(), name: document.getElementById('oboCharName').value.trim() || '主角',
+    type: 'protagonist', gender: gender, clothing: clothing,
+    age: '', hair: '', build: '', features: '', relationship: ''
+  };
+  characterProfiles.push(ch);
+  saveCharacterProfiles();
+  finishOnboarding();
 }
 
 async function finishOnboarding() {
@@ -624,6 +577,8 @@ function skipQuestion() {
 // ============================================================
 var recognition = null;
 var isRecording = false;
+var voiceFullText = '';      // accumulated text across pauses
+var voiceInterimText = '';  // current interim (unconfirmed) text
 
 function setupVoiceRecognition() {
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -634,16 +589,41 @@ function setupVoiceRecognition() {
   recognition.interimResults = true;
 
   recognition.onresult = function(event) {
-    var transcript = '';
+    var finalText = '';
+    var interimText = '';
     for (var i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
+      var r = event.results[i];
+      if (r.isFinal) {
+        finalText += r[0].transcript;
+      } else {
+        interimText += r[0].transcript;
+      }
     }
+
+    // Accumulate final recognized text
+    if (finalText) {
+      // Apply sentence breaks: add newline after 。！？… —
+      var formatted = finalText.replace(/([。！？…—])\s*/g, '$1\n');
+      voiceFullText += formatted;
+      voiceInterimText = '';
+    }
+    if (interimText) {
+      voiceInterimText = interimText;
+    }
+
     var el = document.getElementById('sbAnswer');
-    if (el) el.value = transcript;
+    if (el) el.value = voiceFullText + voiceInterimText;
   };
 
   recognition.onend = function() {
-    isRecording = false;
+    // If user hasn't clicked stop, auto-restart after pause
+    if (isRecording) {
+      try {
+        recognition.start();
+        return;
+      } catch(e) {}
+    }
+    // User manually stopped
     var btn = document.getElementById('btnVoice');
     var hint = document.getElementById('voiceHint');
     if (btn) btn.classList.remove('recording');
@@ -651,6 +631,13 @@ function setupVoiceRecognition() {
   };
 
   recognition.onerror = function(event) {
+    if (event.error === 'no-speech') {
+      // Silence — auto-restart if still recording
+      if (isRecording) {
+        try { setTimeout(function() { if (isRecording) recognition.start(); }, 200); } catch(e) {}
+      }
+      return;
+    }
     isRecording = false;
     var btn = document.getElementById('btnVoice');
     var hint = document.getElementById('voiceHint');
@@ -658,7 +645,7 @@ function setupVoiceRecognition() {
     if (event.error === 'not-allowed' || event.error === 'permission-denied') {
       if (hint) hint.textContent = '麦克风权限未授权，请用文字输入';
       if (btn) btn.disabled = true;
-    } else {
+    } else if (event.error !== 'aborted') {
       if (hint) hint.textContent = '识别出错，请重试或使用文字输入';
     }
   };
@@ -670,6 +657,10 @@ function toggleVoiceInput() {
   var hint = document.getElementById('voiceHint');
   if (!isRecording) {
     try {
+      // Preserve existing text in textarea
+      var el = document.getElementById('sbAnswer');
+      voiceFullText = (el && el.value) ? el.value : '';
+      voiceInterimText = '';
       recognition.start();
       isRecording = true;
       if (btn) btn.classList.add('recording');
@@ -678,8 +669,15 @@ function toggleVoiceInput() {
       if (hint) hint.textContent = '启动语音失败，请用文字输入';
     }
   } else {
-    recognition.stop();
     isRecording = false;
+    recognition.stop();
+    // Flush interim text
+    var el2 = document.getElementById('sbAnswer');
+    if (el2 && voiceInterimText) {
+      el2.value = voiceFullText + voiceInterimText;
+      voiceFullText = el2.value;
+      voiceInterimText = '';
+    }
     if (btn) btn.classList.remove('recording');
     if (hint) hint.textContent = '点击麦克风开始说话';
   }
@@ -701,7 +699,7 @@ function buildStoryboardSystemPrompt() {
     '{\n' +
     '  "title": "视频标题",\n' +
     '  "totalDuration": "30s",\n' +
-    '  "bizName": "' + (settings.bizName || '') + '",\n' +
+    '  "bizName": "故事板",\n' +
     '  "directorBrief": {\n' +
     '    "coreIdea": "核心创意一句话",\n' +
     '    "targetEmotion": "好奇→向往→信任→冲动",\n' +
@@ -745,7 +743,7 @@ function buildStoryboardSystemPrompt() {
     '6. 句长≤20字/句，每段至少2个语气词（吧/嘛/哈/呢/啊）\n' +
     '7. 纯JSON输出，不要```json```包裹，不要任何前缀和后缀\n\n' +
     '## 当前可用资源\n' +
-    '业务：' + (settings.bizName || '未设置') + '\n' +
+    '业务：故事板\n' +
     '角色库：\n' + (charList || '（空，用描述性文字）') + '\n' +
     '场景库：\n' + (sceneList || '（空，用描述性文字）') + '\n';
 }
@@ -1402,16 +1400,6 @@ function bindEvents() {
     item.addEventListener('click', function() { switchTab(this.dataset.tab); });
   });
 
-  // Biz name save
-  var btnSaveBiz = document.getElementById('btnSaveBizName');
-  if (btnSaveBiz) btnSaveBiz.addEventListener('click', function() {
-    settings.bizName = document.getElementById('meBizName').value.trim();
-    saveSettingsToStorage();
-    if (typeof sbUser !== 'undefined' && sbUser) sbSaveProfile().catch(function(e) {});
-    this.textContent = '已保存'; this.style.color = '#5b9a8b';
-    setTimeout(function() { btnSaveBiz.textContent = '保存'; btnSaveBiz.style.color = ''; }, 1500);
-  });
-
   // Settings overlay
   var btnSettings = document.getElementById('btnMeSettings');
   if (btnSettings) btnSettings.addEventListener('click', function() {
@@ -1540,8 +1528,6 @@ function bindEvents() {
 
   // Onboarding
   document.getElementById('btnOboNext').addEventListener('click', oboNext);
-  document.getElementById('btnOboPrev').addEventListener('click', oboPrev);
-  document.getElementById('oboBizName').addEventListener('keydown', function(e) { if (e.key === 'Enter') oboNext(); });
   document.querySelector('#oboCharGender').addEventListener('click', function(e) {
     var chip = e.target.closest('.chip');
     if (!chip) return;

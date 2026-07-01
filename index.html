@@ -95,15 +95,6 @@
   <div class="tab-panel" id="tabMe">
     <div class="me-scroll">
 
-      <!-- 业务名称 -->
-      <div class="me-card-box">
-        <div class="me-section-head"><span>📝 业务信息</span></div>
-        <div class="me-edit-row" style="display:flex;gap:8px">
-          <input class="me-input" id="meBizName" placeholder="业务名称：例如 XX健身" maxlength="30" style="flex:1">
-          <button class="dialog-btn primary" id="btnSaveBizName" style="width:auto;padding:8px 16px;font-size:.78rem">保存</button>
-        </div>
-      </div>
-
       <!-- 资产管理 -->
       <div class="me-card-box">
         <div class="me-section-head"><span>🗂 资产</span></div>
@@ -330,22 +321,8 @@
      ============================================================ -->
 <div class="obo-page hidden" id="onboardingPage">
   <div class="obo-inner">
-    <div class="obo-steps" id="oboSteps">
-      <span class="obo-dot active">1</span>
-      <span class="obo-line"></span>
-      <span class="obo-dot">2</span>
-    </div>
     <div class="obo-panels">
       <div class="obo-panel active" id="oboPanel1">
-        <div class="obo-icon">🎬</div>
-        <h2 class="obo-title">欢迎使用自媒体创作助手</h2>
-        <p class="obo-desc">导演分镜表创作，专注即梦提示词生成</p>
-        <div class="obo-field">
-          <label class="obo-label">业务名称 <span class="field-required">*必填</span></label>
-          <input class="obo-input" id="oboBizName" placeholder="例如：XX健身、YY美食探店" maxlength="30">
-        </div>
-      </div>
-      <div class="obo-panel" id="oboPanel2">
         <div class="obo-icon">💃</div>
         <h2 class="obo-title">创建你的主角形象</h2>
         <p class="obo-desc">AI 用它当角色锚点，保证即梦多段视频人物一致</p>
@@ -367,12 +344,7 @@
       </div>
     </div>
     <div class="obo-nav">
-      <button class="obo-nav-btn secondary" id="btnOboPrev" style="visibility:hidden">← 上一步</button>
-      <div class="obo-dots-mob" id="oboDotsMob">
-        <span class="obo-dot-m active"></span>
-        <span class="obo-dot-m"></span>
-      </div>
-      <button class="obo-nav-btn primary" id="btnOboNext">下一步 →</button>
+      <button class="obo-nav-btn primary" id="btnOboNext" style="width:100%">✨ 开始使用</button>
     </div>
   </div>
 </div>
