@@ -1013,7 +1013,11 @@ function normalizeDirectorAnalysis(data) {
 
 // Phase 2: generate shots after director confirmed
 async function generateShots() {
-  if (!settings.apiKey) return;
+  console.log('[generateShots] CALLED, apiKey:', settings.apiKey ? 'yes' : 'no');
+  if (!settings.apiKey) {
+    alert('请先在「我的」→ 设置 中配置 API Key');
+    return;
+  }
 
   isGenerating = true;
   updateStopButton();
