@@ -369,6 +369,7 @@ function oboNext() {
   };
   characterProfiles.push(ch);
   saveCharacterProfiles();
+  if (typeof sbSaveCharacter !== 'undefined') sbSaveCharacter(ch).catch(function(e) {});
   finishOnboarding();
 }
 
@@ -1586,14 +1587,16 @@ function bindEvents() {
   });
 
   // Save API config
-  document.getElementById('btnSaveApiConfig').addEventListener('click', function() {
+  document.getElementById('btnSaveApiConfig').addEventListener('click', async function() {
     settings.apiKey = document.getElementById('meApiKey').value.trim();
     settings.endpoint = document.getElementById('meEndpoint').value.trim();
     settings.model = document.getElementById('meModel').value;
     settings.customModel = document.getElementById('meCustomModel').value.trim();
     saveSettingsToStorage();
-    if (typeof sbSaveApiConfig !== 'undefined') sbSaveApiConfig();
     var hint = document.getElementById('apiConfigSaveHint');
+    if (typeof sbSaveApiConfig !== 'undefined') {
+      try { await sbSaveApiConfig(); } catch(e) {}
+    }
     hint.textContent = '✓ 已保存'; hint.style.color = '#5b9a8b';
     setTimeout(function() { hint.textContent = ''; }, 2000);
   });

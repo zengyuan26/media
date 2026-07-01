@@ -79,14 +79,9 @@ async function sbLoadApiConfig() {
     settings.endpoint = (_c = r.data.endpoint) !== null && _c !== void 0 ? _c : 'https://api.deepseek.com/v1';
     settings.model = (_d = r.data.model) !== null && _d !== void 0 ? _d : 'deepseek-chat';
     settings.customModel = (_e = r.data.custom_model) !== null && _e !== void 0 ? _e : '';
-  } else {
-    // No cloud data for this user — clear API config
-    settings.apiKey = '';
-    settings.endpoint = 'https://api.deepseek.com/v1';
-    settings.model = 'deepseek-chat';
-    settings.customModel = '';
+    saveSettingsToStorage();
   }
-  saveSettingsToStorage();
+  // If no cloud data, keep whatever is in localStorage — don't clear it
 }
 
 async function sbSaveApiConfig() {
