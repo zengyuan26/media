@@ -1088,19 +1088,6 @@ function normalizeShots(da) {
 // ============================================================
 // STORYBOARD — RENDER (Phase 1: Director Review)
 // ============================================================
-function toggleSection(id) {
-  var body = document.getElementById(id);
-  var header = body ? body.previousElementSibling : null;
-  var arrow = header ? header.querySelector('.sb-accordion-arrow') : null;
-  if (body.style.display === 'none') {
-    body.style.display = 'block';
-    if (arrow) arrow.textContent = '▾';
-  } else {
-    body.style.display = 'none';
-    if (arrow) arrow.textContent = '▸';
-  }
-}
-
 function renderDirectorReview() {
   var board = document.getElementById('sbBoard');
   var da = currentDirectorAnalysis;
