@@ -1395,11 +1395,16 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
   abortController = new AbortController();
   var model = settings.model === 'custom' ? settings.customModel : settings.model;
   console.log('[doStoryboardApiCall] endpoint:', settings.endpoint, 'model:', model);
+
+  // 30s timeout
+  var timeoutId = setTimeout(function() { abortController.abort(); }, 30000);
+
   var messages = [
     { role: 'system', content: '[System Prompt]\n' + systemPrompt },
     { role: 'user', content: userPrompt }
   ];
 
+  try {
   var resp = await fetch(settings.endpoint + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
@@ -1412,6 +1417,7 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
     }),
     signal: abortController.signal
   });
+  clearTimeout(timeoutId);
   console.log('[doStoryboardApiCall] response status:', resp.status);
 
   if (!resp.ok) {
@@ -1425,11 +1431,13 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
   var fullText = '';
   var reader = resp.body.getReader();
   var decoder = new TextDecoder();
+  var chunkCount = 0;
 
   while (true) {
-    var _a = await reader.read(), done = _a.done, value = _a.value;
-    if (done) break;
-    var chunk = decoder.decode(value, { stream: true });
+    var result = await reader.read();
+    if (result.done) { console.log('[stream] done after', chunkCount, 'chunks'); break; }
+    chunkCount++;
+    var chunk = decoder.decode(result.value, { stream: true });
     var lines = chunk.split('\n');
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i].trim();
@@ -1442,8 +1450,15 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
         if (token) fullText += token;
       } catch(e) {}
     }
+    if (chunkCount % 10 === 0) console.log('[stream] chunk', chunkCount, ', text length:', fullText.length);
+    // Safety: break after 1000 chunks to prevent infinite loop
+    if (chunkCount > 1000) { console.log('[stream] SAFETY BREAK'); break; }
   }
+  console.log('[stream] finished, total text:', fullText.length);
   return fullText;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function stopGeneration() {
