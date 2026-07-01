@@ -262,10 +262,17 @@
           <div class="chip" data-value="女">👩 女</div>
         </div>
       </div>
+      <div class="me-field">
+        <label class="me-label">年龄 <span class="field-required">*必填</span></label>
+        <input class="me-input" id="charEditAge" placeholder="例如：28岁">
+      </div>
 
-      <!-- Random generate button -->
+      <!-- Generate buttons -->
       <div style="text-align:center;padding:6px 0">
-        <button class="dialog-btn secondary" id="btnRandomChar" onclick="randomizeCharacter()" style="font-size:.78rem;width:100%">🎲 一键生成形象</button>
+        <div style="display:flex;gap:6px">
+          <button class="dialog-btn secondary" id="btnRandomChar" onclick="randomizeCharacter()" style="flex:1;font-size:.72rem">🎲 随机</button>
+          <button class="dialog-btn secondary" id="btnAiChar" onclick="aiGenerateCharacter()" style="flex:1;font-size:.72rem">✨ AI 生成</button>
+        </div>
         <span style="font-size:.65rem;color:#a09888;display:block;margin-top:4px">可单独修改每项，再次点击重新随机</span>
       </div>
 

@@ -283,15 +283,46 @@ function randomizeCharacter() {
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  var ageEl = document.getElementById('charEditAge');
+  if (!ageEl.value) ageEl.value = pick(RANDOM_CHAR.age);
   document.getElementById('charEditClothing').value = pick(RANDOM_CHAR['clothing_' + suffix]);
-  document.getElementById('charEditAge').value = pick(RANDOM_CHAR.age);
   document.getElementById('charEditHair').value = pick(RANDOM_CHAR['hair_' + suffix]);
   document.getElementById('charEditBuild').value = pick(RANDOM_CHAR.build);
   document.getElementById('charEditFeatures').value = pick(RANDOM_CHAR.features);
 
-  // Flash the random button
   var btn = document.getElementById('btnRandomChar');
   if (btn) { btn.textContent = '🎲 重新随机'; }
+}
+
+async function aiGenerateCharacter() {
+  var name = document.getElementById('charEditName').value.trim();
+  var genderEl = document.querySelector('#charEditGender .chip.active');
+  var gender = genderEl ? genderEl.dataset.value : '男';
+  var age = document.getElementById('charEditAge').value.trim();
+
+  if (!name && !age) { alert('请先填写形象名称和年龄'); return; }
+  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+
+  var btn = document.getElementById('btnAiChar');
+  btn.textContent = '⏳ 生成中...';
+  btn.disabled = true;
+
+  try {
+    var prompt = '请为"' + (name || '角色') + '"生成形象细节。性别：' + gender + '，年龄：' + (age || '成年人') + '。\n输出纯JSON：\n{"clothing":"服装描述（具体到款式和颜色）","hair":"发型发色","build":"体型身高","features":"标志特征（眼镜/饰品/痣/纹身等）"}';
+    var text = await doStoryboardApiCall('你是人物造型设计师。输出纯JSON，不要markdown包裹。', prompt);
+    var jsonText = collectStreamJson(text);
+    if (!jsonText) throw new Error('解析失败');
+    var data = JSON.parse(jsonText);
+    document.getElementById('charEditClothing').value = data.clothing || '';
+    document.getElementById('charEditHair').value = data.hair || '';
+    document.getElementById('charEditBuild').value = data.build || '';
+    document.getElementById('charEditFeatures').value = data.features || '';
+  } catch(e) {
+    alert('AI生成失败，改用随机');
+    randomizeCharacter();
+  }
+  btn.textContent = '✨ AI 生成';
+  btn.disabled = false;
 }
 
 function openCharacterEditor(charId) {
@@ -309,11 +340,8 @@ function openCharacterEditor(charId) {
   document.querySelectorAll('#charEditGender .chip').forEach(function(c) { c.classList.toggle('active', c.dataset.value === gender); });
 
   document.getElementById('btnCharDelete').style.display = ch ? 'block' : 'none';
-  document.getElementById('btnRandomChar').textContent = ch ? '🎲 重新随机' : '🎲 一键生成形象';
+  document.getElementById('btnRandomChar').textContent = '🎲 随机';
   document.getElementById('charEditorOverlay').classList.add('open');
-
-  // Auto random for new character
-  if (!ch) randomizeCharacter();
 }
 
 function closeCharacterEditor() {
@@ -325,9 +353,11 @@ function saveCharacterFromDialog() {
   var name = document.getElementById('charEditName').value.trim();
   var genderEl = document.querySelector('#charEditGender .chip.active');
   var gender = genderEl ? genderEl.dataset.value : '';
+  var age = document.getElementById('charEditAge').value.trim();
 
   if (!name) { alert('请填写形象名称'); return; }
   if (!gender) { alert('请选择性别'); return; }
+  if (!age) { alert('请填写年龄'); return; }
 
   var ch = {
     id: editingCharId || generateId(),
