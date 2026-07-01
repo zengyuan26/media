@@ -1966,34 +1966,38 @@ function addShot() {
 function replaceAllCharacters() {
   if (!characterProfiles.length) { alert('请先在「我的」中创建形象'); return; }
   var sb = currentStoryboard.storyboard || currentStoryboard;
-  // Find all characterIds used
-  var usedIds = {};
+
+  // Collect character names used (by characterName, AI uses descriptive names)
+  var usedNames = [];
+  var seen = {};
   sb.shots.forEach(function(shot) {
     (shot.subjects || []).forEach(function(s) {
-      if (s.characterId) usedIds[s.characterId] = s.characterName || s.characterId;
+      var key = s.characterName || '未命名角色';
+      if (!seen[key]) { seen[key] = true; usedNames.push(key); }
     });
   });
 
-  var fromIds = Object.keys(usedIds);
-  if (!fromIds.length) { alert('当前故事板中没有引用角色'); return; }
+  if (!usedNames.length) { alert('当前分镜中没有角色'); return; }
 
-  var fromId = prompt('要替换哪个角色？\n\n当前使用的角色：\n' + fromIds.map(function(id) { return '- ' + usedIds[id] + ' (' + id + ')'; }).join('\n') + '\n\n输入角色的characterId或名称：');
-  if (!fromId) return;
+  // Step 1: pick which character to replace
+  var fromName = prompt('替换哪个角色？\n\n当前使用的角色：\n' + usedNames.map(function(n) { return '- ' + n; }).join('\n') + '\n\n输入角色名称：');
+  if (!fromName) return;
 
-  // Try to find by name first
-  var match = fromIds.find(function(id) { return usedIds[id] === fromId; });
-  if (!match) match = fromIds.find(function(id) { return id === fromId; });
-  if (!match) { alert('未找到该角色'); return; }
+  var matchKey = usedNames.find(function(n) { return n === fromName || n.indexOf(fromName) >= 0; });
+  if (!matchKey) { alert('未找到匹配的角色'); return; }
 
-  var toNames = characterProfiles.map(function(c) { return c.name + ' (' + c.id + ')'; }).join('\n');
-  var toId = prompt('替换为哪个形象？\n\n可用形象：\n' + toNames + '\n\n输入形象的characterId：');
-  if (!toId) return;
-  var toChar = findCharById(toId);
+  // Step 2: pick replacement
+  var toList = characterProfiles.map(function(c) { return c.name; }).join('\n');
+  var toName = prompt('替换为哪个形象？\n\n可用形象：\n' + toList + '\n\n输入形象名称：');
+  if (!toName) return;
+  var toChar = characterProfiles.find(function(c) { return c.name === toName || c.name.indexOf(toName) >= 0; });
   if (!toChar) { alert('未找到该形象'); return; }
 
+  // Replace all matching
   sb.shots.forEach(function(shot) {
     (shot.subjects || []).forEach(function(s) {
-      if (s.characterId === match) {
+      var key = s.characterName || '';
+      if (key === matchKey || key.indexOf(fromName) >= 0) {
         s.characterId = toChar.id;
         s.characterName = toChar.name;
       }
@@ -2017,32 +2021,44 @@ function replaceKeyProps() {
 function replaceAllScenes() {
   if (!sceneProfiles.length) { alert('请先在「我的」中创建场景'); return; }
   var sb = currentStoryboard.storyboard || currentStoryboard;
-  var usedIds = {};
+
+  // Collect scene names used (by sceneName, since AI uses descriptive names not IDs)
+  var usedNames = [];
+  var seen = {};
   sb.shots.forEach(function(shot) {
     var s = shot.scene || {};
-    if (s.sceneId) usedIds[s.sceneId] = s.sceneName || s.sceneId;
+    var key = s.sceneName || s.environment || '未命名场景';
+    if (!seen[key]) { seen[key] = true; usedNames.push(key); }
   });
 
-  var fromIds = Object.keys(usedIds);
-  if (!fromIds.length) { alert('当前故事板中没有引用场景'); return; }
+  if (!usedNames.length) { alert('当前分镜中没有场景信息'); return; }
 
-  var fromId = prompt('要替换哪个场景？\n\n当前使用的场景：\n' + fromIds.map(function(id) { return '- ' + usedIds[id] + ' (' + id + ')'; }).join('\n') + '\n\n输入场景的sceneId或名称：');
-  if (!fromId) return;
+  // Step 1: pick which scene to replace
+  var fromName = prompt('替换哪个场景？\n\n当前使用的场景：\n' + usedNames.map(function(n) { return '- ' + n; }).join('\n') + '\n\n输入场景名称：');
+  if (!fromName) return;
 
-  var match = fromIds.find(function(id) { return usedIds[id] === fromId; });
-  if (!match) match = fromIds.find(function(id) { return id === fromId; });
-  if (!match) { alert('未找到该场景'); return; }
+  // Find matching scene in shots
+  var matchKey = usedNames.find(function(n) { return n === fromName || n.indexOf(fromName) >= 0; });
+  if (!matchKey) { alert('未找到匹配的场景'); return; }
 
-  var toNames = sceneProfiles.map(function(s) { return s.name + ' (' + s.id + ')'; }).join('\n');
-  var toId = prompt('替换为哪个场景？\n\n可用场景：\n' + toNames + '\n\n输入场景的sceneId：');
-  if (!toId) return;
-  var toScene = sceneProfiles.find(function(s) { return s.id === toId; });
+  // Step 2: pick replacement scene
+  var toList = sceneProfiles.map(function(s) { return s.name; }).join('\n');
+  var toName = prompt('替换为哪个场景？\n\n可用场景：\n' + toList + '\n\n输入场景名称：');
+  if (!toName) return;
+  var toScene = sceneProfiles.find(function(s) { return s.name === toName || s.name.indexOf(toName) >= 0; });
   if (!toScene) { alert('未找到该场景'); return; }
 
+  // Replace all matching shots
   sb.shots.forEach(function(shot) {
-    if (shot.scene && shot.scene.sceneId === match) {
-      shot.scene.sceneId = toScene.id;
-      shot.scene.sceneName = toScene.name;
+    var s = shot.scene || {};
+    var key = s.sceneName || s.environment || '';
+    if (key === matchKey || key.indexOf(fromName) >= 0) {
+      shot.scene = {
+        sceneId: toScene.id,
+        sceneName: toScene.name,
+        environment: toScene.environment || '',
+        atmosphere: toScene.atmosphere || ''
+      };
     }
   });
 
