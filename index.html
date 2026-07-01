@@ -266,6 +266,23 @@
         <label class="me-label">年龄 <span class="field-required">*必填</span></label>
         <input class="me-input" id="charEditAge" placeholder="例如：28岁">
       </div>
+      <div class="me-field">
+        <label class="me-label">穿搭风格</label>
+        <div class="chip-row" id="charEditStyle">
+          <div class="chip active" data-value="休闲">休闲</div>
+          <div class="chip" data-value="商务">商务</div>
+          <div class="chip" data-value="运动">运动</div>
+          <div class="chip" data-value="潮流">潮流</div>
+          <div class="chip" data-value="居家">居家</div>
+        </div>
+      </div>
+      <div class="me-field">
+        <label class="me-label">季节</label>
+        <div class="chip-row" id="charEditSeason">
+          <div class="chip active" data-value="春夏">春夏</div>
+          <div class="chip" data-value="秋冬">秋冬</div>
+        </div>
+      </div>
 
       <!-- Generate buttons -->
       <div style="text-align:center;padding:6px 0">
@@ -273,16 +290,12 @@
           <button class="dialog-btn secondary" id="btnRandomChar" onclick="randomizeCharacter()" style="flex:1;font-size:.72rem">🎲 随机</button>
           <button class="dialog-btn secondary" id="btnAiChar" onclick="aiGenerateCharacter()" style="flex:1;font-size:.72rem">✨ AI 生成</button>
         </div>
-        <span style="font-size:.65rem;color:#a09888;display:block;margin-top:4px">可单独修改每项，再次点击重新随机</span>
+        <span style="font-size:.65rem;color:#a09888;display:block;margin-top:4px">可单独修改每项，再次点击重新生成</span>
       </div>
 
       <div class="me-field">
         <label class="me-label">服装</label>
         <input class="me-input" id="charEditClothing" placeholder="点击上方按钮随机生成">
-      </div>
-      <div class="me-field">
-        <label class="me-label">年龄</label>
-        <input class="me-input" id="charEditAge" placeholder="随机生成">
       </div>
       <div class="me-field">
         <label class="me-label">发型</label>

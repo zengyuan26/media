@@ -266,28 +266,52 @@ function deleteCharacterFromManager(id) {
 
 // Random character generation data
 var RANDOM_CHAR = {
-  clothing_m: ['白色T恤+深蓝牛仔裤', '灰色连帽卫衣+黑色工装裤', '藏青衬衫+卡其休闲裤', '黑色高领毛衣+深灰西裤', '军绿夹克+黑色牛仔裤', '浅蓝牛仔外套+白T+黑裤', '棕色皮夹克+深蓝牛仔', '灰白条纹衬衫+藏青西裤'],
-  clothing_f: ['白色雪纺衬衫+卡其阔腿裤', '碎花连衣裙+米色开衫', '黑色高领衫+格纹短裙', '粉色卫衣+白色直筒裤', '浅蓝衬衫+深蓝A字裙', '米色风衣+白色T恤+牛仔裤', '酒红针织衫+黑色半身裙', '白衬衫+驼色烟管裤'],
-  age: ['22岁', '25岁', '28岁', '30岁', '32岁', '35岁', '38岁', '40岁', '45岁', '26岁', '27岁'],
+  casual_m:   ['白色T恤+深蓝牛仔裤', '灰色连帽卫衣+黑运动裤', '条纹polo衫+卡其短裤', '浅蓝牛仔外套+白T+黑裤', '军绿工装夹克+黑牛仔裤'],
+  casual_f:   ['白色雪纺衫+牛仔阔腿裤', '碎花连衣裙+米色开衫', '粉色卫衣+白色直筒裤', '条纹T恤+高腰牛仔短裤', '浅蓝衬衫+白色半身裙'],
+  business_m: ['藏青西装+白衬衫+领带', '深灰西服套装+黑皮鞋', '浅灰衬衫+深蓝西裤', '炭黑马甲+白衬衫+灰西裤', '海军蓝blazer+卡其裤'],
+  business_f: ['黑色西装套裙+白衬衫', '驼色风衣+白衬衫+烟管裤', '深蓝one-piece连衣裙+西装外套', '灰格纹套装+黑高跟鞋', '白衬衫+黑色阔腿西裤'],
+  sport_m:    ['速干运动T恤+黑色运动短裤', '灰色运动卫衣+深蓝压缩裤', '白色运动背心+黑色运动长裤', '荧光绿跑步夹克+黑短裤', '深蓝运动套装+白色跑鞋'],
+  sport_f:    ['粉色运动bra+黑色瑜伽裤', '白色速干T恤+深蓝运动短裤', '薄荷绿运动背心+灰leggings', '深蓝运动连衣裙+白色跑鞋', '浅灰卫衣+黑色运动紧身裤'],
+  trendy_m:   ['黑色oversize卫衣+宽松工装裤', '涂鸦印花T恤+破洞牛仔裤', '亮色短夹克+黑色阔腿裤', '迷彩外套+黑色束脚裤', '黑白格纹衬衫+黑破洞牛仔'],
+  trendy_f:   ['短款针织开衫+高腰阔腿裤', '木耳边上衣+格纹短裙', '亮色西装外套+骑行短裤', '廓形牛仔外套+百褶短裙', 'crop top+高腰工装裤'],
+  home_m:     ['灰色棉质家居服套装', '白色背心+深灰棉短裤', '深蓝格纹睡衣套装', '米色针织衫+咖啡色休闲裤', '浅灰卫衣+黑色棉质长裤'],
+  home_f:     ['粉色棉质家居连衣裙', '白色蕾丝睡袍+吊带', '浅灰针织套装·居家', '米色毛毛外套+白色阔腿裤', '鹅黄棉质睡衣套装'],
+  age: ['22岁', '25岁', '28岁', '30岁', '32岁', '35岁', '38岁', '40岁', '26岁', '27岁', '33岁'],
   hair_m: ['黑色短发·清爽碎盖', '黑色短发·三七分', '深棕短发·纹理烫', '黑色短发·寸头', '深棕中短发·微分', '黑色短发·背头'],
   hair_f: ['黑色齐肩发·内扣', '深棕长发·大波浪', '黑色长发·直发及腰', '浅棕短发·锁骨卷', '黑色中长发·低马尾', '深棕短发·波波头'],
-  build: ['身高170，偏瘦', '身高165，匀称', '身高175，标准', '身高160，娇小', '身高180，高挑', '身高168，偏瘦', '身高172，标准', '身高163，匀称'],
+  build_m: ['身高175，匀称', '身高180，健壮', '身高170，偏瘦', '身高172，标准', '身高178，运动型'],
+  build_f: ['身高165，匀称', '身高160，娇小', '身高170，高挑', '身高163，标准', '身高168，偏瘦'],
   features: ['银色细框眼镜', '右手腕银手链', '左耳单颗耳钉', '黑色方框眼镜', '颈间细项链', '左手腕皮质手环', '无框眼镜·书卷气', '嘴角一颗小痣', '鼻梁细微雀斑', '右手无名指银色戒指']
 };
+
+function getStyleKey() {
+  var styleEl = document.querySelector('#charEditStyle .chip.active');
+  return styleEl ? styleEl.dataset.value : '休闲';
+}
+
+function getSeason() {
+  var seasonEl = document.querySelector('#charEditSeason .chip.active');
+  return seasonEl ? seasonEl.dataset.value : '春夏';
+}
 
 function randomizeCharacter() {
   var genderEl = document.querySelector('#charEditGender .chip.active');
   var gender = genderEl ? genderEl.dataset.value : '男';
   var isMale = gender === '男';
   var suffix = isMale ? 'm' : 'f';
+  var style = getStyleKey();
+  var season = getSeason();
+  var key = style + '_' + suffix;
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
   var ageEl = document.getElementById('charEditAge');
   if (!ageEl.value) ageEl.value = pick(RANDOM_CHAR.age);
-  document.getElementById('charEditClothing').value = pick(RANDOM_CHAR['clothing_' + suffix]);
+  // Use style-specific clothing if available, fallback to casual
+  var clothingArr = RANDOM_CHAR[key] || RANDOM_CHAR['casual_' + suffix];
+  document.getElementById('charEditClothing').value = pick(clothingArr) + (season === '秋冬' ? '·保暖面料' : '·轻薄面料');
   document.getElementById('charEditHair').value = pick(RANDOM_CHAR['hair_' + suffix]);
-  document.getElementById('charEditBuild').value = pick(RANDOM_CHAR.build);
+  document.getElementById('charEditBuild').value = pick(RANDOM_CHAR['build_' + suffix] || RANDOM_CHAR.build_m);
   document.getElementById('charEditFeatures').value = pick(RANDOM_CHAR.features);
 
   var btn = document.getElementById('btnRandomChar');
@@ -308,7 +332,9 @@ async function aiGenerateCharacter() {
   btn.disabled = true;
 
   try {
-    var prompt = '请为"' + (name || '角色') + '"生成形象细节。性别：' + gender + '，年龄：' + (age || '成年人') + '。\n输出纯JSON：\n{"clothing":"服装描述（具体到款式和颜色）","hair":"发型发色","build":"体型身高","features":"标志特征（眼镜/饰品/痣/纹身等）"}';
+    var style = getStyleKey();
+    var season = getSeason();
+    var prompt = '请为"' + (name || '角色') + '"生成形象细节。\n性别：' + gender + '，年龄：' + (age || '成年人') + '，穿搭风格：' + style + '，季节：' + season + '。\n输出纯JSON：\n{"clothing":"服装描述（具体到款式、颜色、面料，符合' + style + '风格和' + season + '季节）","hair":"发型发色","build":"体型身高","features":"标志特征（眼镜/饰品/痣/纹身等）"}';
     var text = await doStoryboardApiCall('你是人物造型设计师。输出纯JSON，不要markdown包裹。', prompt);
     var jsonText = collectStreamJson(text);
     if (!jsonText) throw new Error('解析失败');
@@ -2260,6 +2286,22 @@ function bindEvents() {
   document.querySelectorAll('#charEditGender .chip').forEach(function(c) {
     c.addEventListener('click', function() {
       document.querySelectorAll('#charEditGender .chip').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+
+  // Char editor style chips
+  document.querySelectorAll('#charEditStyle .chip').forEach(function(c) {
+    c.addEventListener('click', function() {
+      document.querySelectorAll('#charEditStyle .chip').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+
+  // Char editor season chips
+  document.querySelectorAll('#charEditSeason .chip').forEach(function(c) {
+    c.addEventListener('click', function() {
+      document.querySelectorAll('#charEditSeason .chip').forEach(function(x) { x.classList.remove('active'); });
       this.classList.add('active');
     });
   });
