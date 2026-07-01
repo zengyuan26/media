@@ -17,15 +17,14 @@ function initSupabase() {
 // ============================================================
 // AUTH (simple username/password via DB functions)
 // ============================================================
-async function sbSignUp(email, password) {
+async function sbSignUp(email, password, phone) {
   var r = await fetch(SUPABASE_URL + '/rest/v1/rpc/signup_user', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-    body: JSON.stringify({ p_username: email, p_password: password })
+    body: JSON.stringify({ p_username: email, p_password: password, p_phone: phone || '' })
   });
   if (!r.ok) { var e = await r.json(); throw new Error(e.message || '注册失败'); }
   var data = await r.json();
-  // Sign in after signup
   return await sbSignIn(email, password);
 }
 
@@ -50,20 +49,11 @@ async function sbGetSession() { return sbUser ? { user: sbUser } : null; }
 async function sbLoadProfile() {
   if (!sbUser) return null;
   if (!sb) return null;
-  var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _n;
+  var _a, _b, _c;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').select('*').eq('id', sbUser.id).single());
   if (!r || r.error || !r.data) return null;
   var p = r.data;
   settings.bizName = (_b = p.biz_name) !== null && _b !== void 0 ? _b : '';
-  settings.bizScope = (_c = p.biz_scope) !== null && _c !== void 0 ? _c : '全国';
-  settings.language = (_d = p.language) !== null && _d !== void 0 ? _d : '普通话';
-  settings.customLanguage = (_e = p.custom_language) !== null && _e !== void 0 ? _e : '';
-  settings.persona = (_f = p.persona) !== null && _f !== void 0 ? _f : 'auto';
-  settings.videoLength = (_g = p.video_length) !== null && _g !== void 0 ? _g : '30';
-  settings.subtitleEnabled = (_h = p.subtitle_enabled) !== null && _h !== void 0 ? _h : true;
-  settings.bgmEnabled = (_j = p.bgm_enabled) !== null && _j !== void 0 ? _j : true;
-  settings.searchEnabled = (_k = p.search_enabled) !== null && _k !== void 0 ? _k : true;
-  settings.userProfile = (_l = p.user_profile) !== null && _l !== void 0 ? _l : '';
   if (p.onboarding_done) localStorage.setItem('zimeiti-v3-onboarding-done', '1');
   return p;
 }
@@ -74,15 +64,6 @@ async function sbSaveProfile() {
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').upsert({
     id: sbUser.id,
     biz_name: settings.bizName,
-    biz_scope: settings.bizScope,
-    language: settings.language,
-    custom_language: settings.customLanguage,
-    persona: settings.persona,
-    video_length: settings.videoLength,
-    subtitle_enabled: settings.subtitleEnabled,
-    bgm_enabled: settings.bgmEnabled,
-    search_enabled: settings.searchEnabled,
-    user_profile: settings.userProfile,
     onboarding_done: localStorage.getItem('zimeiti-v3-onboarding-done') === '1',
     updated_at: new Date().toISOString()
   }));
@@ -204,26 +185,3 @@ async function sbDeleteScene(id) {
   await sbLoadScenes();
 }
 
-// ============================================================
-// SCRIPT HISTORY
-// ============================================================
-async function sbSaveScriptToHistory(title) {
-  if (!sbUser || !title) return;
-  var _a;
-  await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('script_history').insert({
-    user_id: sbUser.id,
-    title: title,
-    content_type: copyModeActive ? 'remix' : 'create'
-  }));
-}
-
-async function sbLoadScriptHistory() {
-  if (!sbUser) return [];
-  var _a;
-  var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('script_history')
-    .select('title, created_at')
-    .eq('user_id', sbUser.id)
-    .order('created_at', { ascending: false })
-    .limit(50));
-  return (r.data || []).map(function(h) { return { title: h.title, time: new Date(h.created_at).toLocaleString('zh-CN') }; });
-}

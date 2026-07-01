@@ -1,0 +1,350 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Storyboard Schema",
+  "description": "短视频导演分镜表完整数据结构，用于 AI 输出和故事板渲染",
+
+  "storyboard": {
+    "title": "精品咖啡推广·爆款复制",
+    "bizName": "手工咖啡豆",
+    "bizScope": "全国",
+    "language": "口语化·朋友聊天感",
+    "totalDuration": "30s",
+    "platform": "即梦",
+
+    "directorBrief": {
+      "coreIdea": "用一杯手冲咖啡的仪式感，打破速溶咖啡的廉价印象",
+      "targetEmotion": "好奇→向往→信任→冲动购买",
+      "hookType": "反问型·制造认知冲突",
+      "videoStyle": "日系生活美学·治愈感",
+      "creativeAngle": "不直接说咖啡好，用冲泡过程本身和顾客反应来建立品质感知"
+    },
+
+    "rhythmMap": [
+      { "timeRange": "0-5s",   "label": "钩子",    "tempo": "快速",     "purpose": "抓住注意力·制造悬念",     "cutsPerSec": 0.6 },
+      { "timeRange": "5-10s",  "label": "发问",    "tempo": "中速",     "purpose": "引出价格好奇心",           "cutsPerSec": 0.3 },
+      { "timeRange": "10-20s", "label": "展示",    "tempo": "慢速·沉浸", "purpose": "建立信任·展示品质差异",   "cutsPerSec": 0.1 },
+      { "timeRange": "20-30s", "label": "收尾",    "tempo": "中速·升温", "purpose": "满足感+社交证明→促成行动", "cutsPerSec": 0.4 }
+    ],
+
+    "emotionCurve": [
+      { "timeRange": "0-5s",   "emotion": "🤔 疑惑",  "intensity": 8, "trigger": "反问打破固有认知" },
+      { "timeRange": "5-10s",  "emotion": "😲 好奇",  "intensity": 6, "trigger": "价格悬念不被直接回答" },
+      { "timeRange": "10-20s", "emotion": "🤩 向往",  "intensity": 7, "trigger": "产地品质+手工冲泡视觉享受" },
+      { "timeRange": "20-30s", "emotion": "😌 满足·冲动", "intensity": 9, "trigger": "体验价揭晓+他人满意反应" }
+    ],
+
+    "audienceReaction": {
+      "targetAudience": "25-40岁咖啡消费者·每天喝速溶/连锁但向往品质咖啡的人",
+      "painPoint": "觉得好咖啡贵、麻烦、离自己很远",
+      "desiredAction": "点击购买·首次尝试手工咖啡豆",
+      "beforeWatching": "好咖啡离我很远",
+      "afterWatching": "39块试试也不亏",
+      "whyItWorks": [
+        "反问开头制造认知缺口——观众下意识想知道自己是不是还在喝速溶",
+        "价格悬念→品质展示→低价揭晓，信息差制造冲动消费",
+        "双人互动结尾建立社交证明（别人也觉得好+买了），降低决策门槛",
+        "全片不说'好喝'二字，用冲泡过程和顾客反应间接证明品质"
+      ]
+    },
+
+    "globalDefaults": {
+      "style": "日系生活美学·低饱和暖调·胶片颗粒",
+      "quality": "4K 60fps",
+      "lighting": "暖色自然光为主"
+    },
+
+    "availableCharacters": [
+      { "characterId": "char_cafe_owner", "characterName": "咖啡师小王", "type": "protagonist", "gender": "男", "clothing": "白衬衫+深蓝围裙", "features": "银色细框眼镜", "role": "主角·品质代表" },
+      { "characterId": "char_customer",   "characterName": "顾客小李",   "type": "supporting",  "gender": "男",  "clothing": "深色休闲夹克",   "features": "",           "role": "配角·观众视角" }
+    ],
+
+    "availableScenes": [
+      { "sceneId": "scene_cafe", "sceneName": "精品咖啡馆吧台", "location": "室内", "keyElements": ["木纹吧台", "手冲壶", "咖啡机", "落地窗", "暖黄灯光"], "timeOfDay": "下午" }
+    ],
+
+    "shots": [
+      {
+        "id": "shot_1",
+        "duration": "0-5s",
+        "shotType": "近景",
+        "camera": {
+          "movement": "慢推镜 dolly in",
+          "focalLength": "85mm",
+          "aperture": "f/2.0",
+          "angle": "平视·微俯拍"
+        },
+
+        "subjects": [
+          {
+            "characterId": "char_cafe_owner",
+            "characterName": "咖啡师小王",
+            "position": "画面中央",
+            "scale": "近景·胸以上",
+            "direction": "面朝左下方（看向手冲壶）",
+            "additionalDesc": "专注表情"
+          }
+        ],
+
+        "action": "右手持手冲壶缓慢匀速画圈注水，蒸汽从壶口升起。镜头从咖啡师脸部推到双手特写，水柱细且稳定",
+
+        "scene": {
+          "sceneId": "scene_cafe",
+          "sceneName": "精品咖啡馆吧台",
+          "environment": "吧台木纹台面，手冲器具整齐排列",
+          "atmosphere": "安静·专注",
+          "background": "虚化咖啡机、落地窗射入阳光"
+        },
+
+        "lighting": {
+          "type": "暖色侧逆光",
+          "keyLight": "窗外自然光·金黄色",
+          "fillLight": "正面柔光箱补光·光比1:3",
+          "direction": "左上方45°",
+          "highlights": "偏金黄",
+          "shadows": "柔和·无明显暗部"
+        },
+
+        "style": {
+          "visualStyle": "日系生活美学",
+          "colorTone": "低饱和暖色调",
+          "texture": "胶片颗粒感·微柔焦"
+        },
+
+        "quality": {
+          "resolution": "4K",
+          "fps": 60,
+          "motionBlur": "电影级动态模糊",
+          "postProcess": "后期微增锐"
+        },
+
+        "dialogue": "你还在喝速溶咖啡？",
+
+        "emotionBeat": "🤔 疑惑",
+        "notes": "钩子镜头，前3秒必须抓住注意力。推镜速度要慢，制造悬念感"
+      },
+
+      {
+        "id": "shot_2",
+        "duration": "5-10s",
+        "shotType": "近景",
+        "continuity": {
+          "transition": "硬切 + 快速横摇 whip pan",
+          "carryOver": ["咖啡师小王在背景虚化", "手冲咖啡器具", "暖黄色调"],
+          "newElements": ["顾客小李进入前景", "手机道具"],
+          "eyeLine": "咖啡师看左下方(shot_1) → 顾客从右侧入画面朝左方(shot_2) ← 视线180°轴线匹配",
+          "actionLink": "手冲注水蒸汽升起 → 咖啡香气飘出 → 顾客闻到气味抬头",
+          "emotionLink": "🤔 疑惑/专注(shot_1) → 😲 好奇/意外(shot_2)，强度 8→6 过渡",
+          "cameraLink": "慢推镜(shot_1)静止在特写 → 快速横摇(shot_2)甩向顾客 → 速度对比制造节奏变化"
+        },
+        "camera": {
+          "movement": "快速横摇 whip pan",
+          "focalLength": "50mm",
+          "aperture": "f/2.8",
+          "angle": "平视"
+        },
+
+        "subjects": [
+          {
+            "characterId": "char_customer",
+            "characterName": "顾客小李",
+            "position": "画面中央偏右",
+            "scale": "近景·胸以上",
+            "direction": "面朝左方（看咖啡师）",
+            "additionalDesc": "惊讶表情，手机举到一半停住"
+          },
+          {
+            "characterId": "char_cafe_owner",
+            "characterName": "咖啡师小王",
+            "position": "画面左侧·虚化",
+            "scale": "中景·腰部以上",
+            "direction": "面朝右下方",
+            "additionalDesc": "手冲姿势，背景虚化"
+          }
+        ],
+
+        "action": "顾客快速转头看向咖啡师，手中手机滑了一下后重新抓稳。镜头从咖啡师快速横摇到顾客脸部",
+
+        "scene": {
+          "sceneId": "scene_cafe",
+          "sceneName": "精品咖啡馆吧台",
+          "environment": "吧台区域，顾客站在吧台前",
+          "atmosphere": "好奇·意外",
+          "background": "吧台木纹、手冲器具"
+        },
+
+        "lighting": {
+          "type": "暖色侧逆光+正面柔光",
+          "keyLight": "窗外自然光·金黄色",
+          "fillLight": "正面柔光·提亮面部",
+          "direction": "左上方45°",
+          "highlights": "偏金黄·顾客面部受光",
+          "shadows": "柔和"
+        },
+
+        "style": {
+          "visualStyle": "日系生活美学",
+          "colorTone": "低饱和暖色调",
+          "texture": "胶片颗粒感"
+        },
+
+        "quality": {
+          "resolution": "4K",
+          "fps": 60,
+          "motionBlur": "电影级动态模糊·横摇运动模糊",
+          "postProcess": "后期微增锐"
+        },
+
+        "dialogue": "这个多少钱？",
+
+        "emotionBeat": "😲 好奇",
+        "notes": "横摇速度要快但不过曝，落幅停在顾客惊讶表情上"
+      },
+
+      {
+        "id": "shot_3",
+        "duration": "10-20s",
+        "shotType": "特写→中景",
+        "continuity": {
+          "transition": "叠化 dissolve",
+          "carryOver": ["咖啡师小王(从背景虚化回到前景)", "吧台", "暖黄色调"],
+          "newElements": ["咖啡豆包装袋", "产地标识特写"],
+          "eyeLine": "顾客看咖啡师(shot_2) → 咖啡师面朝镜头/产品(shot_3)，注意力转移到产品",
+          "actionLink": "顾客问'多少钱'(shot_2) → 咖啡师展示产品+报价(shot_3)，一问一答因果链",
+          "emotionLink": "😲 好奇(shot_2) → 🤩 向往/信任(shot_3)，情绪从疑问过渡到品质展示",
+          "cameraLink": "快速横摇落幅(shot_2) → 俯拍缓慢环绕(shot_3) → 从动态转入静态沉浸，暗示信息密度切换"
+        },
+        "camera": {
+          "movement": "俯拍缓慢环绕 orbit",
+          "focalLength": "35mm",
+          "aperture": "f/2.8",
+          "angle": "45°俯拍"
+        },
+
+        "subjects": [
+          {
+            "characterId": "char_cafe_owner",
+            "characterName": "咖啡师小王",
+            "position": "画面右侧",
+            "scale": "中景",
+            "direction": "面朝左方",
+            "additionalDesc": "展示咖啡豆包装，手部动作优雅"
+          }
+        ],
+
+        "action": "咖啡师拿出咖啡豆包装袋，展开放在吧台上，手指轻点包装上的产地标识。镜头从包装特写缓慢拉远环绕，展示整个吧台",
+
+        "scene": {
+          "sceneId": "scene_cafe",
+          "sceneName": "精品咖啡馆吧台",
+          "environment": "吧台全景，咖啡豆包装+手冲器具展示",
+          "atmosphere": "专业·信任感",
+          "background": "咖啡机、落地窗、木纹吧台"
+        },
+
+        "lighting": {
+          "type": "顶光+侧逆光",
+          "keyLight": "吧台上方暖黄射灯",
+          "fillLight": "窗外自然光·金黄色",
+          "direction": "上方+左上方",
+          "highlights": "包装袋LOGO清晰",
+          "shadows": "柔和·立体感强"
+        },
+
+        "style": {
+          "visualStyle": "日系生活美学",
+          "colorTone": "暖色调·高饱和产品色",
+          "texture": "产品包装质感清晰"
+        },
+
+        "quality": {
+          "resolution": "4K",
+          "fps": 60,
+          "motionBlur": "环绕运动模糊·自然过渡",
+          "postProcess": "产品区域锐化"
+        },
+
+        "dialogue": "云南普洱·海拔1200米·手工采摘，新客体验价只要39",
+
+        "emotionBeat": "🤩 向往",
+        "notes": "产品展示段，环绕速度要稳。包装LOGO和产地信息要看清"
+      },
+
+      {
+        "id": "shot_4",
+        "duration": "20-30s",
+        "shotType": "中景·双人镜头",
+        "continuity": {
+          "transition": "硬切 cut",
+          "carryOver": ["咖啡师小王", "顾客小李", "咖啡豆包装袋", "吧台", "暖黄色调"],
+          "newElements": ["手冲成品咖啡杯", "双人互动空间"],
+          "eyeLine": "咖啡师看产品(shot_3) → 咖啡师面朝右方看顾客 / 顾客面朝左方看咖啡师(shot_4) ← 双人正反打，视线交汇建立亲密感",
+          "actionLink": "展示产品+报价(shot_3) → 顾客接咖啡+闻香+决定购买(shot_4) ← 完整的推销→成交弧线",
+          "emotionLink": "🤩 向往/信任(shot_3) → 😌 满足/冲动(shot_4)，强度7→9，推向高潮收尾",
+          "cameraLink": "俯拍环绕(shot_3) → 固定机位微推(shot_4) → 从产品环绕展示回到人物互动，机位静止暗示稳定/确定性"
+        },
+        "camera": {
+          "movement": "固定机位·微推",
+          "focalLength": "50mm",
+          "aperture": "f/2.8",
+          "angle": "平视"
+        },
+
+        "subjects": [
+          {
+            "characterId": "char_cafe_owner",
+            "characterName": "咖啡师小王",
+            "position": "画面左侧",
+            "scale": "中景·腰部以上",
+            "direction": "面朝右方（看顾客）",
+            "additionalDesc": "微笑，递出咖啡杯"
+          },
+          {
+            "characterId": "char_customer",
+            "characterName": "顾客小李",
+            "position": "画面右侧",
+            "scale": "中景·腰部以上",
+            "direction": "面朝左方（看咖啡师）",
+            "additionalDesc": "接过咖啡杯，满意微笑"
+          }
+        ],
+
+        "action": "咖啡师递出一杯手冲咖啡，顾客接过，低头闻香，满意微笑。两人自然互动，气氛轻松",
+
+        "scene": {
+          "sceneId": "scene_cafe",
+          "sceneName": "精品咖啡馆吧台",
+          "environment": "吧台双人互动区域",
+          "atmosphere": "温馨·满足",
+          "background": "咖啡机虚化、暖黄灯光"
+        },
+
+        "lighting": {
+          "type": "双人柔光·暖调",
+          "keyLight": "吧台暖黄射灯+窗外自然光",
+          "fillLight": "正面柔光箱·均匀补光",
+          "direction": "上方+左上方",
+          "highlights": "两人面部受光柔和均匀",
+          "shadows": "几乎无阴影·温暖氛围"
+        },
+
+        "style": {
+          "visualStyle": "日系生活美学",
+          "colorTone": "暖色调·高光偏白",
+          "texture": "柔和·胶片感"
+        },
+
+        "quality": {
+          "resolution": "4K",
+          "fps": 60,
+          "motionBlur": "自然动态模糊",
+          "postProcess": "人像柔肤·色彩微调"
+        },
+
+        "dialogue": "好香...给我来两袋。   点击下方，你也试试",
+
+        "emotionBeat": "😌 满足·冲动",
+        "notes": "收尾镜头，传达满足感和行动号召。微推镜增加亲密感"
+      }
+    ]
+  }
+}

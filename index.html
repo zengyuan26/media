@@ -13,7 +13,7 @@
      ============================================================ -->
 <div class="header">
   <div class="header-left">
-    <div class="header-icon">✨</div>
+    <div class="header-icon">🎬</div>
     <span class="header-title">自媒体创作助手</span>
   </div>
   <div class="header-actions">
@@ -22,100 +22,85 @@
 </div>
 
 <!-- ============================================================
-     TAB CONTENT AREA
+     TAB CONTENT
      ============================================================ -->
 <div class="tab-content">
 
-  <!-- TAB 1: 主页 -->
-  <div class="tab-panel active" id="tabHome">
-    <div class="chat-area" id="chatArea">
-      <div class="chat-empty" id="chatEmpty">
-        <div class="chat-empty-icon">💬</div>
-        <div class="chat-empty-text">选择一种创作场景开始，或在下方输入你的需求</div>
-        <div class="chat-empty-cards" id="chatEmptyCards"></div>
+  <!-- TAB 1: 故事板 -->
+  <div class="tab-panel active" id="tabStoryboard">
+
+    <!-- 阶段A: 问答收集区 -->
+    <div class="sb-interview" id="sbInterview">
+      <div class="sb-interview-inner">
+        <div class="sb-interview-avatar">🤖</div>
+        <div class="sb-interview-question" id="sbQuestion">准备开始分析爆款视频</div>
+
+        <div class="sb-interview-answer">
+          <textarea class="sb-interview-textarea" id="sbAnswer" rows="4" placeholder="用语音或文字回答…"></textarea>
+          <div class="sb-interview-toolbar">
+            <button class="sb-voice-btn" id="btnVoice" title="语音输入">🎤</button>
+            <span class="sb-voice-hint" id="voiceHint">点击麦克风开始说话</span>
+          </div>
+        </div>
+
+        <div class="sb-interview-nav">
+          <button class="sb-nav-btn secondary" id="btnPrevQ" disabled>← 上一步</button>
+          <button class="sb-nav-btn secondary" id="btnSkipQ">跳过</button>
+          <button class="sb-nav-btn primary" id="btnNextQ">下一步 →</button>
+        </div>
+
+        <div class="sb-interview-progress" id="sbProgress"></div>
       </div>
     </div>
-    <div class="status-bar" id="statusBar">就绪 — 请先在设置中配置 API Key</div>
-  </div>
 
-  <!-- TAB 2: 创作 -->
-  <div class="tab-panel" id="tabCreate">
-    <div class="create-scroll"></div>
-    <div class="create-bottom">
-      <div class="asset-row">
-        <span class="asset-row-label">选择形象</span>
-        <div class="asset-icon-grid" id="charGrid"></div>
-      </div>
-      <div class="asset-row">
-        <span class="asset-row-label">选择场景</span>
-        <div class="asset-icon-grid" id="sceneGrid"></div>
-      </div>
-      <textarea class="create-textarea" id="createInput" rows="3" placeholder="描述你想创作的短视频内容…"></textarea>
-      <button class="create-btn primary" id="btnGenerate">✨ 生成脚本</button>
-    </div>
-  </div>
+    <!-- 阶段B: 故事板展示区（生成后显示） -->
+    <div class="sb-board" id="sbBoard" style="display:none">
 
-  <!-- TAB 3: 复制爆款 -->
-  <div class="tab-panel" id="tabRemix">
-    <div class="create-scroll">
-      <div class="copy-chat-area" id="copyChatArea"></div>
-      <div class="copy-generate-row" id="copyGenerateRow">
-        <textarea class="me-input" id="copyAdjustInput" rows="2" placeholder="输入调整意见…（可选）" style="flex:1;resize:none"></textarea>
-        <div style="display:flex;gap:8px;align-items:center">
-          <label class="me-toggle-row" style="flex-shrink:0">
-            <input type="checkbox" id="copySubtitleToggle" checked>
-            <span class="me-toggle-slider"></span>
-            <span class="me-toggle-text">字幕</span>
-          </label>
-          <label class="me-toggle-row" style="flex-shrink:0">
-            <input type="checkbox" id="copyBgmToggle" checked>
-            <span class="me-toggle-slider"></span>
-            <span class="me-toggle-text">BGM</span>
-          </label>
-          <button class="dialog-btn primary" id="btnCopyGenerate" style="flex:1">✨ 生成脚本</button>
+      <!-- 导演分析 -->
+      <div class="sb-section">
+        <div class="sb-section-header" id="btnToggleDirector">
+          <span>🎬 导演分析</span>
+          <span class="sb-section-toggle">▾</span>
+        </div>
+        <div class="sb-section-body" id="sbDirectorBody">
+          <div id="sbDirectorBrief"></div>
+          <div class="sb-rhythm-bar" id="sbRhythmMap"></div>
+          <div class="sb-emotion-curve" id="sbEmotionCurve"></div>
+          <div class="sb-audience" id="sbAudience"></div>
         </div>
       </div>
-    </div>
-    <div class="create-bottom">
-      <div class="asset-row">
-        <span class="asset-row-label">选择形象</span>
-        <div class="asset-icon-grid" id="remixCharGrid"></div>
+
+      <!-- 分镜卡片 -->
+      <div class="sb-section">
+        <div class="sb-section-header"><span>🎥 分镜脚本</span></div>
+        <div class="sb-section-body">
+          <div class="sb-shot-list" id="sbShotList"></div>
+          <button class="sb-add-shot-btn" id="btnSbAddShot">+ 新增镜头</button>
+        </div>
       </div>
-      <div class="asset-row">
-        <span class="asset-row-label">选择场景</span>
-        <div class="asset-icon-grid" id="remixSceneGrid"></div>
+
+      <!-- 操作栏 -->
+      <div class="sb-actions-bar">
+        <button class="dialog-btn secondary" id="btnSbReplaceChar">🔄 替换形象</button>
+        <button class="dialog-btn secondary" id="btnSbReplaceScene">🔄 替换场景</button>
+        <button class="dialog-btn secondary" id="btnSbReset">🔄 重新生成</button>
+        <button class="dialog-btn primary" id="btnSbCopyPrompt">📋 复制提示词</button>
+        <button class="dialog-btn secondary" id="btnSbCopyJson">📋 复制JSON</button>
       </div>
-      <textarea class="create-textarea" id="remixInput" rows="3" placeholder="粘贴抖音/即梦链接，或直接粘贴视频脚本文本…"></textarea>
-      <button class="copy-parse-btn" id="btnParseLink" style="width:100%;margin-top:0">🔍 解析链接</button>
+
     </div>
   </div>
 
-  <!-- TAB 4: 我的 -->
+  <!-- TAB 2: 我的 -->
   <div class="tab-panel" id="tabMe">
     <div class="me-scroll">
 
-      <!-- 个人卡片 + 设置入口 -->
-      <div class="me-profile-card">
-        <div class="me-profile-left">
-          <div class="me-profile-avatar" id="meAvatar">👤</div>
-          <div class="me-profile-info">
-            <div class="me-edit-row">
-              <input class="me-profile-name" id="meBizName" placeholder="业务名称：例如 XX健身" maxlength="30">
-              <button class="me-save-chip" id="btnSaveBizName">保存</button>
-            </div>
-          </div>
-        </div>
-        <button class="btn-icon" id="btnMeSettings" title="设置">⚙</button>
-      </div>
-
-      <!-- 个人资料入口 -->
+      <!-- 业务名称 -->
       <div class="me-card-box">
-        <div class="me-section-head" style="cursor:pointer" onclick="document.getElementById('profileDialog').classList.add('open');document.getElementById('meUserProfile').value=settings.userProfile||''">
-          <span>📝 个人资料</span>
-          <span style="font-size:.72rem;color:#818cf8;font-weight:500">编辑 →</span>
-        </div>
-        <div style="font-size:.72rem;color:#888;line-height:1.4" id="meProfilePreview">
-          介绍一下你自己，AI 会根据这些信息个性化生成内容
+        <div class="me-section-head"><span>📝 业务信息</span></div>
+        <div class="me-edit-row" style="display:flex;gap:8px">
+          <input class="me-input" id="meBizName" placeholder="业务名称：例如 XX健身" maxlength="30" style="flex:1">
+          <button class="dialog-btn primary" id="btnSaveBizName" style="width:auto;padding:8px 16px;font-size:.78rem">保存</button>
         </div>
       </div>
 
@@ -136,87 +121,27 @@
         </div>
       </div>
 
-      <!-- 子Tab：创作脚本记录 / 偏好设置 -->
-      <div class="me-subtabs">
-        <div class="me-subtab" data-subtab="subHistory">创作脚本记录</div>
-        <div class="me-subtab active" data-subtab="subPrefs">偏好设置</div>
+      <!-- 设置入口 -->
+      <div class="me-card-box" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="document.getElementById('settingsOverlay').classList.add('open')">
+        <span style="font-weight:600;font-size:.85rem">⚙ 设置</span>
+        <span style="font-size:.72rem;color:#818cf8">API Key / Model →</span>
       </div>
 
-      <!-- 子Tab内容：创作脚本记录 -->
-      <div class="me-subpanel" id="subHistory">
-        <div class="me-history-list" id="meScriptHistory">
-          <div class="me-history-empty">还没有生成过脚本</div>
-        </div>
-      </div>
-
-      <!-- 子Tab内容：偏好设置 -->
-      <div class="me-subpanel active" id="subPrefs">
-        <div class="me-card-box">
-          <div class="me-pref-row">
-            <span class="me-pref-label">语言风格</span>
-            <select class="me-input" id="meLanguage" style="width:auto;padding:6px 8px;font-size:.72rem">
-              <option value="普通话">普通话</option>
-              <option value="重庆话">重庆话</option>
-              <option value="东北话">东北话</option>
-              <option value="粤语">粤语</option>
-              <option value="英语">英语</option>
-              <option value="日语">日语</option>
-              <option value="custom">自定义…</option>
-            </select>
-          </div>
-          <div id="meCustomLangRow" style="display:none">
-            <input class="me-input" id="meCustomLanguage" placeholder="自定义方言" style="margin-bottom:6px">
-          </div>
-          <div class="me-pref-row">
-            <span class="me-pref-label">视频时长默认</span>
-            <div class="chip-row" id="meVideoLength">
-              <div class="chip" data-value="15">15s</div>
-              <div class="chip active" data-value="30">30s</div>
-              <div class="chip" data-value="60">60s</div>
-            </div>
-          </div>
-          <div class="me-pref-row">
-            <span class="me-pref-label">字幕默认</span>
-            <div class="chip-row" id="meSubtitle">
-              <div class="chip active" data-value="1">开</div>
-              <div class="chip" data-value="0">关</div>
-            </div>
-          </div>
-          <div class="me-pref-row">
-            <span class="me-pref-label">BGM默认</span>
-            <div class="chip-row" id="meBgm">
-              <div class="chip active" data-value="1">开</div>
-              <div class="chip" data-value="0">关</div>
-            </div>
-          </div>
-          <div class="me-pref-row">
-            <span class="me-pref-label">联网搜索增强</span>
-            <label class="me-toggle-row">
-              <input type="checkbox" id="meWebSearch" checked>
-              <span class="me-toggle-slider"></span>
-            </label>
-          </div>
-        </div>
+      <div class="me-card-box" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" id="btnLogoutCard">
+        <span style="font-weight:600;font-size:.85rem;color:#e57373">退出登录</span>
+        <span style="font-size:.72rem;color:#e57373">→</span>
       </div>
 
     </div>
   </div>
 
 </div>
-</div>
 
+<!-- Tab bar -->
 <div class="tab-bar">
-  <div class="tab-item active" data-tab="tabHome">
-    <span class="tab-icon">🏠</span>
-    <span class="tab-label">主页</span>
-  </div>
-  <div class="tab-item" data-tab="tabCreate">
-    <span class="tab-icon">✨</span>
-    <span class="tab-label">创作</span>
-  </div>
-  <div class="tab-item" data-tab="tabRemix">
-    <span class="tab-icon">📋</span>
-    <span class="tab-label">复制爆款</span>
+  <div class="tab-item active" data-tab="tabStoryboard">
+    <span class="tab-icon">🎬</span>
+    <span class="tab-label">故事板</span>
   </div>
   <div class="tab-item" data-tab="tabMe">
     <span class="tab-icon">👤</span>
@@ -227,9 +152,43 @@
 <!-- ============================================================
      SETTINGS OVERLAY
      ============================================================ -->
-<!-- ============================================================
-     PROFILE DIALOG
-     ============================================================ -->
+<div class="overlay" id="settingsOverlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="dialog settings-dialog">
+    <div class="dialog-header">
+      <span class="dialog-title">⚙ 设置</span>
+      <button class="btn-icon" onclick="document.getElementById('settingsOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="me-card-box" style="border:none;padding:0">
+        <div class="me-section-head"><span>🔑 API 配置</span></div>
+        <div style="position:relative;margin-bottom:6px">
+          <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." autocomplete="off" style="padding-right:44px">
+          <button id="btnToggleApiKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏">🙈</button>
+        </div>
+        <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint" readonly style="margin-bottom:6px;background:#f0ece4;color:#8a8278">
+        <select class="me-input" id="meModel">
+          <option value="deepseek-chat">deepseek-chat</option>
+          <option value="deepseek-reasoner">deepseek-reasoner</option>
+          <option value="qwen-plus">qwen-plus (通义千问)</option>
+          <option value="qwen-max">qwen-max (通义千问)</option>
+          <option value="glm-4">glm-4 (智谱)</option>
+          <option value="moonshot-v1-8k">moonshot-v1-8k (月之暗面)</option>
+          <option value="custom">自定义…</option>
+        </select>
+        <div id="meCustomModelField" style="display:none;margin-top:6px">
+          <input type="text" class="me-input" id="meCustomModel" placeholder="输入 model ID">
+        </div>
+        <div style="margin-top:10px">
+          <input type="tel" class="me-input" id="mePhone" placeholder="手机号（找回密码用）" style="font-size:.78rem">
+        </div>
+        <button class="dialog-btn primary" id="btnSaveApiConfig" style="margin-top:4px;width:100%">💾 保存 API 配置</button>
+        <span id="apiConfigSaveHint" style="display:block;font-size:.72rem;color:#5b9a8b;text-align:center;height:18px"></span>
+      </div>
+      <button class="me-reset-btn" id="btnLogout" style="margin-top:4px;color:#e57373">退出登录</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============================================================
      CHARACTER MANAGER OVERLAY
      ============================================================ -->
@@ -264,81 +223,6 @@
       <input class="me-input" id="newSceneName2" placeholder="场景名称：例如 厨房、办公室">
       <input class="me-input" id="newSceneDesc2" placeholder="场景描述：例如 明亮的开放式厨房">
       <button class="dialog-btn primary" onclick="addSceneFromManager()" style="width:100%">+ 添加场景</button>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SCENE EDITOR OVERLAY
-     ============================================================ -->
-<div class="overlay" id="sceneEditorOverlay" onclick="if(event.target===this)closeSceneEditor()">
-  <div class="dialog settings-dialog">
-    <div class="dialog-header">
-      <span class="dialog-title">🏠 场景管理</span>
-      <button class="btn-icon" onclick="closeSceneEditor()">✕</button>
-    </div>
-    <div class="dialog-body">
-      <div id="sceneListInEditor" style="display:flex;flex-direction:column;gap:8px">
-        <div style="font-size:.72rem;color:#555;text-align:center;padding:12px 0">还没有场景</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <input class="me-input" id="newSceneName" placeholder="场景名称：例如 厨房、办公室" style="flex:1">
-        <button class="dialog-btn primary" onclick="addScene()">+ 添加</button>
-      </div>
-      <input class="me-input" id="newSceneDesc" placeholder="场景描述：例如 明亮的开放式厨房，白色橱柜配木色台面">
-      <span style="font-size:.64rem;color:#555">💡 场景描述越具体，即梦生成的背景越稳定</span>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="profileDialog" style="z-index:115" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="dialog settings-dialog">
-    <div class="dialog-header">
-      <span class="dialog-title">📝 个人资料</span>
-      <button class="btn-icon" onclick="document.getElementById('profileDialog').classList.remove('open')">✕</button>
-    </div>
-    <div class="dialog-body">
-      <textarea class="me-textarea" id="meUserProfile" rows="6" placeholder="用一段话介绍你自己：身份、年龄、经历、特点…&#10;&#10;AI 会根据这些信息个性化生成内容。越具体效果越好。"></textarea>
-      <div class="me-profile-actions">
-        <button class="dialog-btn primary" id="btnSaveProfile" style="width:100%">💾 保存资料</button>
-        <span class="me-profile-tip">💡 之后支持语音录入，AI 会像采访一样帮你完善资料</span>
-      </div>
-      <span class="me-save-hint" id="profileSaveHint"></span>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="settingsOverlay" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="dialog settings-dialog">
-    <div class="dialog-header">
-      <span class="dialog-title">⚙ 设置</span>
-      <button class="btn-icon" id="btnSettingsClose" onclick="document.getElementById('settingsOverlay').classList.remove('open')">✕</button>
-    </div>
-    <div class="dialog-body">
-      <div class="me-card-box" style="border:none;padding:0">
-        <div class="me-section-head"><span>🔑 API 配置</span></div>
-        <div style="position:relative;margin-bottom:6px">
-          <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." autocomplete="off" style="padding-right:44px">
-          <button id="btnToggleApiKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏">🙈</button>
-        </div>
-        <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint：https://api.deepseek.com/v1" readonly style="margin-bottom:6px;background:#f0ece4;color:#8a8278">
-        <select class="me-input" id="meModel">
-          <option value="deepseek-chat">deepseek-chat</option>
-          <option value="deepseek-reasoner">deepseek-reasoner</option>
-          <option value="qwen-plus">qwen-plus (通义千问)</option>
-          <option value="qwen-max">qwen-max (通义千问)</option>
-          <option value="glm-4">glm-4 (智谱)</option>
-          <option value="moonshot-v1-8k">moonshot-v1-8k (月之暗面)</option>
-          <option value="custom">自定义…</option>
-        </select>
-        <div id="meCustomModelField" style="display:none;margin-top:6px">
-          <input type="text" class="me-input" id="meCustomModel" placeholder="输入 model ID">
-        </div>
-        <button class="dialog-btn primary" id="btnSaveApiConfig" style="margin-top:10px;width:100%">💾 保存 API 配置</button>
-        <span id="apiConfigSaveHint" style="display:block;font-size:.72rem;color:#5b9a8b;text-align:center;height:18px"></span>
-      </div>
-      <button class="me-reset-btn" id="btnResetAll" style="margin-top:0">恢复默认设置</button>
-      <button class="me-reset-btn" id="btnLogout" style="margin-top:4px;color:#e57373">退出登录</button>
     </div>
   </div>
 </div>
@@ -403,37 +287,43 @@
     </div>
   </div>
 </div>
-</div>
 
 <!-- ============================================================
-     ONBOARDING OVERLAY
-     ============================================================ -->
-<!-- ============================================================
-     LOGIN PAGE — full screen, first thing user sees
+     LOGIN PAGE
      ============================================================ -->
 <div class="overlay" id="loginPage">
   <div style="display:flex;flex-direction:column;align-items:center;gap:20px;width:340px;max-width:90vw;text-align:center">
-    <div style="font-size:3rem">✨</div>
+    <div style="font-size:3rem">🎬</div>
     <div>
       <div style="font-size:1.3rem;font-weight:700;color:#2d2a26;margin-bottom:4px">自媒体创作助手</div>
-      <div style="font-size:.82rem;color:#8a8278">AI短视频脚本创作 · 即梦提示词</div>
+      <div style="font-size:.82rem;color:#8a8278">导演分镜表 · 即梦提示词</div>
     </div>
-    <!-- 表单 -->
-    <div style="width:100%;display:flex;flex-direction:column;gap:10px">
+    <!-- 登录/注册表单 -->
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px" id="loginForm">
       <input type="text" class="me-input" id="loginEmail" placeholder="用户名" style="text-align:center">
+      <input type="tel" class="me-input" id="loginPhone" placeholder="手机号（11位，用于找回密码）" style="text-align:center">
       <input type="password" class="me-input" id="loginPassword" placeholder="密码（至少6位）" style="text-align:center">
       <div style="display:flex;gap:8px;width:100%">
         <button class="dialog-btn primary" id="btnLogin" style="flex:1">登录</button>
         <button class="dialog-btn" id="btnRegister" style="flex:1;background:#ede8e1;color:#2d2a26">注册</button>
       </div>
+      <button id="btnForgotPwd" style="background:none;border:none;color:#8a8278;font-size:.75rem;cursor:pointer;padding:4px 0">忘记密码？</button>
+    </div>
+    <!-- 重置密码表单（初始隐藏） -->
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px;display:none" id="resetPwdForm">
+      <div style="font-size:.85rem;color:#2d2a26;font-weight:600;margin-bottom:4px">重置密码</div>
+      <input type="text" class="me-input" id="resetEmail" placeholder="用户名" style="text-align:center">
+      <input type="tel" class="me-input" id="resetPhone" placeholder="注册时填的手机号" style="text-align:center">
+      <input type="password" class="me-input" id="resetPassword" placeholder="新密码（至少6位）" style="text-align:center">
+      <button class="dialog-btn primary" id="btnResetPwd" style="width:100%">重置密码</button>
+      <button id="btnBackToLogin" style="background:none;border:none;color:#8a8278;font-size:.75rem;cursor:pointer;padding:4px 0">← 返回登录</button>
     </div>
     <div id="loginError" style="font-size:.75rem;color:#e57373;display:none"></div>
-
   </div>
 </div>
 
 <!-- ============================================================
-     ONBOARDING PAGE — full screen guide, mandatory, no skip
+     ONBOARDING PAGE
      ============================================================ -->
 <div class="obo-page hidden" id="onboardingPage">
   <div class="obo-inner">
@@ -442,20 +332,16 @@
       <span class="obo-line"></span>
       <span class="obo-dot">2</span>
     </div>
-
     <div class="obo-panels">
-      <!-- Step 1: Biz Info -->
       <div class="obo-panel active" id="oboPanel1">
-        <div class="obo-icon">✨</div>
+        <div class="obo-icon">🎬</div>
         <h2 class="obo-title">欢迎使用自媒体创作助手</h2>
-        <p class="obo-desc">AI短视频脚本创作，专注即梦提示词生成</p>
+        <p class="obo-desc">导演分镜表创作，专注即梦提示词生成</p>
         <div class="obo-field">
           <label class="obo-label">业务名称 <span class="field-required">*必填</span></label>
           <input class="obo-input" id="oboBizName" placeholder="例如：XX健身、YY美食探店" maxlength="30">
         </div>
       </div>
-
-      <!-- Step 2: Character -->
       <div class="obo-panel" id="oboPanel2">
         <div class="obo-icon">💃</div>
         <h2 class="obo-title">创建你的主角形象</h2>
@@ -477,7 +363,6 @@
         </div>
       </div>
     </div>
-
     <div class="obo-nav">
       <button class="obo-nav-btn secondary" id="btnOboPrev" style="visibility:hidden">← 上一步</button>
       <div class="obo-dots-mob" id="oboDotsMob">
@@ -489,9 +374,155 @@
   </div>
 </div>
 
+<!-- ============================================================
+     SHOT EDITOR SHEET (bottom sheet)
+     ============================================================ -->
+<div class="shot-editor-sheet" id="shotEditorSheet">
+  <div class="shot-editor-overlay" onclick="closeShotEditor()"></div>
+  <div class="shot-editor-panel">
+    <div class="shot-editor-header">
+      <span class="shot-editor-title">编辑镜头</span>
+      <button class="btn-icon" onclick="closeShotEditor()">✕</button>
+    </div>
+    <div class="shot-editor-body">
+      <input type="hidden" id="seIndex">
+
+      <div class="shot-editor-field">
+        <label>景别</label>
+        <div class="shot-editor-chips" id="seShotType">
+          <span class="chip" data-value="远景">远景</span>
+          <span class="chip" data-value="全景">全景</span>
+          <span class="chip active" data-value="中景">中景</span>
+          <span class="chip" data-value="近景">近景</span>
+          <span class="chip" data-value="特写">特写</span>
+        </div>
+      </div>
+
+      <div class="shot-editor-field">
+        <label>时长 (秒)</label>
+        <input class="me-input" id="seDuration" placeholder="例如：0-5s">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>角色</label>
+        <select class="me-input" id="seCharacter"></select>
+      </div>
+
+      <div class="shot-editor-field">
+        <label>角色站位</label>
+        <input class="me-input" id="sePosition" placeholder="例如：画面中央">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>角色朝向</label>
+        <input class="me-input" id="seDirection" placeholder="例如：面朝左下方">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>角色补充描述</label>
+        <input class="me-input" id="seAdditionalDesc" placeholder="例如：惊讶表情，专注神态">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>动作</label>
+        <textarea class="me-input" id="seAction" rows="3" placeholder="描述角色的具体动作和动态表现…"></textarea>
+      </div>
+
+      <div class="shot-editor-field">
+        <label>场景</label>
+        <select class="me-input" id="seScene"></select>
+      </div>
+
+      <div class="shot-editor-field">
+        <label>场景环境描述</label>
+        <input class="me-input" id="seEnvironment" placeholder="周围环境、物品、氛围">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>场景氛围</label>
+        <input class="me-input" id="seAtmosphere" placeholder="例如：安静·专注 / 温馨·满足">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>光影类型</label>
+        <input class="me-input" id="seLightType" placeholder="例如：暖色侧逆光">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>光影方向</label>
+        <input class="me-input" id="seLightDir" placeholder="例如：左上方45°">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>运镜</label>
+        <div class="shot-editor-chips" id="seCameraMov">
+          <span class="chip" data-value="推">推</span>
+          <span class="chip" data-value="拉">拉</span>
+          <span class="chip" data-value="摇">摇</span>
+          <span class="chip" data-value="移">移</span>
+          <span class="chip" data-value="跟">跟</span>
+          <span class="chip" data-value="俯">俯</span>
+          <span class="chip" data-value="仰">仰</span>
+        </div>
+        <input class="me-input" id="seCameraCustom" placeholder="运镜补充描述…" style="margin-top:6px">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>视觉风格</label>
+        <input class="me-input" id="seStyle" placeholder="例如：日系生活美学·低饱和暖调">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>画质</label>
+        <input class="me-input" id="seQuality" placeholder="例如：4K 60fps">
+      </div>
+
+      <div class="shot-editor-field">
+        <label>台词</label>
+        <textarea class="me-input" id="seDialogue" rows="2" placeholder="镜头内的台词…"></textarea>
+      </div>
+
+      <div class="shot-editor-field">
+        <label>导演备注</label>
+        <textarea class="me-input" id="seNotes" rows="2" placeholder="特殊说明…"></textarea>
+      </div>
+
+      <!-- Continuity (衔接) -->
+      <div class="shot-editor-field" id="seContinuityField">
+        <label style="font-weight:700;color:#5b9a8b">🔗 与上一镜的衔接</label>
+        <label>切换方式</label>
+        <select class="me-input" id="seTransition">
+          <option value="硬切 cut">硬切 cut</option>
+          <option value="叠化 dissolve">叠化 dissolve</option>
+          <option value="甩镜头 whip pan">甩镜头 whip pan</option>
+          <option value="匹配剪辑 match cut">匹配剪辑 match cut</option>
+        </select>
+        <label>保留元素 (carryOver)</label>
+        <input class="me-input" id="seCarryOver" placeholder="上一镜哪些元素延续，逗号分隔">
+        <label>新入场元素 (newElements)</label>
+        <input class="me-input" id="seNewElements" placeholder="这一镜新出现的元素，逗号分隔">
+        <label>视线衔接 (eyeLine)</label>
+        <input class="me-input" id="seEyeLine" placeholder="两镜之间角色视线方向变化">
+        <label>动作链接 (actionLink)</label>
+        <input class="me-input" id="seActionLink" placeholder="动作因果关系">
+        <label>情绪链接 (emotionLink)</label>
+        <input class="me-input" id="seEmotionLink" placeholder="情绪强度/类型变化">
+        <label>运镜衔接 (cameraLink)</label>
+        <input class="me-input" id="seCameraLink" placeholder="运镜方式对比/过渡">
+      </div>
+
+    </div>
+    <div class="shot-editor-footer">
+      <button class="dialog-btn danger" id="btnShotDelete" style="flex:1">🗑 删除</button>
+      <button class="dialog-btn secondary" id="btnShotCancel" onclick="closeShotEditor()" style="flex:1">取消</button>
+      <button class="dialog-btn primary" id="btnShotSave" style="flex:2">💾 保存镜头</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 <script>
-// Load Supabase async — won't block app if CDN is slow/blocked
+// Load Supabase async
 var script = document.createElement('script');
 script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 script.onload = function() {
