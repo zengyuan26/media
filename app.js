@@ -1393,13 +1393,9 @@ function renderShotsPage() {
   html += '<button class="sb-action-btn" onclick="replaceAllScenes()">🏠 换场景</button>';
   html += '<button class="sb-action-btn" onclick="replaceKeyProps()">📦 换道具</button>';
   html += '<button class="sb-action-btn" onclick="pickDialect()">🗣 换方言</button>';
+  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 提取提示词</button>';
   html += '<button class="sb-action-btn primary" onclick="generateShots()">🎬 重新生成</button>';
   html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">···</button>';
-  html += '</div>';
-
-  // Export
-  html += '<div style="display:flex;gap:6px;padding:6px 0 10px;justify-content:flex-end">';
-  html += '<button class="dialog-btn secondary" onclick="exportStoryboardPrompts()" style="font-size:.65rem;padding:6px 10px">📋 提示词</button>';
   html += '</div>';
 
   board.innerHTML = html;
