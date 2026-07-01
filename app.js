@@ -434,10 +434,25 @@ async function doLoginOrRegister(mode) {
     } else {
       await sbSignIn(email, pass);
     }
+    // Backup current API config before resetting
+    var prevApiKey = settings.apiKey;
+    var prevEndpoint = settings.endpoint;
+    var prevModel = settings.model;
+    var prevCustomModel = settings.customModel;
+
     settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     characterProfiles = [];
     sceneProfiles = [];
     await loadAllFromCloud();
+
+    // If cloud didn't restore API config, keep previous values
+    if (!settings.apiKey && prevApiKey) {
+      settings.apiKey = prevApiKey;
+      settings.endpoint = prevEndpoint;
+      settings.model = prevModel;
+      settings.customModel = prevCustomModel;
+    }
+
     applyAllSettings();
     renderCharacterList(); updateAccountUI();
     setTimeout(dismissLoginPage, mode === 'register' ? 500 : 0);
