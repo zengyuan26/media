@@ -571,11 +571,10 @@ async function doLoginOrRegister(mode) {
     var prevScenes = sceneProfiles.slice();
 
     settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-    characterProfiles = [];
-    sceneProfiles = [];
+    // Don't reset characters/scenes — keep local data, cloud will merge if it has newer data
     await loadAllFromCloud();
 
-    // If cloud didn't restore data, keep local values
+    // If cloud didn't restore, keep local values
     if (!settings.apiKey && prevApiKey) {
       settings.apiKey = prevApiKey;
       settings.endpoint = prevEndpoint;
@@ -589,6 +588,13 @@ async function doLoginOrRegister(mode) {
     if (!sceneProfiles.length && prevScenes.length) {
       sceneProfiles = prevScenes;
       saveSceneProfiles();
+    }
+    // Also ensure cloud has our local data
+    if (characterProfiles.length && typeof sbUser !== 'undefined' && sbUser) {
+      prevChars.forEach(function(ch) { if (typeof sbSaveCharacter !== 'undefined') sbSaveCharacter(ch).catch(function(){}); });
+    }
+    if (sceneProfiles.length && typeof sbUser !== 'undefined' && sbUser) {
+      prevScenes.forEach(function(s) { if (typeof sbSaveScene !== 'undefined') sbSaveScene(s).catch(function(){}); });
     }
 
     applyAllSettings();
@@ -2120,9 +2126,11 @@ var currentDialect = '普通话';
 function loadDialects() {
   try { var d = JSON.parse(localStorage.getItem('zimeiti-v3-dialects')); if (Array.isArray(d)) dialects = d; } catch(e) {}
   if (!dialects.length) dialects = DEFAULT_DIALECTS.slice();
+  try { var cd = localStorage.getItem('zimeiti-v3-current-dialect'); if (cd) currentDialect = cd; } catch(e) {}
 }
 function saveDialects() {
   try { localStorage.setItem('zimeiti-v3-dialects', JSON.stringify(dialects)); } catch(e) {}
+  try { localStorage.setItem('zimeiti-v3-current-dialect', currentDialect); } catch(e) {}
 }
 
 function pickDialect() {
@@ -2162,6 +2170,7 @@ function confirmDialect(name) {
     return;
   }
   currentDialect = name;
+  saveDialects();
   updateAccountUI();
   closePicker();
 }
@@ -2172,9 +2181,11 @@ function addDialect() {
   if (!name) return;
   if (dialects.indexOf(name) >= 0) { alert('该方言已存在'); return; }
   dialects.push(name);
+  currentDialect = name;
   saveDialects();
+  updateAccountUI();
   input.value = '';
-  pickDialect(); // refresh list
+  pickDialect();
 }
 
 var keyProps = '';

@@ -101,7 +101,7 @@ async function sbLoadCharacters() {
   if (!sbUser) return;
   var _a;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('characters').select('*').eq('user_id', sbUser.id).order('created_at'));
-  if (r.data) {
+  if (r.data && r.data.length) {
     characterProfiles = r.data.map(mapChar);
     saveCharacterProfiles();
   }
@@ -150,7 +150,7 @@ async function sbLoadScenes() {
   if (!sbUser) return;
   var _a;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('scenes').select('*').eq('user_id', sbUser.id).order('created_at'));
-  if (r.data) {
+  if (r.data && r.data.length) {
     sceneProfiles = r.data.map(function(s) { return { id: s.id, name: s.name, description: s.description || '', environment: s.environment || '', atmosphere: s.atmosphere || '', lighting: s.lighting || '' }; });
     saveSceneProfiles();
   }
