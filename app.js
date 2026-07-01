@@ -905,58 +905,63 @@ function buildStoryboardSystemPrompt() {
     return '- ' + s.id + ': ' + s.name + ' (' + (s.description || '') + ')';
   }).join('\n');
 
-  return '你是短视频导演助手，根据用户对爆款视频的描述，输出完整的导演分镜表JSON。\n\n' +
-    '## 输出JSON结构\n' +
+  return '你是短视频导演助手。根据用户对爆款视频的描述，输出完整的导演分镜表 JSON。\n\n' +
+    '## 输出格式（所有字段必填，不得省略）\n\n' +
     '{\n' +
-    '  "title": "视频标题",\n' +
-    '  "totalDuration": "30s",\n' +
-    '  "bizName": "故事板",\n' +
+    '  "title": "吸引人的标题",\n' +
+    '  "totalDuration": "预估总时长，如 30s",\n' +
     '  "directorBrief": {\n' +
-    '    "coreIdea": "核心创意一句话",\n' +
-    '    "targetEmotion": "好奇→向往→信任→冲动",\n' +
-    '    "hookType": "反问型/悬念型/共鸣型/反差型",\n' +
-    '    "videoStyle": "日系生活美学/欧美大片/国潮...",\n' +
-    '    "creativeAngle": "创意思路简述"\n' +
+    '    "coreIdea": "核心创意（必填）",\n' +
+    '    "targetEmotion": "希望观众经历的情绪变化，如 好奇→惊讶→认同（必填）",\n' +
+    '    "hookType": "钩子类型（必填）",\n' +
+    '    "videoStyle": "视觉风格（必填）"\n' +
     '  },\n' +
     '  "rhythmMap": [\n' +
-    '    {"timeRange":"0-5s","label":"钩子","tempo":"快速/中速/慢速","purpose":"抓住注意力","cutsPerSec":0.5}\n' +
+    '    {"timeRange": "时间段", "label": "节奏标签", "tempo": "快/中/慢", "purpose": "目的"}\n' +
+    '    // 至少3段，覆盖全片\n' +
     '  ],\n' +
     '  "emotionCurve": [\n' +
-    '    {"timeRange":"0-5s","emotion":"🤔 疑惑","intensity":8,"trigger":"触发点描述"}\n' +
+    '    {"timeRange": "时间段", "emotion": "情绪emoji+文字", "intensity": 1-10, "trigger": "触发原因"}\n' +
+    '    // 至少3个节点，对应 rhythmMap\n' +
     '  ],\n' +
     '  "audienceReaction": {\n' +
-    '    "targetAudience": "目标人群描述",\n' +
-    '    "painPoint": "痛点",\n' +
-    '    "desiredAction": "期望用户做的行动",\n' +
-    '    "beforeWatching": "看之前的认知状态",\n' +
-    '    "afterWatching": "看之后的认知状态",\n' +
-    '    "whyItWorks": ["为什么有效1","为什么有效2"]\n' +
+    '    "targetAudience": "目标人群（必填）",\n' +
+    '    "painPoint": "痛点（必填）",\n' +
+    '    "beforeWatching": "看之前的认知状态（必填）",\n' +
+    '    "afterWatching": "看之后的变化（必填）",\n' +
+    '    "whyItWorks": ["有效原因1", "有效原因2"]\n' +
     '  },\n' +
     '  "shots": [\n' +
     '    {\n' +
-    '      "id":"shot_1","duration":"0-5s","shotType":"近景/特写/中景/全景/远景",\n' +
-    '      "camera":{"movement":"慢推镜 dolly in","focalLength":"85mm","aperture":"f/2.0","angle":"平视"},\n' +
-    '      "subjects":[{"characterId":"char_xxx","characterName":"角色名","position":"画面中央","scale":"近景/中景/远景","direction":"面朝左方","additionalDesc":"补充描述"}],\n' +
-    '      "action":"动作描述","scene":{"sceneId":"scene_xxx","sceneName":"场景名","environment":"环境","atmosphere":"氛围","background":"背景虚化描述"},\n' +
-    '      "lighting":{"type":"暖色侧逆光","keyLight":"主灯","fillLight":"补光","direction":"左上方45°","highlights":"高光特征","shadows":"阴影特征"},\n' +
-    '      "style":{"visualStyle":"视觉风格","colorTone":"色调","texture":"质感"},\n' +
-    '      "quality":{"resolution":"4K","fps":60,"motionBlur":"动态模糊说明","postProcess":"后期处理"},\n' +
-    '      "dialogue":"台词","emotionBeat":"🎭 情绪节点","notes":"导演备注"\n' +
+    '      "id": "shot_1",\n' +
+    '      "duration": "时间范围",\n' +
+    '      "shotType": "景别（远景/全景/中景/近景/特写）",\n' +
+    '      "subjects": [{"characterId": "", "characterName": "角色描述", "position": "位置", "direction": "朝向", "additionalDesc": "表情/状态"}],\n' +
+    '      "action": "具体动作（必填）",\n' +
+    '      "scene": {"sceneId": "", "sceneName": "场景", "environment": "环境描述", "atmosphere": "氛围"},' +
+    '      "lighting": {"type": "光影类型", "direction": "方向"},\n' +
+    '      "camera": {"movement": "运镜方式", "focalLength": "焦段", "angle": "角度"},\n' +
+    '      "style": {"visualStyle": "视觉风格"},\n' +
+    '      "quality": {"resolution": "4K", "fps": 60},\n' +
+    '      "dialogue": "台词（如有，必填）",\n' +
+    '      "emotionBeat": "情绪节点",\n' +
+    '      "continuity": {"transition": "切换方式", "carryOver": ["延续元素"], "newElements": ["新元素"], "eyeLine": "视线衔接", "actionLink": "动作因果", "emotionLink": "情绪变化", "cameraLink": "运镜衔接"}\n' +
     '    }\n' +
+    '    // 至少4个镜头，每个镜头每个字段必须填写具体内容\n' +
     '  ]\n' +
     '}\n\n' +
-    '## 输出要求\n' +
-    '1. 每镜必填7要素：subjects/action/scene/lighting/camera/style/quality/dialogue\n' +
-    '2. 第2镜起每镜必填continuity对象：{"transition":"硬切/叠化/甩镜头/匹配剪辑","carryOver":["延续元素"],"newElements":["新元素"],"eyeLine":"视线衔接","actionLink":"动作因果","emotionLink":"情绪变化","cameraLink":"运镜对比"}\n' +
-    '3. 镜头数4-8个，覆盖全片时长\n' +
-    '4. subjects中的characterId引用可用角色库的ID，scene中的sceneId引用场景库的ID。如果没有匹配的角色/场景，用描述性文字，characterId/sceneId留空\n' +
-    '5. 台词口语化，禁用书面语（首先、其次、综上所述、值得注意的是）\n' +
-    '6. 句长≤20字/句，每段至少2个语气词（吧/嘛/哈/呢/啊）\n' +
-    '7. 纯JSON输出，不要```json```包裹，不要任何前缀和后缀\n\n' +
-    '## 当前可用资源\n' +
-    '业务：故事板\n' +
-    '角色库：\n' + (charList || '（空，用描述性文字）') + '\n' +
-    '场景库：\n' + (sceneList || '（空，用描述性文字）') + '\n';
+    '## 硬性要求\n' +
+    '- directorBrief 的 4 个字段全部必填，不得为空\n' +
+    '- rhythmMap 至少 3 段\n' +
+    '- emotionCurve 至少 3 个节点，intensity 填数字 1-10\n' +
+    '- audienceReaction 的 5 个字段全部必填，不得为空\n' +
+    '- shots 至少 4 个，每个镜头必须填：shotType / subjects / action / scene / lighting / camera / style / quality / dialogue（无台词则填 ""）/ emotionBeat\n' +
+    '- 第 2 镜起每镜必须填 continuity（transition 必填，其余至少填一项）\n' +
+    '- 每个字段写具体内容，不要写"待定"、"无"、"..."等占位符\n' +
+    '- 纯 JSON 输出，不要 ```json``` 包裹\n\n' +
+    '## 可用资源\n' +
+    '角色库：\n' + (charList || '（空）') + '\n' +
+    '场景库：\n' + (sceneList || '（空）') + '\n';
 }
 
 function buildStoryboardPrompt() {
@@ -1054,6 +1059,7 @@ async function generateStoryboard() {
     var jsonText = collectStreamJson(streamText);
     if (!jsonText) throw new Error('未能从AI响应中解析JSON');
     currentStoryboard = JSON.parse(jsonText);
+    normalizeStoryboard(currentStoryboard);
     // Update record as completed
     updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
     renderStoryboard();
@@ -1203,6 +1209,71 @@ function stopGeneration() {
     renderRecords();
     activeRecordId = null;
   }
+}
+
+function normalizeStoryboard(data) {
+  var sb = data.storyboard || data;
+  if (!sb) return;
+
+  // Ensure directorBrief
+  var db = sb.directorBrief = sb.directorBrief || {};
+  db.coreIdea = db.coreIdea || sb.title || '精彩短视频';
+  db.targetEmotion = db.targetEmotion || '好奇→认同→行动';
+  db.hookType = db.hookType || '根据内容推断';
+  db.videoStyle = db.videoStyle || '现代简约';
+
+  // Ensure rhythmMap
+  if (!Array.isArray(sb.rhythmMap) || sb.rhythmMap.length === 0) {
+    sb.rhythmMap = [{ timeRange: '0-10s', label: '开场', tempo: '中速', purpose: '引入主题' }];
+  }
+
+  // Ensure emotionCurve
+  if (!Array.isArray(sb.emotionCurve) || sb.emotionCurve.length === 0) {
+    sb.emotionCurve = [{ timeRange: '0-10s', emotion: '😐 中性', intensity: 5, trigger: '开场' }];
+  }
+
+  // Ensure audienceReaction
+  var ar = sb.audienceReaction = sb.audienceReaction || {};
+  ar.targetAudience = ar.targetAudience || '短视频用户';
+  ar.painPoint = ar.painPoint || '信息获取效率低';
+  ar.beforeWatching = ar.beforeWatching || '对话题了解有限';
+  ar.afterWatching = ar.afterWatching || '获得新认知或情感共鸣';
+  ar.whyItWorks = Array.isArray(ar.whyItWorks) && ar.whyItWorks.length ? ar.whyItWorks : ['内容有针对性', '表达方式吸引人'];
+
+  // Ensure shots
+  if (!Array.isArray(sb.shots) || sb.shots.length === 0) {
+    sb.shots = [{
+      id: 'shot_1', duration: '0-10s', shotType: '中景',
+      subjects: [{ characterId: '', characterName: '主角', position: '画面中央', direction: '面朝镜头', additionalDesc: '' }],
+      action: '进行中',
+      scene: { sceneId: '', sceneName: '通用场景', environment: '', atmosphere: '' },
+      lighting: { type: '自然光', direction: '正面' },
+      camera: { movement: '固定', focalLength: '50mm', angle: '平视' },
+      style: { visualStyle: '现代简约' },
+      quality: { resolution: '4K', fps: 60 },
+      dialogue: '',
+      emotionBeat: '😐 中性'
+    }];
+  }
+
+  // Ensure each shot has required fields
+  (sb.shots || []).forEach(function(shot, i) {
+    shot.id = shot.id || ('shot_' + (i + 1));
+    shot.duration = shot.duration || '';
+    shot.shotType = shot.shotType || '中景';
+    shot.subjects = Array.isArray(shot.subjects) && shot.subjects.length ? shot.subjects : [{ characterId: '', characterName: '', position: '', direction: '', additionalDesc: '' }];
+    shot.action = shot.action || '';
+    shot.scene = shot.scene || { sceneId: '', sceneName: '', environment: '', atmosphere: '' };
+    shot.lighting = shot.lighting || { type: '', direction: '' };
+    shot.camera = shot.camera || { movement: '', focalLength: '', angle: '' };
+    shot.style = shot.style || { visualStyle: '' };
+    shot.quality = shot.quality || { resolution: '4K', fps: 60 };
+    shot.dialogue = shot.dialogue || '';
+    shot.emotionBeat = shot.emotionBeat || '';
+    if (i > 0 && !shot.continuity) {
+      shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
+    }
+  });
 }
 
 // ============================================================
