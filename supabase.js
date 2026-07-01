@@ -36,7 +36,7 @@ async function sbSignIn(email, password) {
   });
   if (!r.ok) { var e = await r.json(); throw new Error(e.message || '用户名或密码错误'); }
   var data = await r.json();
-  sbUser = { id: data.id, email: email };
+  sbUser = { id: data.user_id, email: email };
   return data;
 }
 

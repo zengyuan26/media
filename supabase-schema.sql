@@ -87,11 +87,13 @@ CREATE POLICY "Allow all on api_configs" ON api_configs FOR ALL USING (true) WIT
 -- ============================================================
 
 -- 注册
+DROP FUNCTION IF EXISTS signup_user(TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS signup_user(TEXT, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION signup_user(
   p_username TEXT,
   p_password TEXT,
   p_phone TEXT DEFAULT ''
-) RETURNS TABLE(id UUID) AS $$
+) RETURNS TABLE(user_id UUID) AS $$
 DECLARE
   new_id UUID;
 BEGIN
@@ -100,18 +102,19 @@ BEGIN
   END IF;
 
   INSERT INTO users (username, password, phone) VALUES (p_username, p_password, p_phone)
-  RETURNING id INTO new_id;
+  RETURNING users.id INTO new_id;
 
-  id := new_id;
+  user_id := new_id;
   RETURN NEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 登录
+DROP FUNCTION IF EXISTS login_user(TEXT, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION login_user(
   p_username TEXT,
   p_password TEXT
-) RETURNS TABLE(id UUID) AS $$
+) RETURNS TABLE(user_id UUID) AS $$
 DECLARE
   uid UUID;
 BEGIN
@@ -120,17 +123,18 @@ BEGIN
     RAISE EXCEPTION '用户名或密码错误';
   END IF;
 
-  id := uid;
+  user_id := uid;
   RETURN NEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 重置密码
+DROP FUNCTION IF EXISTS reset_password(TEXT, TEXT, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION reset_password(
   p_username TEXT,
   p_phone TEXT,
   p_new_password TEXT
-) RETURNS TABLE(id UUID) AS $$
+) RETURNS TABLE(user_id UUID) AS $$
 DECLARE
   uid UUID;
 BEGIN
@@ -139,9 +143,9 @@ BEGIN
     RAISE EXCEPTION '用户名不存在或手机号不匹配';
   END IF;
 
-  UPDATE users SET password = p_new_password, updated_at = NOW() WHERE id = uid;
+  UPDATE users SET password = p_new_password, updated_at = NOW() WHERE users.id = uid;
 
-  id := uid;
+  user_id := uid;
   RETURN NEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
