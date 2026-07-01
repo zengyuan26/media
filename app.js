@@ -919,7 +919,7 @@ function buildDirectorSystemPrompt() {
     '{\n' +
     '  "directorAnalysis": {\n' +
     '    "title": "吸引人的标题",\n' +
-    '    "totalDuration": "预估总时长，如 30s",\n' +
+    '    "totalDuration": "预估总时长。短视频通常10-15秒，不要超过20秒（必填）",\n' +
     '    "directorBrief": {\n' +
     '      "coreIdea": "核心创意一句话：这个视频讲什么、为什么能火（必填）",\n' +
     '      "hookDesign": "前3秒钩子设计：具体画面是什么 + 为什么能抓住人（必填）",\n' +
@@ -930,6 +930,7 @@ function buildDirectorSystemPrompt() {
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
+    '- totalDuration 控制在10-15秒，除非用户明确描述了更长内容\n' +
     '- keyFrames 至少 3 个，是具体的画面描述，不是抽象概念\n' +
     '- hookDesign 要说清楚前3秒的画面内容，不是"用悬念吸引"这种空话\n' +
     '- visualReference 要具体到风格/摄影师/账号名，不要写"现代简约"\n' +
@@ -985,7 +986,8 @@ function buildShotsSystemPrompt() {
     '  ]\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- 至少 4 个镜头，镜头数匹配总时长（约每5-8秒一个镜头）\n' +
+    '- 所有镜头的 duration 总和必须等于视频总时长：' + (da.totalDuration || '15s') + '。每个镜头2-5秒为宜\n' +
+    '- 镜头数3-5个，总时长越短镜头越少\n' +
     '- 每个镜头的 action 必须具体到身体动作和物体变化，不要写"进行展示"这种空话\n' +
     '- 运镜必须从运镜手法参考中选择，写出完整名称如"缓推 dolly in"\n' +
     '- 焦段根据景别选择：特写85mm+，近景50mm，中景35mm，全景24mm\n' +
