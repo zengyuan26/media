@@ -1428,8 +1428,9 @@ function collectStreamJson(text) {
   try { JSON.parse(fixed2); return fixed2; } catch(e) {}
 
   // Strategy 4: fix missing quotes on property names
-  // Matches patterns like "type": or "  type": (missing opening quote) in JSON
   var fixed3 = fixed2.replace(/([,\{\[\s\n\r]+)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
+  // Fix missing opening quote on string values: "key":value" → "key":"value"
+  fixed3 = fixed3.replace(/":\s*([^\{\[\}\],\s"][^,\}\]\n]*)"/g, '":"$1"');
   try { JSON.parse(fixed3); return fixed3; } catch(e) {}
 
   // Strategy 5: try removing the last malformed shot (common AI error at end)
