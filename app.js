@@ -1553,12 +1553,6 @@ function renderOneShotCard(shot, index) {
   if (dialogue) html += '<div class="sb-shot-dialogue">💬 ' + escapeHtml(dialogue) + '</div>';
   html += '</div>';
 
-  html += '<div class="sb-shot-card-actions">';
-  html += '<button class="sb-shot-edit" onclick="openShotEditor(' + index + ')">✏️ 编辑</button>';
-  if (index > 0) html += '<button onclick="moveShot(' + index + ',-1)">↑</button>';
-  if (index < (currentStoryboard.storyboard || currentStoryboard).shots.length - 1) html += '<button onclick="moveShot(' + index + ',1)">↓</button>';
-  html += '<button onclick="deleteShot(' + index + ')" style="color:#e57373">🗑</button>';
-  html += '</div>';
   html += '</div>';
 
   return html;
