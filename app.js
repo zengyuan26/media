@@ -1093,20 +1093,44 @@ function normalizeShots(da) {
 // ============================================================
 // STORYBOARD — RENDER (Phase 1: Director Review)
 // ============================================================
+function toggleSection(id) {
+  var body = document.getElementById(id);
+  var header = body ? body.previousElementSibling : null;
+  var arrow = header ? header.querySelector('.sb-accordion-arrow') : null;
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    if (arrow) arrow.textContent = '▾';
+  } else {
+    body.style.display = 'none';
+    if (arrow) arrow.textContent = '▸';
+  }
+}
+
 function renderDirectorReview() {
   var board = document.getElementById('sbBoard');
   var da = currentDirectorAnalysis;
   if (!da || !board) return;
   var db = da.directorBrief || {};
   var ar = da.audienceReaction || {};
+  var rhythmMap = da.rhythmMap || [];
+  var emotionCurve = da.emotionCurve || [];
+  var colors = ['#5b9a8b','#6bae9e','#7dc2b1','#8fd6c4','#a1ead7'];
 
   var html = '';
 
   // Title
-  html += '<div style="text-align:center;padding:8px 0 4px"><span style="font-size:1.1rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+  html += '<div style="text-align:center;padding:6px 0 2px"><span style="font-size:1.05rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.7rem;color:#8a8278;margin-left:6px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
-  // Director brief
-  html += '<div class="sb-section"><div class="sb-section-header"><span>📋 导演分析</span></div><div class="sb-section-body">';
+  // Confirm button at top
+  html += '<div style="text-align:center;padding:6px 0 10px">';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">🔄 重新来</button>';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.85rem;padding:10px 28px">确认，生成分镜 ✨</button>';
+  html += '</div>';
+
+  // 1. Director brief (open by default)
+  html += '<div class="sb-section">';
+  html += '<div class="sb-section-header" onclick="toggleSection(\'secDirectorBody\')" style="cursor:pointer"><span>📋 导演分析</span><span class="sb-accordion-arrow">▾</span></div>';
+  html += '<div class="sb-section-body" id="secDirectorBody">';
   html += '<div class="sb-director-brief">';
   html += '<p><span class="ds-label">核心创意：</span>' + escapeHtml(db.coreIdea || '') + '</p>';
   html += '<p><span class="ds-label">目标情绪：</span>' + escapeHtml(db.targetEmotion || '') + '</p>';
@@ -1114,11 +1138,11 @@ function renderDirectorReview() {
   html += '<p><span class="ds-label">视频风格：</span>' + escapeHtml(db.videoStyle || '') + '</p>';
   html += '</div></div></div>';
 
-  // Rhythm map
-  var rhythmMap = da.rhythmMap || [];
-  html += '<div class="sb-section"><div class="sb-section-header"><span>📈 节奏地图</span></div><div class="sb-section-body">';
+  // 2. Rhythm map (collapsed)
+  html += '<div class="sb-section">';
+  html += '<div class="sb-section-header" onclick="toggleSection(\'secRhythmBody\')" style="cursor:pointer"><span>📈 节奏地图</span><span class="sb-accordion-arrow">▸</span></div>';
+  html += '<div class="sb-section-body" id="secRhythmBody" style="display:none">';
   if (rhythmMap.length) {
-    var colors = ['#5b9a8b','#6bae9e','#7dc2b1','#8fd6c4','#a1ead7'];
     html += '<div class="sb-rhythm-bar">';
     rhythmMap.forEach(function(r, i) {
       html += '<div class="sb-rhythm-segment" style="flex:1;background:' + (colors[i % colors.length]) + '" title="' + escapeHtml((r.tempo || '') + ' - ' + (r.purpose || '')) + '">' + escapeHtml(r.label || r.timeRange || '') + '</div>';
@@ -1132,9 +1156,10 @@ function renderDirectorReview() {
   }
   html += '</div></div>';
 
-  // Emotion curve
-  var emotionCurve = da.emotionCurve || [];
-  html += '<div class="sb-section"><div class="sb-section-header"><span>🎭 情绪曲线</span></div><div class="sb-section-body">';
+  // 3. Emotion curve (collapsed)
+  html += '<div class="sb-section">';
+  html += '<div class="sb-section-header" onclick="toggleSection(\'secEmotionBody\')" style="cursor:pointer"><span>🎭 情绪曲线</span><span class="sb-accordion-arrow">▸</span></div>';
+  html += '<div class="sb-section-body" id="secEmotionBody" style="display:none">';
   if (emotionCurve.length) {
     html += '<div class="sb-emotion-curve">';
     emotionCurve.forEach(function(e) {
@@ -1145,8 +1170,10 @@ function renderDirectorReview() {
   }
   html += '</div></div>';
 
-  // Audience reaction
-  html += '<div class="sb-section"><div class="sb-section-header"><span>👥 观众分析</span></div><div class="sb-section-body">';
+  // 4. Audience reaction (collapsed)
+  html += '<div class="sb-section">';
+  html += '<div class="sb-section-header" onclick="toggleSection(\'secAudienceBody\')" style="cursor:pointer"><span>👥 观众分析</span><span class="sb-accordion-arrow">▸</span></div>';
+  html += '<div class="sb-section-body" id="secAudienceBody" style="display:none">';
   html += '<div class="sb-audience">';
   html += '<div class="audience-item"><span class="audience-label">目标人群：</span>' + escapeHtml(ar.targetAudience || '') + '</div>';
   html += '<div class="audience-item"><span class="audience-label">痛点：</span>' + escapeHtml(ar.painPoint || '') + '</div>';
@@ -1158,12 +1185,6 @@ function renderDirectorReview() {
     html += '</div>';
   }
   html += '</div></div></div>';
-
-  // Confirm button
-  html += '<div style="text-align:center;padding:12px 0">';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:10px">🔄 重新来</button>';
-  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.9rem;padding:12px 32px">确认，生成分镜 ✨</button>';
-  html += '</div>';
 
   board.innerHTML = html;
   board.style.display = 'flex';
