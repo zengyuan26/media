@@ -1059,14 +1059,14 @@ function buildDirectorSystemPrompt() {
     '      "coreIdea": "核心创意一句话：这个视频讲什么、为什么能火（必填）",\n' +
     '      "hookDesign": "前3秒钩子设计：具体画面是什么 + 为什么能抓住人（必填）",\n' +
     '      "emotionalTone": "情绪基调：整体色彩倾向/节奏感/语气风格，如 暖黄色调·快节奏·压迫感旁白（必填）",\n' +
-    '      "visualReference": "视觉参考：像哪个账号/电影/摄影师的风格，如 日系生活美学·滨田英明风·低饱和暖调（必填）",\n' +
-    '      "keyFrames": ["必须出现的核心画面1", "核心画面2", "核心画面3"]\n' +
-    '    }\n' +
+    '      "visualReference": "视觉参考：像哪个账号/电影/摄影师的风格，如 日系生活美学·滨田英明风·低饱和暖调（必填）"\n' +
+    '    },\n' +
+    '    "keyFrames": ["前3秒抓眼球的具体画面", "中间转折/反差的画面", "结尾情绪落点的画面"]\n' +
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
     '- totalDuration 控制在10-15秒，除非用户明确描述了更长内容\n' +
-    '- keyFrames 至少 3 个，是具体的画面描述，不是抽象概念\n' +
+    '- keyFrames 必须填至少3个具体画面！禁止"开场关键画面"这种占位符！每个画面要描述清楚人物+动作+场景\n' +
     '- hookDesign 要说清楚前3秒的画面内容，不是"用悬念吸引"这种空话\n' +
     '- visualReference 要具体到风格/摄影师/账号名，不要写"现代简约"\n' +
     '- 纯 JSON 输出，不要 ```json``` 包裹';
@@ -1091,7 +1091,7 @@ function buildShotsSystemPrompt() {
     '钩子设计：' + (db.hookDesign || '') + '\n' +
     '情绪基调：' + (db.emotionalTone || '') + '\n' +
     '视觉参考：' + (db.visualReference || '') + '\n' +
-    '关键画面：' + ((db.keyFrames || []).join(' / ')) + '\n' +
+    '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n' +
     (keyProps ? '关键道具（必须出现在镜头中）：' + keyProps + '\n' : '') + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
@@ -1144,8 +1144,9 @@ function normalizeDirectorAnalysis(data) {
   db.hookDesign = db.hookDesign || '前3秒用强视觉冲击或反常识画面抓住注意力';
   db.emotionalTone = db.emotionalTone || '中性色调·中速节奏·自然语气';
   db.visualReference = db.visualReference || '现代短视频风格·干净利落的画面';
-  if (!Array.isArray(db.keyFrames) || db.keyFrames.length === 0) {
-    db.keyFrames = ['开场关键画面', '核心内容展示画面', '结尾收束画面'];
+  if (!Array.isArray(da.keyFrames) || da.keyFrames.length === 0) {
+    // Try to derive from coreIdea
+    da.keyFrames = [db.hookDesign || db.coreIdea || '开场画面', db.coreIdea || '核心画面', '结尾画面'];
   }
 }
 
@@ -1235,7 +1236,7 @@ function renderDirectorReview() {
   var da = currentDirectorAnalysis;
   if (!da || !board) return;
   var db = da.directorBrief || {};
-  var kf = db.keyFrames || [];
+  var kf = da.keyFrames || [];
 
   var html = '';
 
