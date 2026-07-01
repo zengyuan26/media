@@ -1572,6 +1572,8 @@ function collectStreamJson(text) {
   var fixed3 = fixed2.replace(/([,\{\[\s\n\r]+)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
   // Fix missing opening quote on string values: "key":value" → "key":"value"
   fixed3 = fixed3.replace(/":\s*([^\{\[\}\],\s"][^,\}\]\n]*)"/g, '":"$1"');
+  // Fix missing colon+quote: "key" value" → "key": "value"
+  fixed3 = fixed3.replace(/"\s+([^\{\[\}\],:\s"][^,\}\]\n]*)"/g, '": "$1"');
   try { JSON.parse(fixed3); return fixed3; } catch(e) {}
 
   // Strategy 5: try removing the last malformed shot (common AI error at end)
