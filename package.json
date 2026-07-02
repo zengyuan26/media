@@ -12,10 +12,7 @@
     "build:mac": "electron-builder --mac",
     "build": "echo 'no build needed — static HTML'"
   },
-  "devDependencies": {
-    "electron": "^37.10.3",
-    "electron-builder": "^25.0.0"
-  },
+  "devDependencies": {},
   "build": {
     "appId": "com.zimeiti.creator",
     "productName": "自媒体创作助手",
@@ -59,7 +56,5 @@
       "category": "public.app-category.productivity"
     }
   },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.108.2"
-  }
+  "dependencies": {}
 }
