@@ -6,7 +6,8 @@
   "author": "zengyuan26",
   "license": "MIT",
   "scripts": {
-    "start": "npx electron .",
+    "start": "node dev-server.js",
+    "start:electron": "npx electron .",
     "build:win": "electron-builder --win --x64",
     "build:mac": "electron-builder --mac",
     "build": "echo 'no build needed — static HTML'"
