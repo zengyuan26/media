@@ -2,5 +2,7 @@
   "name": "api-analyze",
   "version": "1.0.0",
   "main": "index.js",
-  "dependencies": {}
+  "dependencies": {
+    "@cloudbase/functions-framework": "^1.14.0"
+  }
 }

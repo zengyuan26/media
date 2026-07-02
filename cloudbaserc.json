@@ -1,0 +1,38 @@
+{
+  "envId": "{{env.ENV_ID}}",
+  "version": "2.0",
+  "framework": {
+    "name": "zimeiti-creator",
+    "plugins": {
+      "web": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "outputPath": ".",
+          "cloudPath": "/",
+          "ignore": [".git", ".github", "node_modules", "cloudbase", "netlify", "edge-functions", "dist", "*.md", "main.js", "preload.js", "dev-server.js", "test-*.js"]
+        }
+      },
+      "api": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "cloudbase/functions",
+          "functions": [
+            {
+              "name": "api-analyze",
+              "runtime": "Nodejs18.15",
+              "timeout": 15,
+              "installDependency": true,
+              "triggers": [
+                {
+                  "name": "http",
+                  "type": "http",
+                  "config": { "path": "/api/analyze" }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
