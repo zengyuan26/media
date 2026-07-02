@@ -768,9 +768,7 @@ function confirmAndGenerate() {
 // ============================================================
 // VIDEO LINK PARSER — call api/analyze to extract video metadata
 // ============================================================
-var API_BASE = (window.location.protocol === 'file:' || window.location.hostname === 'localhost')
-  ? 'https://zimeiti-creator.vercel.app'
-  : '';
+var API_BASE = '';
 
 var isParsingLink = false;
 

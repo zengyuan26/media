@@ -9,10 +9,10 @@
     "start": "npx electron .",
     "build:win": "electron-builder --win --x64",
     "build:mac": "electron-builder --mac",
-    "build": "electron-builder --win --x64 --mac"
+    "build": "echo 'no build needed — static HTML'"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
+    "electron": "^37.10.3",
     "electron-builder": "^25.0.0"
   },
   "build": {
