@@ -903,10 +903,15 @@ async function parseVideoLink() {
       input.value = '';
 
       // Phase 2: enrich with zhiling if not already done
-      var canUseZhiling = window.electronAPI && window.electronAPI.callZhiling && zhilingKey;
-    if (canUseZhiling) {
+    if (zhilingKey) {
       statusEl.textContent = phase1Msg + ' | 🎬 正在 AI 分析视频画面（约15-30秒）…';
-      window.electronAPI.callZhiling(zhilingKey, url).then(function(result) {
+      var zhilingPromise;
+      if (window.electronAPI && window.electronAPI.callZhiling) {
+        zhilingPromise = window.electronAPI.callZhiling(zhilingKey, url);
+      } else {
+        zhilingPromise = callZhilingDirect(zhilingKey, url);
+      }
+      zhilingPromise.then(function(result) {
         if (result && result.success && result.content) {
           var contentIdx = -1;
           for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
