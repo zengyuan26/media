@@ -23,7 +23,8 @@ var DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.deepseek.com/v1',
   model: 'deepseek-chat',
-  customModel: ''
+  customModel: '',
+  zhilingKey: ''
 };
 
 var INTERVIEW_QUESTIONS = [
@@ -815,8 +816,41 @@ async function parseVideoLink() {
     fillInterviewFromLink(data);
 
     statusEl.className = 'sb-link-status success';
-    statusEl.textContent = '已提取「' + (data.platform || '视频') + '」' + (data.title ? '：' + data.title : '') + ' — 问答已预填，可直接生成';
+    var phase1Msg = '已提取「' + (data.platform || '视频') + '」' + (data.title ? '：' + data.title : '') + ' — 问答已预填，可直接生成';
+    statusEl.textContent = phase1Msg;
     input.value = '';
+
+    // Phase 2: If zhilingKey configured, run AI video analysis in background
+    var canUseZhiling = window.electronAPI && window.electronAPI.callZhiling && settings.zhilingKey;
+    if (canUseZhiling) {
+      statusEl.textContent = phase1Msg + ' | 🎬 正在 AI 分析视频画面（约15-30秒）…';
+      window.electronAPI.callZhiling(settings.zhilingKey, url).then(function(result) {
+        if (result && result.success && result.content) {
+          // Enrich interviewAnswers with AI analysis content
+          var contentIdx = -1;
+          for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+            if (INTERVIEW_QUESTIONS[i].id === 'content') { contentIdx = i; break; }
+          }
+          if (contentIdx >= 0) {
+            var existing = interviewAnswers[contentIdx];
+            var enrichedText = result.content;
+            if (existing && existing.answer) {
+              enrichedText = existing.answer + '\n\n---\nAI 视频分析：\n\n' + result.content;
+            }
+            interviewAnswers[contentIdx] = { question: INTERVIEW_QUESTIONS[contentIdx].question, answer: enrichedText, supplement: '' };
+            renderInterview();
+          }
+          statusEl.className = 'sb-link-status success';
+          statusEl.textContent = phase1Msg + ' | ✅ AI 画面分析完成';
+        } else {
+          statusEl.className = 'sb-link-status warning';
+          statusEl.textContent = phase1Msg + ' | ⚠️ AI 分析失败：' + ((result && result.error) || '未知错误');
+        }
+      }).catch(function(e) {
+        statusEl.className = 'sb-link-status warning';
+        statusEl.textContent = phase1Msg + ' | ⚠️ AI 分析失败：' + (e.message || '网络错误');
+      });
+    }
   } catch (e) {
     statusEl.className = 'sb-link-status error';
     statusEl.textContent = '解析失败：' + (e.message || '网络错误');
@@ -2623,6 +2657,7 @@ function bindEvents() {
   var btnSettings = document.getElementById('btnMeSettings');
   if (btnSettings) btnSettings.addEventListener('click', function() {
     document.getElementById('meApiKey').value = settings.apiKey || '';
+    document.getElementById('meZhilingKey').value = settings.zhilingKey || '';
     document.getElementById('meEndpoint').value = settings.endpoint || '';
     document.getElementById('meModel').value = settings.model || 'deepseek-chat';
     updateCustomModel();
@@ -2642,6 +2677,7 @@ function bindEvents() {
   // Save API config
   document.getElementById('btnSaveApiConfig').addEventListener('click', async function() {
     settings.apiKey = document.getElementById('meApiKey').value.trim();
+    settings.zhilingKey = document.getElementById('meZhilingKey').value.trim();
     settings.endpoint = document.getElementById('meEndpoint').value.trim();
     settings.model = document.getElementById('meModel').value;
     settings.customModel = document.getElementById('meCustomModel').value.trim();

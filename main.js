@@ -193,3 +193,86 @@ ipcMain.handle('parse-link', async (_event, url) => {
     return { _fallback: true, _message: e.message };
   }
 });
+
+// ============================================================
+// IPC: 17zhiling video analysis (submit + poll)
+// ============================================================
+const ZHILING_SUBMIT = 'https://api.17zhiling.com/api/video-inference/parse-video-url-time';
+const ZHILING_STATUS = 'https://api.17zhiling.com/api/video-inference/task-status';
+
+async function zhilingSubmit(key, videoUrl) {
+  const body = new URLSearchParams({ key, videoUrl }).toString();
+  return new Promise((resolve, reject) => {
+    const req = https.request(ZHILING_SUBMIT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' },
+      timeout: 15000,
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+          resolve(json);
+        } catch (e) { reject(new Error('Invalid submit response')); }
+      });
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Submit timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function zhilingPoll(key, taskId) {
+  const url = ZHILING_STATUS + '?key=' + encodeURIComponent(key) + '&taskId=' + encodeURIComponent(taskId);
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { timeout: 10000 }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+          resolve(json);
+        } catch (e) { reject(new Error('Invalid poll response')); }
+      });
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Poll timeout')); });
+  });
+}
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+ipcMain.handle('call-zhiling', async (_event, { key, url }) => {
+  try {
+    // Step 1: Submit
+    const submitResult = await zhilingSubmit(key, url);
+    if (submitResult.code !== 200 || !submitResult.data) {
+      return { success: false, error: submitResult.msg || '提交失败' };
+    }
+    const taskId = submitResult.data;
+
+    // Step 2: Poll (max 120 seconds, 3s interval)
+    const deadline = Date.now() + 120000;
+    while (Date.now() < deadline) {
+      await sleep(3000);
+      const result = await zhilingPoll(key, taskId);
+      if (result.code !== 200 || !result.data) continue;
+
+      const schedule = result.data.schedule;
+      if (schedule === 'SUCCESS') {
+        return { success: true, content: result.data.content || '' };
+      }
+      if (schedule === 'FAIL') {
+        return { success: false, error: '视频分析失败（FAIL）' };
+      }
+      // WAIT_HANDLE or PROCESSING → keep polling
+    }
+    return { success: false, error: '视频分析超时（超过120秒）' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});

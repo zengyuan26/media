@@ -188,6 +188,10 @@
           <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." autocomplete="off" style="padding-right:44px">
           <button id="btnToggleApiKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏">🙈</button>
         </div>
+        <div style="position:relative;margin-bottom:6px">
+          <input type="password" class="me-input" id="meZhilingKey" placeholder="17zhiling API Key（选填，视频画面AI分析）" autocomplete="off" style="padding-right:44px">
+          <button id="btnToggleZhilingKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏" onclick="var i=document.getElementById('meZhilingKey');var t=i.type==='password'?'text':'password';i.type=t;this.textContent=t==='text'?'🐵':'🙈'">🙈</button>
+        </div>
         <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint" readonly style="margin-bottom:6px;background:#f0ece4;color:#8a8278">
         <select class="me-input" id="meModel">
           <option value="deepseek-chat">deepseek-chat</option>
