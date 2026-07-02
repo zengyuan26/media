@@ -39,13 +39,20 @@ async function extractBilibili(url) {
   if (!id) return null;
 
   try {
-    const isVideo = url.includes('/video/');
-    const apiUrl = isVideo
-      ? 'https://api.bilibili.com/x/web-interface/view?aid=' + id
-      : 'https://api.bilibili.com/x/web-interface/view?bvid=' + id;
+    var apiUrl;
+    if (typeof id === 'string' && id.toUpperCase().startsWith('BV')) {
+      apiUrl = 'https://api.bilibili.com/x/web-interface/view?bvid=' + id;
+    } else {
+      apiUrl = 'https://api.bilibili.com/x/web-interface/view?aid=' + id;
+    }
 
     const resp = await fetch(apiUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.bilibili.com' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.bilibili.com',
+        'Origin': 'https://www.bilibili.com',
+      },
+      signal: AbortSignal.timeout(5000),
     });
     if (!resp.ok) return null;
     const json = await resp.json();
