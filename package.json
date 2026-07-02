@@ -23,6 +23,10 @@
     },
     "files": [
       "main.js",
+      "preload.js",
+      "app.js",
+      "styles.css",
+      "supabase.js",
       "index.html"
     ],
     "win": {

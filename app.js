@@ -777,19 +777,30 @@ async function parseVideoLink() {
   statusEl.textContent = '正在提取视频信息…';
 
   try {
-    var res = await fetch(API_BASE + '/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url })
-    });
+    var data = null;
 
-    if (!res.ok) {
-      var errData = null;
-      try { errData = await res.json(); } catch(e) {}
-      throw new Error((errData && errData.error) || ('请求失败 (' + res.status + ')'));
+    // Try Electron IPC first (local, no geo-blocking)
+    if (window.electronAPI && window.electronAPI.parseLink) {
+      statusEl.textContent = '正在通过本地提取视频信息…';
+      data = await window.electronAPI.parseLink(url);
     }
 
-    var data = await res.json();
+    // Fall back to Vercel API
+    if (!data) {
+      var res = await fetch(API_BASE + '/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url })
+      });
+
+      if (!res.ok) {
+        var errData = null;
+        try { errData = await res.json(); } catch(e) {}
+        throw new Error((errData && errData.error) || ('请求失败 (' + res.status + ')'));
+      }
+
+      data = await res.json();
+    }
 
     if (data._fallback) {
       statusEl.className = 'sb-link-status warning';
