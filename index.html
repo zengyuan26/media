@@ -29,48 +29,30 @@
   <!-- TAB 1: 故事板 -->
   <div class="tab-panel active" id="tabStoryboard">
 
-    <!-- 阶段A: 问答收集区 -->
+    <!-- 链接输入区 -->
     <div class="sb-interview" id="sbInterview">
       <div class="sb-interview-inner">
+        <div class="sb-interview-icon">🔗</div>
+        <div class="sb-interview-title">粘贴视频链接，AI 自动拆解为导演分镜表</div>
+        <div class="sb-interview-subtitle">支持抖音 / 小红书 / B站 / YouTube / 快手</div>
 
-        <!-- 链接解析入口 -->
         <div class="sb-link-parse" id="sbLinkParse">
-          <input class="sb-link-input" id="sbLinkInput" type="url" placeholder="粘贴抖音/小红书/B站/YouTube视频链接，自动提取文案…" autocomplete="off" onkeydown="if(event.key==='Enter')parseVideoLink()">
-          <button class="sb-link-btn" id="btnParseLink" onclick="parseVideoLink()">🔍 解析</button>
+          <input class="sb-link-input" id="sbLinkInput" type="url" placeholder="粘贴视频链接…" autocomplete="off" onkeydown="if(event.key==='Enter')parseVideoLink()">
+          <button class="sb-link-btn" id="btnParseLink" onclick="parseVideoLink()">🎬 解析生成</button>
         </div>
         <div class="sb-link-status" id="sbLinkStatus" style="display:none"></div>
+      </div>
+    </div>
 
-        <!-- 进度点 -->
-        <div class="sb-progress-dots" id="sbProgressDots"></div>
-
-        <!-- 问题 -->
-        <div class="sb-interview-question" id="sbQuestion"></div>
-
-        <!-- 卡片选择区 -->
-        <div class="sb-choice-grid" id="sbChoiceGrid"></div>
-        <div class="sb-choice-grid" id="sbChoiceGridB" style="margin-top:8px"></div>
-
-        <!-- 可选补充 -->
-        <div class="sb-supplement" id="sbSupplement" style="display:none">
-          <label class="sb-supplement-label" id="sbSupplementLabel"></label>
-          <textarea class="sb-interview-textarea" id="sbSupplementInput" rows="2"></textarea>
+    <!-- 分析结果预览区 -->
+    <div class="sb-preview" id="sbPreview" style="display:none">
+      <div class="sb-preview-inner">
+        <div class="sb-preview-label">📋 AI 视频分析结果</div>
+        <div class="sb-preview-content" id="sbPreviewContent"></div>
+        <div class="sb-preview-actions">
+          <button class="sb-nav-btn secondary" id="btnPreviewBack" onclick="backToLinkInput()">← 返回修改</button>
+          <button class="sb-nav-btn primary" id="btnPreviewConfirm" onclick="confirmAndGenerate()">🎬 确认，生成故事板</button>
         </div>
-
-        <!-- 自由输入区 -->
-        <div class="sb-free-input" id="sbFreeInput" style="display:none">
-          <textarea class="sb-interview-textarea" id="sbAnswer" rows="6" placeholder="描述从头到尾发生了什么，或粘贴视频文案/解说词…"></textarea>
-          <div class="sb-interview-toolbar">
-            <button class="sb-voice-btn" id="btnVoice" title="语音输入">🎤</button>
-            <span class="sb-voice-hint" id="voiceHint">点击麦克风开始说话</span>
-          </div>
-        </div>
-
-        <!-- 导航 -->
-        <div class="sb-interview-nav">
-          <button class="sb-nav-btn secondary" id="btnPrevQ" disabled>← 上一题</button>
-          <button class="sb-nav-btn primary" id="btnNextQ">下一题 →</button>
-        </div>
-
       </div>
     </div>
 
@@ -114,8 +96,18 @@
 
   <!-- TAB 2: 我的 -->
   <div class="tab-panel" id="tabMe">
-    <div class="me-scroll">
+    <!-- Header with menu button -->
+    <div class="me-header">
+      <span class="me-header-title">我的</span>
+      <button class="me-menu-btn" id="btnMeMenu" onclick="toggleMeMenu()">⋮</button>
+      <div class="me-menu-dropdown" id="meMenuDropdown" style="display:none">
+        <div class="me-menu-item" onclick="openModelDialog(); closeMeMenu()">⚙ Model 设置</div>
+        <div class="me-menu-item" onclick="openZhilingDialog(); closeMeMenu()">🔑 视频分析 Key</div>
+        <div class="me-menu-item" style="color:#e57373" onclick="closeMeMenu(); doLogout()">退出登录</div>
+      </div>
+    </div>
 
+    <div class="me-scroll">
       <!-- 资产管理 -->
       <div class="me-card-box">
         <div class="me-section-head"><span>🗂 资产</span></div>
@@ -143,18 +135,6 @@
         <div class="me-section-head"><span>📋 生成记录</span></div>
         <div id="sbRecordList" style="font-size:.76rem;color:#a09888;text-align:center;padding:12px 0">暂无记录</div>
       </div>
-
-      <!-- 设置入口 -->
-      <div class="me-card-box" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="document.getElementById('settingsOverlay').classList.add('open')">
-        <span style="font-weight:600;font-size:.85rem">⚙ 设置</span>
-        <span style="font-size:.72rem;color:#818cf8">API Key / Model →</span>
-      </div>
-
-      <div class="me-card-box" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" id="btnLogoutCard">
-        <span style="font-weight:600;font-size:.85rem;color:#e57373">退出登录</span>
-        <span style="font-size:.72rem;color:#e57373">→</span>
-      </div>
-
     </div>
   </div>
 
@@ -172,43 +152,51 @@
   </div>
 </div>
 
-<!-- ============================================================
-     SETTINGS OVERLAY
-     ============================================================ -->
-<div class="overlay" id="settingsOverlay" onclick="if(event.target===this)this.classList.remove('open')">
+<!-- MODEL SETTINGS DIALOG -->
+<div class="overlay" id="modelDialog" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="dialog settings-dialog">
     <div class="dialog-header">
-      <span class="dialog-title">⚙ 设置</span>
-      <button class="btn-icon" onclick="document.getElementById('settingsOverlay').classList.remove('open')">✕</button>
+      <span class="dialog-title">⚙ Model 设置</span>
+      <button class="btn-icon" onclick="document.getElementById('modelDialog').classList.remove('open')">✕</button>
     </div>
     <div class="dialog-body">
-      <div class="me-card-box" style="border:none;padding:0">
-        <div class="me-section-head"><span>🔑 API 配置</span></div>
-        <div style="position:relative;margin-bottom:6px">
-          <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." autocomplete="off" style="padding-right:44px">
-          <button id="btnToggleApiKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏">🙈</button>
-        </div>
-        <div style="position:relative;margin-bottom:6px">
-          <input type="password" class="me-input" id="meZhilingKey" placeholder="17zhiling API Key（选填，视频画面AI分析）" autocomplete="off" style="padding-right:44px">
-          <button id="btnToggleZhilingKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏" onclick="var i=document.getElementById('meZhilingKey');var t=i.type==='password'?'text':'password';i.type=t;this.textContent=t==='text'?'🐵':'🙈'">🙈</button>
-        </div>
-        <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint" readonly style="margin-bottom:6px;background:#f0ece4;color:#8a8278">
-        <select class="me-input" id="meModel">
-          <option value="deepseek-chat">deepseek-chat</option>
-          <option value="deepseek-reasoner">deepseek-reasoner</option>
-          <option value="qwen-plus">qwen-plus (通义千问)</option>
-          <option value="qwen-max">qwen-max (通义千问)</option>
-          <option value="glm-4">glm-4 (智谱)</option>
-          <option value="moonshot-v1-8k">moonshot-v1-8k (月之暗面)</option>
-          <option value="custom">自定义…</option>
-        </select>
-        <div id="meCustomModelField" style="display:none;margin-top:6px">
-          <input type="text" class="me-input" id="meCustomModel" placeholder="输入 model ID">
-        </div>
-        <button class="dialog-btn primary" id="btnSaveApiConfig" style="margin-top:10px;width:100%">💾 保存 API 配置</button>
-        <span id="apiConfigSaveHint" style="display:block;font-size:.72rem;color:#5b9a8b;text-align:center;height:18px"></span>
+      <div style="position:relative;margin-bottom:6px">
+        <input type="password" class="me-input" id="meApiKey" placeholder="API Key：sk-..." autocomplete="off" style="padding-right:44px">
+        <button id="btnToggleApiKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏">🙈</button>
       </div>
-      <button class="me-reset-btn" id="btnLogout" style="margin-top:4px;color:#e57373">退出登录</button>
+      <input type="text" class="me-input" id="meEndpoint" placeholder="Endpoint" readonly style="margin-bottom:6px;background:#f0ece4;color:#8a8278">
+      <select class="me-input" id="meModel">
+        <option value="deepseek-chat">deepseek-chat</option>
+        <option value="deepseek-reasoner">deepseek-reasoner</option>
+        <option value="qwen-plus">qwen-plus (通义千问)</option>
+        <option value="qwen-max">qwen-max (通义千问)</option>
+        <option value="glm-4">glm-4 (智谱)</option>
+        <option value="moonshot-v1-8k">moonshot-v1-8k (月之暗面)</option>
+        <option value="custom">自定义…</option>
+      </select>
+      <div id="meCustomModelField" style="display:none;margin-top:6px">
+        <input type="text" class="me-input" id="meCustomModel" placeholder="输入 model ID">
+      </div>
+      <button class="dialog-btn primary" id="btnSaveApiConfig" style="margin-top:10px;width:100%">💾 保存</button>
+      <span id="apiConfigSaveHint" style="display:block;font-size:.72rem;color:#5b9a8b;text-align:center;height:18px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ZHILING KEY DIALOG -->
+<div class="overlay" id="zhilingDialog" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="dialog settings-dialog">
+    <div class="dialog-header">
+      <span class="dialog-title">🔑 视频分析 Key</span>
+      <button class="btn-icon" onclick="document.getElementById('zhilingDialog').classList.remove('open')">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div style="position:relative;margin-bottom:6px">
+        <input type="password" class="me-input" id="meZhilingKey" placeholder="17zhiling API Key" autocomplete="off" style="padding-right:44px">
+        <button id="btnToggleZhilingKey" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" title="显示/隐藏" onclick="var i=document.getElementById('meZhilingKey');var t=i.type==='password'?'text':'password';i.type=t;this.textContent=t==='text'?'🐵':'🙈'">🙈</button>
+      </div>
+      <button class="dialog-btn primary" id="btnSaveZhilingKey" style="margin-top:10px;width:100%;background:#7b6f5c">💾 保存</button>
+      <span id="zhilingSaveHint" style="display:block;font-size:.72rem;color:#7b6f5c;text-align:center;height:18px"></span>
     </div>
   </div>
 </div>
@@ -537,7 +525,7 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=20260702"></script>
 <script>
 // Load Supabase async
 var script = document.createElement('script');

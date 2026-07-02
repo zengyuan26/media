@@ -23,9 +23,11 @@ var DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.deepseek.com/v1',
   model: 'deepseek-chat',
-  customModel: '',
-  zhilingKey: ''
+  customModel: ''
 };
+
+// zhilingKey is stored separately, completely independent of settings/cloud
+var zhilingKey = '';
 
 var INTERVIEW_QUESTIONS = [
   {
@@ -116,12 +118,25 @@ function loadSettings() {
   } catch(e) {}
 }
 
+function loadZhilingKey() {
+  try { var z = localStorage.getItem('zimeiti-v3-zhiling-key'); zhilingKey = z || ''; } catch(e) {}
+}
+function saveZhilingKey() {
+  try { localStorage.setItem('zimeiti-v3-zhiling-key', zhilingKey); } catch(e) {}
+}
+
 function saveSettingsToStorage() {
   try { localStorage.setItem('zimeiti-v3-settings', JSON.stringify(settings)); } catch(e) {}
 }
 
 function loadCharacterProfiles() {
-  try { var c = JSON.parse(localStorage.getItem('zimeiti-v3-characters')); if (Array.isArray(c)) characterProfiles = c; } catch(e) {}
+  try {
+    var c = JSON.parse(localStorage.getItem('zimeiti-v3-characters'));
+    if (Array.isArray(c)) {
+      c.forEach(function(ch) { if (!ch.id) ch.id = generateId(); });
+      characterProfiles = c;
+    }
+  } catch(e) {}
 }
 function saveCharacterProfiles() {
   try { localStorage.setItem('zimeiti-v3-characters', JSON.stringify(characterProfiles)); } catch(e) {}
@@ -139,6 +154,7 @@ function saveSceneProfiles() {
 function init() {
   if (typeof initSupabase !== 'undefined') initSupabase();
   loadSettings();
+  loadZhilingKey();
   document.getElementById('loginPage').classList.remove('hidden');
 
   if (typeof sbGetSession !== 'undefined') {
@@ -213,6 +229,22 @@ function updateStopButton() {
 // ============================================================
 function findCharById(id) {
   return characterProfiles.find(function(c) { return c.id === id; });
+}
+
+function findSceneById(id) {
+  return sceneProfiles.find(function(s) { return s.id === id; });
+}
+
+function describeCharacter(id) {
+  var ch = findCharById(id);
+  if (!ch) return '';
+  return ch.name + '：' + [ch.gender, ch.age ? ch.age + '岁' : '', ch.clothing, ch.hair, ch.build, ch.features].filter(Boolean).join('，');
+}
+
+function describeScene(id) {
+  var sc = findSceneById(id);
+  if (!sc) return '';
+  return [sc.name, sc.environment, sc.atmosphere, sc.lighting].filter(Boolean).join(' · ');
 }
 
 function renderCharacterList() {
@@ -676,75 +708,61 @@ function initInterview() {
 function renderInterview() {
   var el = document.getElementById('sbInterview');
   var board = document.getElementById('sbBoard');
+  var preview = document.getElementById('sbPreview');
   if (!el || !board) return;
-
-  if (interviewStep >= INTERVIEW_QUESTIONS.length) {
-    generateStoryboard();
-    return;
-  }
-
   el.style.display = 'flex';
+  if (preview) preview.style.display = 'none';
   board.style.display = 'none';
+}
 
-  var q = INTERVIEW_QUESTIONS[interviewStep];
-  var prev = interviewAnswers[interviewStep];
+var _pendingZhilingContent = '';
 
-  // Progress dots
-  var dotsHtml = '';
-  for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
-    var cls = 'dot';
-    if (i < interviewStep && interviewAnswers[i] && interviewAnswers[i].answer) cls += ' done';
-    if (i === interviewStep) cls += ' active';
-    dotsHtml += '<span class="' + cls + '"></span>';
-  }
-  document.getElementById('sbProgressDots').innerHTML = dotsHtml;
+function showZhilingPreview(content) {
+  _pendingZhilingContent = content;
+  var el = document.getElementById('sbInterview');
+  var preview = document.getElementById('sbPreview');
+  var board = document.getElementById('sbBoard');
+  var contentEl = document.getElementById('sbPreviewContent');
 
-  // Question text
-  document.getElementById('sbQuestion').textContent = q.question;
+  if (el) el.style.display = 'none';
+  if (board) board.style.display = 'none';
+  if (!preview || !contentEl) return;
 
-  // Show/hide sections based on question type
-  var choiceGrid = document.getElementById('sbChoiceGrid');
-  var choiceGridB = document.getElementById('sbChoiceGridB');
-  var supplement = document.getElementById('sbSupplement');
-  var freeInput = document.getElementById('sbFreeInput');
-
-  if (q.type === 'free') {
-    choiceGrid.style.display = 'none';
-    choiceGridB.style.display = 'none';
-    supplement.style.display = 'none';
-    freeInput.style.display = 'flex';
-    var ta = document.getElementById('sbAnswer');
-    ta.placeholder = q.placeholder || '';
-    ta.value = prev && prev.answer ? prev.answer : '';
-  } else if (q.type === 'double') {
-    choiceGrid.style.display = 'flex';
-    choiceGridB.style.display = 'flex';
-    supplement.style.display = 'none';
-    freeInput.style.display = 'none';
-    renderChoiceCards(choiceGrid, q.optionsA, prev, 'a');
-    renderChoiceCards(choiceGridB, q.optionsB, prev, 'b');
-  } else {
-    // single
-    choiceGrid.style.display = 'flex';
-    choiceGridB.style.display = 'none';
-    freeInput.style.display = 'none';
-    if (q.supplement) {
-      supplement.style.display = 'block';
-      document.getElementById('sbSupplementLabel').textContent = q.supplement;
-      document.getElementById('sbSupplementInput').value = prev && prev.supplement ? prev.supplement : '';
+  // Render markdown-ish content
+  var lines = content.split('\n');
+  var html = '';
+  var inList = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) { html += '<br>'; continue; }
+    // Headers
+    if (line.startsWith('### ')) {
+      html += '<div class="sb-preview-h3">' + escapeHtml(line.slice(4)) + '</div>';
+    } else if (line.startsWith('#### ')) {
+      html += '<div class="sb-preview-h4">' + escapeHtml(line.slice(5)) + '</div>';
+    } else if (line.startsWith('- ')) {
+      html += '<div class="sb-preview-li">' + escapeHtml(line.slice(2)) + '</div>';
     } else {
-      supplement.style.display = 'none';
+      html += '<div class="sb-preview-p">' + escapeHtml(line) + '</div>';
     }
-    renderChoiceCards(choiceGrid, q.options, prev, 'main');
   }
+  contentEl.innerHTML = html;
+  preview.style.display = 'flex';
+}
 
-  // Navigation
-  document.getElementById('btnPrevQ').disabled = interviewStep === 0;
-  if (interviewStep >= INTERVIEW_QUESTIONS.length - 1) {
-    document.getElementById('btnNextQ').textContent = '✨ 生成故事板';
-  } else {
-    document.getElementById('btnNextQ').textContent = '下一题 →';
-  }
+function backToLinkInput() {
+  var preview = document.getElementById('sbPreview');
+  var el = document.getElementById('sbInterview');
+  if (preview) preview.style.display = 'none';
+  if (el) el.style.display = 'flex';
+  _pendingZhilingContent = '';
+}
+
+function confirmAndGenerate() {
+  var preview = document.getElementById('sbPreview');
+  if (preview) preview.style.display = 'none';
+  document.getElementById('sbInterview').style.display = 'none';
+  generateStoryboard();
 }
 
 // ============================================================
@@ -755,6 +773,38 @@ var API_BASE = (window.location.protocol === 'file:' || window.location.hostname
   : '';
 
 var isParsingLink = false;
+
+// Direct 17zhiling call from browser (no Electron needed)
+async function callZhilingDirect(key, videoUrl) {
+  // Step 1: Submit
+  var body = new URLSearchParams({ key: key, videoUrl: videoUrl }).toString();
+  var submitRes = await fetch('https://api.17zhiling.com/api/video-inference/parse-video-url-time', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' },
+    body: body
+  });
+  var submitJson = await submitRes.json();
+  if (submitJson.code !== 200 || !submitJson.data) {
+    return { success: false, error: submitJson.msg || '提交失败' };
+  }
+  var taskId = submitJson.data;
+
+  // Step 2: Poll (max 120s, 3s interval)
+  var deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    await new Promise(function(r) { setTimeout(r, 3000); });
+    var pollRes = await fetch('https://api.17zhiling.com/api/video-inference/task-status?key=' + encodeURIComponent(key) + '&taskId=' + encodeURIComponent(taskId));
+    var pollJson = await pollRes.json();
+    if (pollJson.code !== 200 || !pollJson.data) continue;
+    if (pollJson.data.schedule === 'SUCCESS') {
+      return { success: true, content: pollJson.data.content || '' };
+    }
+    if (pollJson.data.schedule === 'FAIL') {
+      return { success: false, error: '视频分析失败（FAIL）' };
+    }
+  }
+  return { success: false, error: '视频分析超时（超过120秒）' };
+}
 
 async function parseVideoLink() {
   if (isParsingLink) return;
@@ -794,16 +844,43 @@ async function parseVideoLink() {
         body: JSON.stringify({ url: url })
       });
 
-      if (!res.ok) {
-        var errData = null;
-        try { errData = await res.json(); } catch(e) {}
-        throw new Error((errData && errData.error) || ('请求失败 (' + res.status + ')'));
+      if (res.ok) {
+        try { data = await res.json(); } catch(e) {}
       }
-
-      data = await res.json();
     }
 
-    if (data._fallback) {
+    // If Phase 1 got a fallback result AND zhilingKey available → try zhiling directly
+    var phase1Failed = !data || data._fallback;
+    if (phase1Failed && zhilingKey) {
+      statusEl.textContent = '🎬 正在通过 AI 分析视频（约15-30秒）…';
+      var zhilingResult = await callZhilingDirect(zhilingKey, url);
+      if (zhilingResult && zhilingResult.success && zhilingResult.content) {
+        data = {
+          title: url,
+          description: '',
+          platform: '视频',
+          _zhilingContent: zhilingResult.content
+        };
+      } else {
+        statusEl.className = 'sb-link-status warning';
+        statusEl.textContent = '解析失败：' + ((zhilingResult && zhilingResult.error) || '未知错误') + '。请手动填写问答';
+        isParsingLink = false;
+        btn.disabled = false;
+        btn.textContent = '🔍 解析';
+        return;
+      }
+    }
+
+    if (!data) {
+      statusEl.className = 'sb-link-status warning';
+      statusEl.textContent = '无法提取视频详情，请手动填写问答。链接可能已失效或需要登录。';
+      isParsingLink = false;
+      btn.disabled = false;
+      btn.textContent = '🔍 解析';
+      return;
+    }
+
+    if (data._fallback && !data._zhilingContent) {
       statusEl.className = 'sb-link-status warning';
       statusEl.textContent = data._message || '无法提取视频详情，请手动填写问答';
       isParsingLink = false;
@@ -815,18 +892,22 @@ async function parseVideoLink() {
     // Fill interview answers from extracted data
     fillInterviewFromLink(data);
 
-    statusEl.className = 'sb-link-status success';
-    var phase1Msg = '已提取「' + (data.platform || '视频') + '」' + (data.title ? '：' + data.title : '') + ' — 问答已预填，可直接生成';
-    statusEl.textContent = phase1Msg;
-    input.value = '';
+    if (data._zhilingContent) {
+      // Show preview instead of auto-generating
+      showZhilingPreview(data._zhilingContent);
+      input.value = '';
+    } else {
+      statusEl.className = 'sb-link-status success';
+      var phase1Msg = '已提取「' + (data.platform || '视频') + '」' + (data.title ? '：' + data.title : '') + ' — 问答已预填';
+      statusEl.textContent = phase1Msg;
+      input.value = '';
 
-    // Phase 2: If zhilingKey configured, run AI video analysis in background
-    var canUseZhiling = window.electronAPI && window.electronAPI.callZhiling && settings.zhilingKey;
+      // Phase 2: enrich with zhiling if not already done
+      var canUseZhiling = window.electronAPI && window.electronAPI.callZhiling && zhilingKey;
     if (canUseZhiling) {
       statusEl.textContent = phase1Msg + ' | 🎬 正在 AI 分析视频画面（约15-30秒）…';
-      window.electronAPI.callZhiling(settings.zhilingKey, url).then(function(result) {
+      window.electronAPI.callZhiling(zhilingKey, url).then(function(result) {
         if (result && result.success && result.content) {
-          // Enrich interviewAnswers with AI analysis content
           var contentIdx = -1;
           for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
             if (INTERVIEW_QUESTIONS[i].id === 'content') { contentIdx = i; break; }
@@ -851,6 +932,7 @@ async function parseVideoLink() {
         statusEl.textContent = phase1Msg + ' | ⚠️ AI 分析失败：' + (e.message || '网络错误');
       });
     }
+    }
   } catch (e) {
     statusEl.className = 'sb-link-status error';
     statusEl.textContent = '解析失败：' + (e.message || '网络错误');
@@ -862,11 +944,13 @@ async function parseVideoLink() {
 }
 
 function fillInterviewFromLink(data) {
+  var zhilingContent = data._zhilingContent || '';
   var desc = data.description || '';
   var title = data.title || '';
   var fullText = [];
   if (title) fullText.push(title);
   if (desc) fullText.push(desc);
+  if (zhilingContent) fullText.push(zhilingContent);
   var contentText = fullText.join('\n\n');
   var combined = fullText.join(' ');
 
@@ -919,100 +1003,7 @@ function guessVideoType(text, platform) {
   return '其他';
 }
 
-function renderChoiceCards(grid, options, prevAnswer, key) {
-  var prevVal = prevAnswer && prevAnswer.answer ? prevAnswer.answer[key] || prevAnswer.answer : '';
-  var html = '';
-  options.forEach(function(opt) {
-    var selected = prevVal === opt.value ? ' selected' : '';
-    html += '<div class="sb-choice-card' + selected + '" data-key="' + key + '" data-value="' + opt.value + '" onclick="selectChoice(this)">';
-    html += '<span class="card-icon">' + opt.icon + '</span>';
-    html += '<span class="card-label">' + opt.label + '</span>';
-    html += '</div>';
-  });
-  grid.innerHTML = html;
-}
 
-function selectChoice(card) {
-  var grid = card.parentElement;
-  // Deselect all in same grid
-  grid.querySelectorAll('.sb-choice-card').forEach(function(c) { c.classList.remove('selected'); });
-  card.classList.add('selected');
-}
-
-function nextQuestion() {
-  var q = INTERVIEW_QUESTIONS[interviewStep];
-  var answer;
-
-  if (q.type === 'free') {
-    var text = document.getElementById('sbAnswer').value.trim();
-    if (!text) return;
-    answer = text;
-  } else if (q.type === 'double') {
-    var selA = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
-    var selB = document.querySelector('#sbChoiceGridB .sb-choice-card.selected');
-    if (!selA || !selB) return;
-    answer = { a: selA.dataset.value, b: selB.dataset.value };
-  } else {
-    // single
-    var sel = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
-    if (!sel) return;
-    answer = sel.dataset.value;
-    // Also save supplement if present
-    var supp = document.getElementById('sbSupplementInput').value.trim();
-    interviewAnswers[interviewStep] = {
-      question: q.question,
-      answer: answer,
-      supplement: supp || ''
-    };
-    interviewStep++;
-    if (interviewStep >= INTERVIEW_QUESTIONS.length) {
-      generateStoryboard();
-    } else {
-      renderInterview();
-    }
-    return;
-  }
-
-  // For free and double types, save answer directly
-  interviewAnswers[interviewStep] = { question: q.question, answer: answer };
-  interviewStep++;
-  if (interviewStep >= INTERVIEW_QUESTIONS.length) {
-    generateStoryboard();
-  } else {
-    renderInterview();
-  }
-}
-
-function prevQuestion() {
-  // Save current answer before going back
-  var q = INTERVIEW_QUESTIONS[interviewStep];
-  if (q.type === 'free') {
-    var text = document.getElementById('sbAnswer').value.trim();
-    interviewAnswers[interviewStep] = { question: q.question, answer: text };
-  } else if (q.type === 'double') {
-    var selA = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
-    var selB = document.querySelector('#sbChoiceGridB .sb-choice-card.selected');
-    interviewAnswers[interviewStep] = {
-      question: q.question,
-      answer: {
-        a: selA ? selA.dataset.value : '',
-        b: selB ? selB.dataset.value : ''
-      }
-    };
-  } else {
-    var sel = document.querySelector('#sbChoiceGrid .sb-choice-card.selected');
-    var supp = document.getElementById('sbSupplementInput').value.trim();
-    interviewAnswers[interviewStep] = {
-      question: q.question,
-      answer: sel ? sel.dataset.value : '',
-      supplement: supp || ''
-    };
-  }
-  if (interviewStep > 0) {
-    interviewStep--;
-    renderInterview();
-  }
-}
 
 // ============================================================
 // GENERATION RECORDS
@@ -1247,10 +1238,12 @@ function buildDirectorSystemPrompt() {
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- totalDuration 控制在10-15秒，除非用户明确描述了更长内容\n' +
-    '- keyFrames 必须填至少3个具体画面！禁止"开场关键画面"这种占位符！每个画面要描述清楚人物+动作+场景\n' +
+    '- totalDuration 如实反映视频时长。如果是15秒短视频就写15s，不要人为拉长\n' +
+    '- keyFrames 必须覆盖用户描述中所有重要情节/对话/转折点！如果用户提到了6个要点，keyFrames就至少要6个！禁止缩减内容，15秒也可以有6个画面\n' +
+    '- 用户描述中的所有台词、情节、要点都必须保留，不得省略任何一个\n' +
     '- hookDesign 要说清楚前3秒的画面内容，不是"用悬念吸引"这种空话\n' +
     '- visualReference 要具体到风格/摄影师/账号名，不要写"现代简约"\n' +
+    (currentDialect !== '普通话' ? '- 台词语言：' + currentDialect + '。所有 dialogue 字段必须用' + currentDialect + '书写\n' : '') +
     '- 纯 JSON 输出，不要 ```json``` 包裹';
 }
 
@@ -1296,8 +1289,11 @@ function buildShotsSystemPrompt() {
     '情绪基调：' + (db.emotionalTone || '') + '\n' +
     '视觉参考：' + (db.visualReference || '') + '\n' +
     '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n' +
-    (keyProps ? '关键道具（必须出现在镜头中）：' + keyProps + '\n' : '') +
-    (currentDialect !== '普通话' ? '对话语言风格：' + currentDialect + '（台词必须用' + currentDialect + '表达）\n' : '') +
+    (currentPreScene ? '主场景（所有镜头默认使用）：' + currentPreScene + '\n' : '') +
+    (currentPreCharIds.length > 0 ? '默认出场角色ID列表（必须全部出场）：' + currentPreCharIds.join(',') + '\n' : '') +
+    (keyProps ? '关键道具（必须在至少2个镜头中作为动作核心出现，不可仅作为背景）：' + keyProps + '\n' : '') +
+    '视频比例：' + currentPreRatio + '  帧率：' + currentPreFps + 'fps\n' +
+    '台词语言：' + currentDialect + '。所有 dialogue 字段必须用' + currentDialect + '书写，严禁使用其他语言\n' +
     buildCharAssignHint() + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
@@ -1316,7 +1312,8 @@ function buildShotsSystemPrompt() {
     '      "duration": "时间范围",\n' +
     '      "shotType": "景别（大远景/远景/全景/中景/近景/特写/大特写）",\n' +
     '      "subjects": [{"characterId": "", "characterName": "角色描述", "position": "画面位置", "direction": "朝向", "additionalDesc": "表情/状态"}],\n' +
-    '      "action": "具体动作（必填）",\n' +
+    '      "action": "具体动作（必填，涉及道具必须写出道具如何被使用）",\n' +
+    '      "keyProps": ["本镜出现的道具名称（无则空数组）"],\n' +
     '      "scene": {"sceneId": "", "sceneName": "场景", "environment": "环境细节", "atmosphere": "氛围"},' +
     '      "lighting": {"type": "光影类型（自然光/暖色侧光/冷色顶光/逆光剪影/柔光漫射/硬光高对比）", "direction": "光源方向"},\n' +
     '      "camera": {"movement": "运镜（从运镜手法参考中选）", "focalLength": "焦段（24mm/35mm/50mm/85mm/135mm）", "angle": "角度（平视/俯拍/仰拍/45°侧拍）"},\n' +
@@ -1328,8 +1325,10 @@ function buildShotsSystemPrompt() {
     '  ]\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- 所有镜头的 duration 总和必须等于视频总时长：' + (da.totalDuration || '15s') + '。每个镜头2-5秒为宜\n' +
-    '- 镜头数3-5个，总时长越短镜头越少\n' +
+    '- 所有镜头的 duration 总和必须等于视频总时长：' + currentPreDuration + 's。快速口播类视频每镜1-3秒，慢节奏每镜3-5秒。不得因时长限制而删减内容\n' +
+    '- 镜头数量不作硬性限制！根据视频内容合理决定，分析中提到几个关键信息点/对话/情节转折，就生成至少几个镜头，确保所有内容都被覆盖。对话数=镜头数\n' +
+    (keyProps ? '- 关键道具 ' + keyProps + ' 必须在至少2个镜头的 action 中作为核心出现，keyProps 字段明确标注，写清楚道具如何被手持/展示/互动\n' : '') +
+    '- 所有 dialogue 台词必须用' + currentDialect + '书写，包括语气词也要符合' + currentDialect + '的表达习惯\n' +
     '- 每个镜头的 action 必须具体到身体动作和物体变化，不要写"进行展示"这种空话\n' +
     '- 运镜必须从运镜手法参考中选择，写出完整名称如"缓推 dolly in"\n' +
     '- 焦段根据景别选择：特写85mm+，近景50mm，中景35mm，全景24mm\n' +
@@ -1434,6 +1433,23 @@ function normalizeShots(da) {
   });
 }
 
+function extractCharNamesFromDA(da) {
+  if (currentPreCharIds.length > 0) {
+    return currentPreCharIds.map(function(id) {
+      var ch = findCharById(id);
+      return ch ? ch.name : '';
+    }).filter(Boolean);
+  }
+  var names = [];
+  if (da && da.characterNames && Array.isArray(da.characterNames)) {
+    names = da.characterNames;
+  }
+  if (characterProfiles.length > 0 && names.length === 0) {
+    names = characterProfiles.map(function(c) { return c.name; });
+  }
+  return names.filter(function(n, i) { return n && names.indexOf(n) === i; });
+}
+
 // ============================================================
 // STORYBOARD — RENDER (Phase 1: Director Review)
 // ============================================================
@@ -1449,10 +1465,67 @@ function renderDirectorReview() {
   // Title + duration
   html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1.15rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
+  // Pre-shot selections: character, scene, props, dialect
+  var charNames = currentPreCharIds.map(function(id) {
+    var ch = findCharById(id);
+    return ch ? ch.name : '';
+  }).filter(Boolean);
+  var allSet = currentPreCharIds.length > 0 && currentPreScene && keyProps;
+
+  html += '<div class="sb-pre-shots">';
+  html += '<div class="sb-pre-shots-title">🎯 生成分镜前的设定（全部必选）</div>';
+
+  // Character row
+  html += '<div class="sb-pre-row" onclick="pickPreChar()"><span class="sb-pre-label">👤 角色</span>';
+  html += '<span class="sb-pre-val ' + (charNames.length > 0 ? '' : 'empty') + '">' + (charNames.length > 0 ? charNames.join('、') : '点击选择') + '</span>';
+  html += '<span class="sb-pre-edit">选角色 →</span></div>';
+
+  // Scene row
+  html += '<div class="sb-pre-row" onclick="pickSceneForPreShot(\'' + (currentPreScene || '') + '\')"><span class="sb-pre-label">🏠 场景</span>';
+  html += '<span class="sb-pre-val ' + (currentPreScene ? '' : 'empty') + '">' + (currentPreScene || '点击选择') + '</span>';
+  html += '<span class="sb-pre-edit">选场景 →</span></div>';
+
+  // Props row
+  html += '<div class="sb-pre-row" onclick="pickPreProps()"><span class="sb-pre-label">📦 道具</span>';
+  html += '<span class="sb-pre-val ' + (keyProps ? '' : 'empty') + '">' + (keyProps || '点击设置') + '</span>';
+  html += '<span class="sb-pre-edit">设道具 →</span></div>';
+
+  // Duration row
+  html += '<div class="sb-pre-row"><span class="sb-pre-label">⏱ 时长</span>';
+  html += '<span class="sb-pre-val">';
+  ['15','30','45','60'].forEach(function(d) {
+    html += '<span class="sb-dur-chip' + (currentPreDuration === d ? ' active' : '') + '" onclick="setPreDuration(\'' + d + '\')">' + d + 's</span>';
+  });
+  html += '</span></div>';
+
+  // Ratio row
+  html += '<div class="sb-pre-row"><span class="sb-pre-label">📐 比例</span>';
+  html += '<span class="sb-pre-val">';
+  [{v:'9:16',l:'9:16 竖屏'},{v:'16:9',l:'16:9 横屏'},{v:'1:1',l:'1:1 方形'}].forEach(function(r) {
+    html += '<span class="sb-dur-chip' + (currentPreRatio === r.v ? ' active' : '') + '" onclick="setPreRatio(\'' + r.v + '\')">' + r.l + '</span>';
+  });
+  html += '</span></div>';
+
+  // Fps row
+  html += '<div class="sb-pre-row"><span class="sb-pre-label">🎞 帧率</span>';
+  html += '<span class="sb-pre-val">';
+  [{v:'24',l:'24fps'},{v:'30',l:'30fps'},{v:'60',l:'60fps'}].forEach(function(f) {
+    html += '<span class="sb-dur-chip' + (currentPreFps === f.v ? ' active' : '') + '" onclick="setPreFps(\'' + f.v + '\')">' + f.l + '</span>';
+  });
+  html += '</span></div>';
+
+  // Dialect row
+  html += '<div class="sb-pre-row" onclick="pickDialect()"><span class="sb-pre-label">🗣 方言</span>';
+  html += '<span class="sb-pre-val">' + escapeHtml(currentDialect || '普通话') + '</span>';
+  html += '<span class="sb-pre-edit">选方言 →</span></div>';
+
+  html += '</div>';
+
   // Confirm buttons
   html += '<div style="text-align:center;padding:4px 0 12px">';
   html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">🔄 重新来</button>';
-  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.88rem;padding:10px 32px">确认，生成分镜 ✨</button>';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.88rem;padding:10px 32px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 ✨</button>';
+  if (!allSet) html += '<div style="font-size:.65rem;color:#e57373;margin-top:4px">请先选择角色、场景和道具（上方带虚线的项）</div>';
   html += '</div>';
 
   // Director brief card
@@ -1590,14 +1663,16 @@ function renderShotsPage() {
   html += '</div>';
 
   // Primary actions
+  // Character swap button (only when 2+ unique chars exist)
+  var allChars = getStoryboardChars();
+  if (allChars.length >= 2) {
+    html += '<button class="sb-action-btn" onclick="swapStoryboardChars()" title="互换两个角色的所有出场">🔄 互换角色</button>';
+  }
+
   html += '<div class="sb-actions-bar" style="border-top:1px solid #f0ece4;padding-top:10px">';
-  html += '<button class="sb-action-btn" onclick="replaceAllCharacters()">🔄 换角色</button>';
-  html += '<button class="sb-action-btn" onclick="replaceAllScenes()">🏠 换场景</button>';
-  html += '<button class="sb-action-btn" onclick="replaceKeyProps()">📦 换道具</button>';
-  html += '<button class="sb-action-btn" onclick="pickDialect()">🗣 换方言</button>';
   html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 即梦提示词</button>';
   html += '<button class="sb-action-btn primary" onclick="generateShots()">🎬 重新生成</button>';
-  html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">···</button>';
+  html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">✏️ 镜头修改</button>';
   html += '</div>';
 
   board.innerHTML = html;
@@ -1950,10 +2025,14 @@ function renderOneShotCard(shot, index) {
   // Body
   html += '<div class="sb-shot-card-body">';
 
-  // Characters row
+  // Characters row — each name is clickable to swap individually
   html += '<div class="shot-info-row">';
   html += '<span class="shot-info-icon">👤</span>';
-  html += '<span class="shot-info-text">' + escapeHtml(chars || '(未指定)') + '</span>';
+  var charNames = subjects.map(function(s, i) {
+    var name = s.characterName || '未指定';
+    return '<span class="shot-char-name" onclick="pickCharForSubject(' + index + ',' + i + ')" title="点击切换角色">' + escapeHtml(name) + '</span>';
+  });
+  html += '<span class="shot-info-text">' + charNames.join(' → ') + '</span>';
   html += '</div>';
 
   // Scene row
@@ -2243,6 +2322,13 @@ function pickChar(fromName) {
 
 function confirmPickChar(id, name) {
   closePicker();
+  // Pre-shot phase: just set/add the character
+  if (!currentDirectorAnalysis || !currentDirectorAnalysis.shots || currentDirectorAnalysis.shots.length === 0) {
+    if (id && currentPreCharIds.indexOf(id) < 0) currentPreCharIds.push(id);
+    renderDirectorReview();
+    return;
+  }
+  // Post-shot phase: replace in existing shots
   var toChar = findCharById(id);
   var sb = (currentStoryboard.storyboard || currentStoryboard);
   (sb.shots || []).forEach(function(shot) {
@@ -2250,13 +2336,82 @@ function confirmPickChar(id, name) {
       if ((s.characterName || '') === pickerFromName || (s.characterName || '').indexOf(pickerFromName) >= 0) {
         s.characterId = id;
         s.characterName = name || '';
-        // Also pull in character details
         if (toChar) {
           s.additionalDesc = [toChar.gender, toChar.age, toChar.clothing, toChar.features].filter(Boolean).join('，');
         }
       }
     });
   });
+  rerenderBoard();
+}
+
+function getStoryboardChars() {
+  var sb = (currentStoryboard && (currentStoryboard.storyboard || currentStoryboard)) || {};
+  var shots = sb.shots || [];
+  var names = [];
+  shots.forEach(function(shot) {
+    (shot.subjects || []).forEach(function(s) {
+      if (s.characterName && names.indexOf(s.characterName) < 0) names.push(s.characterName);
+    });
+  });
+  return names;
+}
+
+function swapStoryboardChars() {
+  var names = getStoryboardChars();
+  if (names.length < 2) { alert('至少需要两个不同角色才能互换'); return; }
+  var a = prompt('要互换的第一个角色：\n当前角色：' + names.join('、'), names[0]);
+  if (!a) return;
+  var b = prompt('要互换的第二个角色：\n当前角色：' + names.join('、'), names[1]);
+  if (!b) return;
+  if (a === b) return;
+  var sb = (currentStoryboard && (currentStoryboard.storyboard || currentStoryboard)) || {};
+  (sb.shots || []).forEach(function(shot) {
+    (shot.subjects || []).forEach(function(s) {
+      if (s.characterName === a) s.characterName = b;
+      else if (s.characterName === b) s.characterName = a;
+    });
+  });
+  rerenderBoard();
+}
+
+function pickCharForSubject(shotIndex, subjIndex) {
+  var sb = (currentStoryboard && (currentStoryboard.storyboard || currentStoryboard)) || {};
+  var shot = (sb.shots || [])[shotIndex];
+  if (!shot) return;
+  var subject = (shot.subjects || [])[subjIndex];
+  if (!subject) return;
+  pickerFromName = subject.characterName || '';
+  pickerMode = 'char-single';
+  // On confirm, replace this specific subject
+  window._pickCharForSubjectTarget = { shotIndex: shotIndex, subjIndex: subjIndex };
+
+  document.getElementById('pickerTitle').textContent = '👤 切换角色';
+  document.getElementById('pickerCurrentList').innerHTML = pickerFromName ? '<span class="picker-tag selected" style="background:#5b9a8b;color:#fff">当前：' + escapeHtml(pickerFromName) + '</span>' : '';
+  var listHtml = characterProfiles.map(function(c) {
+    return '<div class="picker-item" onclick="confirmPickCharForSubject(\'' + c.id + '\', \'' + escapeHtml(c.name) + '\')">' +
+      '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
+      '<div><div class="picker-name">' + escapeHtml(c.name) + '</div>' +
+      '<div class="picker-detail">' + escapeHtml([c.gender, c.age, c.clothing].filter(Boolean).join(' · ')) + '</div></div>' +
+      '</div>';
+  }).join('');
+  document.getElementById('pickerList').innerHTML = listHtml;
+  document.getElementById('pickerOverlay').classList.add('open');
+}
+
+function confirmPickCharForSubject(id, name) {
+  closePicker();
+  var t = window._pickCharForSubjectTarget;
+  if (!t) return;
+  var sb = (currentStoryboard && (currentStoryboard.storyboard || currentStoryboard)) || {};
+  var shot = (sb.shots || [])[t.shotIndex];
+  if (!shot) return;
+  var subject = (shot.subjects || [])[t.subjIndex];
+  if (!subject) return;
+  subject.characterId = id;
+  subject.characterName = name || '';
+  var ch = findCharById(id);
+  if (ch) subject.additionalDesc = [ch.gender, ch.age, ch.clothing, ch.features].filter(Boolean).join('，');
   rerenderBoard();
 }
 
@@ -2346,6 +2501,10 @@ function confirmDialect(name) {
   saveDialects();
   updateAccountUI();
   closePicker();
+  // Refresh pre-shot panel if visible
+  if (currentDirectorAnalysis && !currentDirectorAnalysis.shots) {
+    renderDirectorReview();
+  }
 }
 
 function addDialect() {
@@ -2362,14 +2521,157 @@ function addDialect() {
 }
 
 var keyProps = '';
+var currentPreScene = '';  // pre-shot scene selection
+var currentPreCharIds = [];  // pre-shot character selections (multi)
+var currentPreDuration = '30';  // pre-shot duration: 15/30/45/60
+var currentPreRatio = '9:16';   // pre-shot aspect ratio
+var currentPreFps = '24';       // pre-shot frame rate
 
-function replaceKeyProps() {
+function pickSceneForPreShot(fromName) {
+  pickerFromName = fromName;
+  pickerMode = 'scene-preset';
+  if (!sceneProfiles.length) { alert('请先在「我的」中创建场景'); return; }
+
+  document.getElementById('pickerTitle').textContent = '🏠 选择主场景';
+  document.getElementById('pickerCurrentList').innerHTML = currentPreScene ? '<span class="picker-tag selected" style="background:#5b9a8b;color:#fff">当前：' + escapeHtml(currentPreScene) + '</span>' : '';
+  document.getElementById('pickerList').innerHTML = sceneProfiles.map(function(s) {
+    var sel = s.name === currentPreScene ? ' style="border-color:#5b9a8b;background:#eef7f4"' : '';
+    return '<div class="picker-item"' + sel + ' onclick="confirmPreScene(\'' + s.name + '\')">' +
+      '<span class="picker-avatar">🏠</span>' +
+      '<div><div class="picker-name">' + escapeHtml(s.name) + '</div>' +
+      '<div class="picker-detail">' + escapeHtml([s.environment, s.atmosphere].filter(Boolean).join(' · ') || '场景') + '</div></div>' +
+      '</div>';
+  }).join('') + '<div class="picker-item" onclick="confirmPreScene(\'\')" style="color:#e57373">✕ 清除场景</div>';
+  document.getElementById('pickerOverlay').classList.add('open');
+}
+
+function confirmPreScene(name) {
+  currentPreScene = name || '';
+  closePicker();
+  renderDirectorReview();
+}
+
+function setPreDuration(val) {
+  currentPreDuration = val;
+  renderDirectorReview();
+}
+
+function setPreRatio(val) {
+  currentPreRatio = val;
+  renderDirectorReview();
+}
+
+function setPreFps(val) {
+  currentPreFps = val;
+  renderDirectorReview();
+}
+
+function confirmPreChar(id, name) {
+  currentPreCharId = id || '';
+  closePicker();
+  renderDirectorReview();
+}
+
+function pickPreProps() {
   var current = keyProps || '';
   var input = prompt('输入要植入的关键道具（产品/物品）：\n例如：桶装水、某品牌手机、定制杯子\n多个用逗号分隔', current);
-  if (input === null) return; // cancel
+  if (input === null) return;
   keyProps = input.trim();
-  if (keyProps && !confirm('已设置道具：' + keyProps + '\n\n重新生成分镜来植入道具？')) return;
-  if (keyProps) generateShots();
+  renderDirectorReview();
+}
+
+function pickPreChar() {
+  pickerMode = 'char-pre';
+  var ptitle = document.getElementById('pickerTitle');
+  var plist = document.getElementById('pickerList');
+  var pcurrent = document.getElementById('pickerCurrentList');
+  if (!ptitle || !plist || !pcurrent) return;
+
+  ptitle.textContent = '👤 选择角色（可多选）';
+
+  if (characterProfiles.length === 0) {
+    pcurrent.innerHTML = '';
+    plist.innerHTML = '<div style="padding:20px;text-align:center;color:#a09880;font-size:.78rem">暂无形象。<br>请先在「我的」→ 形象管理 中创建角色。</div>';
+    document.getElementById('pickerOverlay').classList.add('open');
+    return;
+  }
+
+  // Ensure every character has an id
+  characterProfiles.forEach(function(c) { if (!c.id) c.id = generateId(); });
+
+  var selectedChars = characterProfiles.filter(function(c) { return currentPreCharIds.indexOf(c.id) >= 0; });
+  var availableChars = characterProfiles.filter(function(c) { return currentPreCharIds.indexOf(c.id) < 0; });
+
+  // Top: selected characters (click to remove)
+  pcurrent.innerHTML = '<div style="font-size:.72rem;color:#8a8278;margin-bottom:6px">已选（点击移除）：</div>' +
+    (selectedChars.length > 0
+      ? selectedChars.map(function(c) {
+          return '<div class="picker-item" data-char-id="' + c.id + '" style="border-color:#5b9a8b;background:#eef7f4;cursor:pointer">' +
+            '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
+            '<div><div class="picker-name">✓ ' + escapeHtml(c.name) + '</div>' +
+            '<div class="picker-detail">' + escapeHtml([c.gender, c.age, c.clothing].filter(Boolean).join(' · ') || '无详细信息') + '</div></div>' +
+            '</div>';
+        }).join('')
+      : '<div style="color:#a09880;font-size:.78rem;padding:8px 0">未选择任何角色</div>');
+
+  // Bottom: available characters (click to add)
+  var h = '';
+  if (selectedChars.length > 0) {
+    h += '<div class="picker-item pre-char-clear-btn" style="color:#e57373;cursor:pointer">✕ 清空全部（已选' + selectedChars.length + '个）</div>';
+  }
+  h += '<div style="font-size:.72rem;color:#8a8278;margin:8px 0 4px">可选角色：</div>';
+  h += availableChars.length > 0
+    ? availableChars.map(function(c) {
+        return '<div class="picker-item" data-char-id="' + c.id + '" style="cursor:pointer">' +
+          '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
+          '<div><div class="picker-name">' + escapeHtml(c.name) + '</div>' +
+          '<div class="picker-detail">' + escapeHtml([c.gender, c.age, c.clothing].filter(Boolean).join(' · ') || '无详细信息') + '</div></div>' +
+          '</div>';
+      }).join('')
+    : '<div style="color:#a09880;font-size:.78rem;padding:10px">所有角色已选中</div>';
+
+  h += '<div style="border-top:1px solid #e0dcd3;margin-top:10px;padding-top:10px;text-align:right">';
+  h += '<button class="dialog-btn primary pre-char-confirm-btn" style="font-size:.78rem;padding:8px 20px">确定</button>';
+  h += '</div>';
+
+  plist.innerHTML = h;
+  document.getElementById('pickerOverlay').classList.add('open');
+
+  // Event delegation: click on available chars → add to selection
+  plist.onclick = function(e) {
+    var el = e.target.closest('[data-char-id]');
+    if (el) {
+      var id = el.getAttribute('data-char-id');
+      if (currentPreCharIds.indexOf(id) < 0) currentPreCharIds.push(id);
+      pickPreChar();
+      return;
+    }
+    if (e.target.closest('.pre-char-clear-btn')) {
+      currentPreCharIds = [];
+      pickPreChar();
+      return;
+    }
+    if (e.target.closest('.pre-char-confirm-btn')) {
+      closePicker();
+      renderDirectorReview();
+    }
+  };
+
+  // Event delegation: click on selected chars → remove from selection
+  pcurrent.onclick = function(e) {
+    var el = e.target.closest('[data-char-id]');
+    if (el) {
+      var id = el.getAttribute('data-char-id');
+      var idx = currentPreCharIds.indexOf(id);
+      if (idx >= 0) currentPreCharIds.splice(idx, 1);
+      pickPreChar();
+    }
+  };
+}
+
+function clearPreChars() {
+  currentPreCharIds = [];
+  pickPreChar();
 }
 
 function pickScene(fromName) {
@@ -2462,19 +2764,18 @@ function buildShotProse(shot) {
   if (light.type) visual.push(light.type + (light.direction ? '从' + light.direction + '打入' : ''));
   if (visual.length) parts.push(visual.join('，'));
 
-  // 主体 + 动作
+  // 主体 + 动作 + 道具
   var subjDesc = (shot.subjects || []).map(function(s) {
     var seg = s.characterName || '';
     if (s.additionalDesc) seg += seg ? '（' + s.additionalDesc + '）' : s.additionalDesc;
     return seg;
   }).filter(Boolean).join('、');
-  if (subjDesc) {
-    var body = subjDesc;
-    if (shot.action) body += '，' + shot.action;
-    parts.push(body);
-  } else if (shot.action) {
-    parts.push(shot.action);
-  }
+  var bodyParts = [];
+  if (subjDesc) bodyParts.push(subjDesc);
+  if (shot.action) bodyParts.push(shot.action);
+  var kp = shot.keyProps;
+  if (kp && Array.isArray(kp) && kp.length > 0) bodyParts.push('画面中出现：' + kp.join('、'));
+  if (bodyParts.length) parts.push(bodyParts.join('，'));
 
   // 场景
   var sc = shot.scene || {};
@@ -2506,11 +2807,8 @@ function exportStoryboardPrompts() {
   var shots = sb.shots || [];
   if (!shots.length) { alert('没有分镜数据'); return; }
 
-  // Pick ratio & fps
-  var ratio = prompt('视频比例？\n9:16 竖屏 / 16:9 横屏 / 1:1 方形', '9:16');
-  if (!ratio) return;
-  var fps = prompt('帧率？\n24fps（电影感）/ 30fps（流畅）/ 60fps（高帧率）', '24');
-  if (!fps) return;
+  var ratio = currentPreRatio || '9:16';
+  var fps = currentPreFps || '24';
 
   // Calculate total duration
   var totalSec = 0;
@@ -2532,13 +2830,25 @@ function exportStoryboardPrompts() {
 
   // Build output
   var out = '## 🎬 ' + (sb.title || '未命名') + '\n\n';
-  out += '**时长**：' + totalDur + '  **比例**：' + ratio + '  **帧率**：' + fps + '\n';
+  out += '**时长**：' + totalDur + '  **比例**：' + ratio + '  **帧率**：' + fps + '  **方言**：' + (currentDialect || '普通话') + '\n';
+  if (keyProps) out += '**关键道具**：' + keyProps + '\n';
   if (styles.length) out += '**风格**：' + styles.join(' · ') + '\n';
   out += '\n---\n\n';
 
   // Determine if we need multi-segment (>15s)
   var maxSingleShot = 15;
   var needSegments = totalSec > maxSingleShot;
+
+  // Collect unique char IDs and scene IDs used in shots
+  var usedCharIds = [];
+  var usedSceneIds = [];
+  shots.forEach(function(shot) {
+    (shot.subjects || []).forEach(function(s) {
+      if (s.characterId && usedCharIds.indexOf(s.characterId) < 0) usedCharIds.push(s.characterId);
+    });
+    var scId = (shot.scene || {}).sceneId;
+    if (scId && usedSceneIds.indexOf(scId) < 0) usedSceneIds.push(scId);
+  });
 
   if (needSegments) {
     // Multi-segment strategy
@@ -2570,6 +2880,34 @@ function exportStoryboardPrompts() {
       out += '### 第' + (si + 1) + '段（' + segLabel + '）\n\n';
       out += '**生成时长**：' + (seg.end - seg.start) + '秒\n\n';
 
+      // Collect chars/scenes used in this segment
+      var segCharIds = [];
+      var segSceneIds = [];
+      seg.shots.forEach(function(shot) {
+        (shot.subjects || []).forEach(function(s) {
+          if (s.characterId && segCharIds.indexOf(s.characterId) < 0) segCharIds.push(s.characterId);
+        });
+        var scId = (shot.scene || {}).sceneId;
+        if (scId && segSceneIds.indexOf(scId) < 0) segSceneIds.push(scId);
+      });
+
+      // Character descriptions for this segment
+      var charDescs = segCharIds.map(describeCharacter).filter(Boolean);
+      if (charDescs.length) {
+        out += '**角色设定（本段必须保持一致）**：\n';
+        charDescs.forEach(function(d) { out += '- ' + d + '\n'; });
+        out += '\n';
+      }
+
+      // Scene descriptions for this segment
+      var sceneDescs = segSceneIds.map(describeScene).filter(Boolean);
+      if (sceneDescs.length) {
+        out += '**场景设定**：\n';
+        sceneDescs.forEach(function(d) { out += '- ' + d + '\n'; });
+        out += '\n';
+      }
+
+      out += '**分镜**：\n\n';
       var segOffset = seg.start;
       seg.shots.forEach(function(shot) {
         var timeLabel = '';
@@ -2591,6 +2929,19 @@ function exportStoryboardPrompts() {
     });
   } else {
     // Single segment (≤15s)
+    var charDescs = usedCharIds.map(describeCharacter).filter(Boolean);
+    if (charDescs.length) {
+      out += '**角色设定**：\n';
+      charDescs.forEach(function(d) { out += '- ' + d + '\n'; });
+      out += '\n';
+    }
+    var sceneDescs = usedSceneIds.map(describeScene).filter(Boolean);
+    if (sceneDescs.length) {
+      out += '**场景设定**：\n';
+      sceneDescs.forEach(function(d) { out += '- ' + d + '\n'; });
+      out += '\n';
+    }
+    out += '**分镜**：\n\n';
     shots.forEach(function(shot, i) {
       out += (shot.duration || '') + '：\n';
       out += buildShotProse(shot) + '\n';
@@ -2647,21 +2998,50 @@ function getActiveChip(groupId) {
 // ============================================================
 // EVENT BINDING
 // ============================================================
+function doLogout() {
+  if (!confirm('确定退出登录？')) return;
+  if (typeof sbSignOut !== 'undefined') { try { sbSignOut(); } catch(e) {} }
+  sbUser = null;
+  currentStoryboard = null;
+  document.getElementById('loginPage').classList.remove('hidden');
+  try { document.getElementById('modelDialog').classList.remove('open'); } catch(e) {}
+  try { document.getElementById('zhilingDialog').classList.remove('open'); } catch(e) {}
+}
+
+function toggleMeMenu() {
+  var menu = document.getElementById('meMenuDropdown');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function closeMeMenu() {
+  var menu = document.getElementById('meMenuDropdown');
+  if (menu) menu.style.display = 'none';
+}
+
+function openModelDialog() {
+  document.getElementById('meApiKey').value = settings.apiKey || '';
+  document.getElementById('meEndpoint').value = settings.endpoint || '';
+  document.getElementById('meModel').value = settings.model || 'deepseek-chat';
+  updateCustomModel();
+  document.getElementById('modelDialog').classList.add('open');
+}
+
+function openZhilingDialog() {
+  document.getElementById('meZhilingKey').value = zhilingKey || '';
+  document.getElementById('zhilingDialog').classList.add('open');
+}
+
 function bindEvents() {
   // Tab switching
   document.querySelectorAll('.tab-item').forEach(function(item) {
     item.addEventListener('click', function() { switchTab(this.dataset.tab); });
   });
 
-  // Settings overlay
+  // Model dialog
   var btnSettings = document.getElementById('btnMeSettings');
   if (btnSettings) btnSettings.addEventListener('click', function() {
-    document.getElementById('meApiKey').value = settings.apiKey || '';
-    document.getElementById('meZhilingKey').value = settings.zhilingKey || '';
-    document.getElementById('meEndpoint').value = settings.endpoint || '';
-    document.getElementById('meModel').value = settings.model || 'deepseek-chat';
-    updateCustomModel();
-    document.getElementById('settingsOverlay').classList.add('open');
+    openModelDialog();
   });
 
   document.getElementById('meModel').addEventListener('change', updateCustomModel);
@@ -2677,7 +3057,6 @@ function bindEvents() {
   // Save API config
   document.getElementById('btnSaveApiConfig').addEventListener('click', async function() {
     settings.apiKey = document.getElementById('meApiKey').value.trim();
-    settings.zhilingKey = document.getElementById('meZhilingKey').value.trim();
     settings.endpoint = document.getElementById('meEndpoint').value.trim();
     settings.model = document.getElementById('meModel').value;
     settings.customModel = document.getElementById('meCustomModel').value.trim();
@@ -2690,19 +3069,23 @@ function bindEvents() {
     setTimeout(function() { hint.textContent = ''; }, 2000);
   });
 
-  // Logout
-  var btnLogout1 = document.getElementById('btnLogout');
-  var btnLogout2 = document.getElementById('btnLogoutCard');
-  function doLogout() {
-    if (!confirm('确定退出登录？')) return;
-    if (typeof sbSignOut !== 'undefined') { try { sbSignOut(); } catch(e) {} }
-    sbUser = null;
-    currentStoryboard = null;
-    document.getElementById('loginPage').classList.remove('hidden');
-    document.getElementById('settingsOverlay').classList.remove('open');
-  }
-  if (btnLogout1) btnLogout1.addEventListener('click', doLogout);
-  if (btnLogout2) btnLogout2.addEventListener('click', doLogout);
+  // Save zhilingKey separately (completely independent)
+  // Save zhilingKey
+  var btnSaveZl = document.getElementById('btnSaveZhilingKey');
+  if (btnSaveZl) btnSaveZl.addEventListener('click', function() {
+    zhilingKey = document.getElementById('meZhilingKey').value.trim();
+    saveZhilingKey();
+    var hint = document.getElementById('zhilingSaveHint');
+    if (!hint) hint = document.getElementById('apiConfigSaveHint');
+    hint.textContent = '✓ 已保存（本地）'; hint.style.color = '#7b6f5c';
+    setTimeout(function() { hint.textContent = ''; }, 2000);
+  });
+
+  // Logout (now via menu)
+  var btnLogoutCard = document.getElementById('btnLogoutCard');
+  if (btnLogoutCard) btnLogoutCard.addEventListener('click', function() { doLogout(); });
+  var btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) btnLogout.addEventListener('click', function() { doLogout(); });
 
   // Login tab switching
   var loginMode = 'login';
@@ -2729,17 +3112,10 @@ function bindEvents() {
   document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLoginOrRegister('login'); });
   document.getElementById('resetPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') doResetPassword(); });
 
-  // Interview buttons
-  document.getElementById('btnNextQ').addEventListener('click', nextQuestion);
-  document.getElementById('btnPrevQ').addEventListener('click', prevQuestion);
-  var sbAnswerEl = document.getElementById('sbAnswer');
-  if (sbAnswerEl) sbAnswerEl.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); nextQuestion(); }
-  });
 
-  // Voice
-  document.getElementById('btnVoice').addEventListener('click', toggleVoiceInput);
-  setupVoiceRecognition();
+  // Voice (may not exist in simplified UI)
+  var btnVoice = document.getElementById('btnVoice');
+  if (btnVoice) { btnVoice.addEventListener('click', toggleVoiceInput); setupVoiceRecognition(); }
 
   // Shot editor
   document.getElementById('btnShotSave').addEventListener('click', saveShot);

@@ -92,6 +92,7 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
   transition:all .15s;text-align:center}
 .dialog-btn.primary{background:#5b9a8b;color:#fff;border-color:#5b9a8b}
 .dialog-btn.primary:hover{background:#4a8a7b}
+.dialog-btn.primary:disabled{background:#c4bfb2;border-color:#c4bfb2;cursor:not-allowed}
 .dialog-btn.secondary:hover{background:#f5f1eb}
 .dialog-btn.danger{color:#e57373;border-color:#f5c6cb}
 
@@ -111,6 +112,15 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 /* ============================================================
    "MY" PAGE
    ============================================================ */
+.me-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0;position:relative}
+.me-header-title{font-size:.95rem;font-weight:700;color:#3d3929}
+.me-menu-btn{width:36px;height:36px;border:none;background:transparent;font-size:1.5rem;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#5b5a52;letter-spacing:2px;transition:background .15s}
+.me-menu-btn:hover{background:#f0ece4}
+.me-menu-dropdown{position:absolute;top:48px;right:20px;background:#fff;border:1px solid #ede8e1;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:100;min-width:180px;overflow:hidden}
+.me-menu-item{padding:12px 16px;font-size:.82rem;cursor:pointer;color:#3d3929;transition:background .15s;white-space:nowrap}
+.me-menu-item:hover{background:#f5f3ed}
+.me-menu-item+.me-menu-item{border-top:1px solid #f0ece4}
+
 .me-scroll{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
 .me-card-box{background:#fff;border-radius:14px;padding:16px;border:1px solid #ede8e1}
 .me-section-head{font-size:.85rem;font-weight:700;margin-bottom:10px}
@@ -149,13 +159,21 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .picker-avatar{font-size:1.3rem;width:32px;text-align:center;flex-shrink:0}
 .picker-name{font-size:.82rem;font-weight:600;color:#2d2a26}
 .picker-detail{font-size:.68rem;color:#8a8278;margin-top:2px}
-.picker-tag{font-size:.7rem;padding:4px 10px;border-radius:8px;background:#f0ece4}
+.picker-tag{font-size:.7rem;padding:4px 10px;border-radius:8px;background:#f0ece4;display:inline-flex;align-items:center;gap:4px}
 
 /* ============================================================
    STORYBOARD — INTERVIEW
    ============================================================ */
 .sb-interview{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 20px;min-height:0}
 .sb-interview-inner{width:100%;max-width:520px;display:flex;flex-direction:column;gap:20px}
+
+.sb-interview-icon{font-size:2.5rem;text-align:center}
+.sb-interview-title{font-size:.95rem;font-weight:700;text-align:center;color:#3d3929}
+.sb-interview-subtitle{font-size:.72rem;text-align:center;color:#a09880;margin-top:-12px}
+
+.sb-manual-divider{display:flex;align-items:center;gap:12px;margin:8px 0}
+.sb-manual-divider::before,.sb-manual-divider::after{content:'';flex:1;height:1px;background:#e0dcd3}
+.sb-manual-divider span{font-size:.68rem;color:#a09880;white-space:nowrap}
 
 /* Link parse entry */
 .sb-link-parse{display:flex;gap:8px;align-items:center}
@@ -169,6 +187,33 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .sb-link-status.success{color:#5b9a8b}
 .sb-link-status.error{color:#d4726a}
 .sb-link-status.warning{color:#c9954a}
+
+/* Zhiling preview */
+.sb-preview{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:24px 20px;overflow-y:auto}
+.sb-preview-inner{width:100%;max-width:600px;display:flex;flex-direction:column;gap:16px}
+.sb-preview-label{font-size:.8rem;font-weight:700;color:#3d3929}
+.sb-preview-content{background:#fafaf7;border:1.5px solid #e0dcd3;border-radius:12px;padding:16px;font-size:.78rem;line-height:1.7;color:#4a4438;max-height:400px;overflow-y:auto}
+.sb-preview-h3{font-weight:700;font-size:.85rem;color:#3d3929;margin:12px 0 4px}
+.sb-preview-h3:first-child{margin-top:0}
+.sb-preview-h4{font-weight:700;font-size:.8rem;color:#5b9a8b;margin:8px 0 2px}
+.sb-preview-li{margin-left:4px;padding:2px 0}
+.sb-preview-li::before{content:'– ';color:#c4bfb2}
+.sb-preview-p{padding:2px 0}
+.sb-preview-actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* Pre-shot selection panel */
+.sb-pre-shots{margin:0 0 12px;border:1.5px solid #e0dcd3;border-radius:12px;padding:12px 16px;background:#fdfdfb}
+.sb-pre-shots-title{font-size:.75rem;font-weight:700;color:#3d3929;margin-bottom:8px}
+.sb-pre-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f0ece4;cursor:pointer;border-radius:6px;transition:background .15s}
+.sb-pre-row:last-child{border-bottom:none}
+.sb-pre-row:hover{background:#f5f3ed}
+.sb-pre-label{font-size:.78rem;font-weight:600;color:#5b9a8b;width:56px;flex-shrink:0}
+.sb-pre-val{flex:1;font-size:.78rem;color:#4a4438}
+.sb-pre-val.empty{color:#c4bfb2;font-style:italic}
+.sb-pre-edit{font-size:.68rem;color:#a09880;flex-shrink:0}
+.sb-dur-chip{display:inline-block;font-size:.72rem;padding:4px 10px;border-radius:8px;border:1.5px solid #e0dcd3;margin-right:6px;cursor:pointer;color:#8a8278;transition:all .15s}
+.sb-dur-chip:hover{border-color:#5b9a8b;color:#5b9a8b}
+.sb-dur-chip.active{background:#5b9a8b;color:#fff;border-color:#5b9a8b}
 
 /* Progress dots */
 .sb-progress-dots{display:flex;gap:10px;justify-content:center}
@@ -266,6 +311,8 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .shot-info-row{display:flex;align-items:flex-start;gap:8px}
 .shot-info-icon{font-size:1rem;flex-shrink:0;width:22px;text-align:center;line-height:1.4}
 .shot-info-text{font-size:.8rem;color:#5d5850;line-height:1.4}
+.shot-char-name{color:#5b9a8b;cursor:pointer;border-bottom:1px dashed #5b9a8b;transition:opacity .15s}
+.shot-char-name:hover{opacity:.7}
 .shot-dialogue-bubble{
   background:#eef7f4;border-left:3px solid #5b9a8b;padding:10px 14px;
   border-radius:0 10px 10px 0;font-size:.88rem;color:#2d2a26;font-weight:600;margin-top:2px
