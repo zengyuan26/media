@@ -157,6 +157,19 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .sb-interview{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 20px;min-height:0}
 .sb-interview-inner{width:100%;max-width:520px;display:flex;flex-direction:column;gap:20px}
 
+/* Link parse entry */
+.sb-link-parse{display:flex;gap:8px;align-items:center}
+.sb-link-input{flex:1;font-size:.78rem;border:1.5px solid #e0dcd3;border-radius:10px;padding:10px 14px;outline:none;box-sizing:border-box;background:#fafaf7}
+.sb-link-input:focus{border-color:#5b9a8b}
+.sb-link-input::placeholder{color:#c4bfb2}
+.sb-link-btn{font-size:.78rem;padding:10px 16px;border-radius:10px;border:none;background:#5b9a8b;color:#fff;cursor:pointer;white-space:nowrap;font-weight:600;transition:opacity .2s}
+.sb-link-btn:hover{opacity:.85}
+.sb-link-btn:disabled{opacity:.5;cursor:not-allowed}
+.sb-link-status{font-size:.72rem;padding:2px 4px;margin-top:-8px;line-height:1.4}
+.sb-link-status.success{color:#5b9a8b}
+.sb-link-status.error{color:#d4726a}
+.sb-link-status.warning{color:#c9954a}
+
 /* Progress dots */
 .sb-progress-dots{display:flex;gap:10px;justify-content:center}
 .sb-progress-dots .dot{width:10px;height:10px;border-radius:50%;background:#e0dcd3;transition:all .3s}

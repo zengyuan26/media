@@ -1,7 +1,13 @@
 {
   "buildCommand": "echo skip",
   "outputDirectory": ".",
+  "functions": {
+    "api/analyze.js": {
+      "maxDuration": 30
+    }
+  },
   "routes": [
+    { "src": "/api/analyze", "dest": "/api/analyze" },
     { "handle": "filesystem" }
   ]
 }

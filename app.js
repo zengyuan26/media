@@ -746,6 +746,134 @@ function renderInterview() {
   }
 }
 
+// ============================================================
+// VIDEO LINK PARSER — call api/analyze to extract video metadata
+// ============================================================
+var API_BASE = (window.location.protocol === 'file:' || window.location.hostname === 'localhost')
+  ? 'https://zimeiti-creator.vercel.app'
+  : '';
+
+var isParsingLink = false;
+
+async function parseVideoLink() {
+  if (isParsingLink) return;
+  var input = document.getElementById('sbLinkInput');
+  var btn = document.getElementById('btnParseLink');
+  var statusEl = document.getElementById('sbLinkStatus');
+  var url = (input.value || '').trim();
+
+  if (!url) {
+    statusEl.style.display = 'block';
+    statusEl.className = 'sb-link-status error';
+    statusEl.textContent = '请粘贴视频链接';
+    return;
+  }
+
+  isParsingLink = true;
+  btn.disabled = true;
+  btn.textContent = '⏳ 解析中…';
+  statusEl.style.display = 'block';
+  statusEl.className = 'sb-link-status';
+  statusEl.textContent = '正在提取视频信息…';
+
+  try {
+    var res = await fetch(API_BASE + '/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    });
+
+    if (!res.ok) {
+      var errData = null;
+      try { errData = await res.json(); } catch(e) {}
+      throw new Error((errData && errData.error) || ('请求失败 (' + res.status + ')'));
+    }
+
+    var data = await res.json();
+
+    if (data._fallback) {
+      statusEl.className = 'sb-link-status warning';
+      statusEl.textContent = data._message || '无法提取视频详情，请手动填写问答';
+      isParsingLink = false;
+      btn.disabled = false;
+      btn.textContent = '🔍 解析';
+      return;
+    }
+
+    // Fill interview answers from extracted data
+    fillInterviewFromLink(data);
+
+    statusEl.className = 'sb-link-status success';
+    statusEl.textContent = '已提取「' + (data.platform || '视频') + '」' + (data.title ? '：' + data.title : '') + ' — 问答已预填，可直接生成';
+    input.value = '';
+  } catch (e) {
+    statusEl.className = 'sb-link-status error';
+    statusEl.textContent = '解析失败：' + (e.message || '网络错误');
+  }
+
+  isParsingLink = false;
+  btn.disabled = false;
+  btn.textContent = '🔍 解析';
+}
+
+function fillInterviewFromLink(data) {
+  var desc = data.description || '';
+  var title = data.title || '';
+  var fullText = [];
+  if (title) fullText.push(title);
+  if (desc) fullText.push(desc);
+  var contentText = fullText.join('\n\n');
+  var combined = fullText.join(' ');
+
+  INTERVIEW_QUESTIONS.forEach(function(q, idx) {
+    var entry = { question: q.question, answer: null, supplement: '' };
+
+    switch (q.id) {
+      case 'type':
+        entry.answer = guessVideoType(combined, data.platform);
+        break;
+      case 'opening':
+        if (desc) {
+          var sentences = desc.split(/[。！？\.!\?]/);
+          var opening = sentences.slice(0, 2).filter(Boolean).join('。');
+          if (opening) entry.supplement = opening;
+        }
+        break;
+      case 'characters':
+        if (/两人|情侣|夫妻|母女|父子|老板.*员工|姐妹|兄弟|两个人/.test(combined)) {
+          entry.answer = '两个人';
+        } else if (/团队|一群人|多人|大家|几个|聚会|群聊/.test(combined)) {
+          entry.answer = '多人';
+        } else if (/猫|狗|宠物|动物|风景|美食|产品/.test(combined) && !/人/.test(combined)) {
+          entry.answer = '没有人物';
+        } else if (/我|一个人|独自|一个人|单身/.test(combined) || !/两人|多人|团队/.test(combined)) {
+          entry.answer = '一个人';
+        }
+        break;
+      case 'content':
+        if (contentText) entry.answer = contentText;
+        break;
+    }
+
+    if (entry.answer || entry.supplement) {
+      interviewAnswers[idx] = entry;
+    }
+  });
+
+  renderInterview();
+}
+
+function guessVideoType(text, platform) {
+  var t = text.toLowerCase();
+  if (/产品|卖货|购买|链接|优惠|折扣|下单|推荐|种草/.test(t)) return '带货';
+  if (/剧情|故事|反转|结局|万万没想到|演技/.test(t)) return '剧情';
+  if (/教程|技巧|方法|学会|教你|干货|知识|科普/.test(t)) return '知识';
+  if (/搞笑|笑死|整蛊|恶搞/.test(t)) return '搞笑';
+  if (/励志|努力|奋斗|成功|改变/.test(t)) return '励志';
+  if (/美食|做饭|烹饪|食谱|探店|好吃|生活/.test(t)) return '生活技巧';
+  return '其他';
+}
+
 function renderChoiceCards(grid, options, prevAnswer, key) {
   var prevVal = prevAnswer && prevAnswer.answer ? prevAnswer.answer[key] || prevAnswer.answer : '';
   var html = '';
@@ -1422,7 +1550,7 @@ function renderShotsPage() {
   html += '<button class="sb-action-btn" onclick="replaceAllScenes()">🏠 换场景</button>';
   html += '<button class="sb-action-btn" onclick="replaceKeyProps()">📦 换道具</button>';
   html += '<button class="sb-action-btn" onclick="pickDialect()">🗣 换方言</button>';
-  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 提取提示词</button>';
+  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 即梦提示词</button>';
   html += '<button class="sb-action-btn primary" onclick="generateShots()">🎬 重新生成</button>';
   html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">···</button>';
   html += '</div>';
@@ -2279,24 +2407,158 @@ function resetToInterview() {
 // ============================================================
 // EXPORT
 // ============================================================
+function buildShotProse(shot) {
+  var parts = [];
+
+  // 景别 + 光影
+  var visual = [];
+  if (shot.shotType) visual.push(shot.shotType);
+  var light = shot.lighting || {};
+  if (light.type) visual.push(light.type + (light.direction ? '从' + light.direction + '打入' : ''));
+  if (visual.length) parts.push(visual.join('，'));
+
+  // 主体 + 动作
+  var subjDesc = (shot.subjects || []).map(function(s) {
+    var seg = s.characterName || '';
+    if (s.additionalDesc) seg += seg ? '（' + s.additionalDesc + '）' : s.additionalDesc;
+    return seg;
+  }).filter(Boolean).join('、');
+  if (subjDesc) {
+    var body = subjDesc;
+    if (shot.action) body += '，' + shot.action;
+    parts.push(body);
+  } else if (shot.action) {
+    parts.push(shot.action);
+  }
+
+  // 场景
+  var sc = shot.scene || {};
+  var sceneParts = [];
+  if (sc.environment) sceneParts.push(sc.environment);
+  if (sc.atmosphere) sceneParts.push('氛围' + sc.atmosphere);
+  if (sceneParts.length) parts.push(sceneParts.join('，'));
+
+  // 运镜
+  var cam = shot.camera || {};
+  var camParts = [];
+  if (cam.movement) camParts.push(cam.movement);
+  if (cam.focalLength) camParts.push(cam.focalLength);
+  if (cam.angle && cam.angle !== '平视') camParts.push(cam.angle + '视角');
+  if (camParts.length) parts.push(camParts.join('，'));
+
+  // 风格
+  var st = shot.style || {};
+  if (st.visualStyle) parts.push(st.visualStyle + '风格');
+
+  // 情绪
+  if (shot.emotionBeat) parts.push('情绪节奏：' + shot.emotionBeat);
+
+  return parts.join('。\n') + '。';
+}
+
 function exportStoryboardPrompts() {
   var sb = currentStoryboard.storyboard || currentStoryboard;
   var shots = sb.shots || [];
-  var out = '标题：' + (sb.title || '') + '\n\n';
-  shots.forEach(function(shot, i) {
-    out += '--- 第' + (i + 1) + '镜 · ' + (shot.duration || '') + ' · ' + (shot.shotType || '') + ' ---\n';
-    out += '主体：' + (shot.subjects || []).map(function(s) { return (s.characterName || '') + ' (' + (s.additionalDesc || '') + ')'; }).join('; ') + '\n';
-    out += '动作：' + (shot.action || '') + '\n';
-    out += '场景：' + ((shot.scene || {}).environment || '') + ' · ' + ((shot.scene || {}).atmosphere || '') + '\n';
-    out += '光影：' + ((shot.lighting || {}).type || '') + ' ' + ((shot.lighting || {}).direction || '') + '\n';
-    out += '运镜：' + ((shot.camera || {}).movement || '') + '\n';
-    out += '风格：' + ((shot.style || {}).visualStyle || '') + '\n';
-    out += '画质：' + ((shot.quality || {}).resolution || '') + '\n';
-    if (shot.dialogue) out += '台词：' + shot.dialogue + '\n';
-    out += '\n';
+  if (!shots.length) { alert('没有分镜数据'); return; }
+
+  // Pick ratio & fps
+  var ratio = prompt('视频比例？\n9:16 竖屏 / 16:9 横屏 / 1:1 方形', '9:16');
+  if (!ratio) return;
+  var fps = prompt('帧率？\n24fps（电影感）/ 30fps（流畅）/ 60fps（高帧率）', '24');
+  if (!fps) return;
+
+  // Calculate total duration
+  var totalSec = 0;
+  shots.forEach(function(s) {
+    var m = (s.duration || '').match(/(\d+)\s*[–\-~至到]\s*(\d+)\s*s?/i);
+    if (!m) m = (s.duration || '').match(/(\d+)\s*-\s*(\d+)\s*s?/i);
+    if (m) totalSec = Math.max(totalSec, parseInt(m[2]) || 0);
+    else { var n = parseInt(s.duration); if (n) totalSec += n; }
   });
+  if (!totalSec) totalSec = shots.length * 5;
+  var totalDur = totalSec + '秒';
+
+  // Collect style hints from shots
+  var styles = [];
+  shots.forEach(function(s) {
+    var st = (s.style || {}).visualStyle;
+    if (st && styles.indexOf(st) === -1) styles.push(st);
+  });
+
+  // Build output
+  var out = '## 🎬 ' + (sb.title || '未命名') + '\n\n';
+  out += '**时长**：' + totalDur + '  **比例**：' + ratio + '  **帧率**：' + fps + '\n';
+  if (styles.length) out += '**风格**：' + styles.join(' · ') + '\n';
+  out += '\n---\n\n';
+
+  // Determine if we need multi-segment (>15s)
+  var maxSingleShot = 15;
+  var needSegments = totalSec > maxSingleShot;
+
+  if (needSegments) {
+    // Multi-segment strategy
+    var segments = [];
+    var segStart = 0;
+    var segShots = [];
+    var segDur = 0;
+    shots.forEach(function(shot, i) {
+      var dur = 5;
+      var m = (shot.duration || '').match(/(\d+)\s*[–\-~至到]\s*(\d+)/);
+      if (!m) m = (shot.duration || '').match(/(\d+)\s*-\s*(\d+)/);
+      if (m) dur = parseInt(m[2]) - parseInt(m[1]);
+      else { var n = parseInt(shot.duration); if (n) dur = n; }
+      if (segDur + dur > maxSingleShot && segShots.length > 0) {
+        segments.push({ shots: segShots, start: segStart, end: segStart + segDur });
+        segStart = segStart + segDur;
+        segShots = [];
+        segDur = 0;
+      }
+      segShots.push(shot);
+      segDur += dur;
+    });
+    if (segShots.length) segments.push({ shots: segShots, start: segStart, end: segStart + segDur });
+
+    out += '**总段数**：' + segments.length + '段（每段在即梦单独生成，用「视频延长」拼接）\n\n';
+
+    segments.forEach(function(seg, si) {
+      var segLabel = seg.start + '-' + seg.end + '秒';
+      out += '### 第' + (si + 1) + '段（' + segLabel + '）\n\n';
+      out += '**生成时长**：' + (seg.end - seg.start) + '秒\n\n';
+
+      var segOffset = seg.start;
+      seg.shots.forEach(function(shot) {
+        var timeLabel = '';
+        var m2 = (shot.duration || '').match(/(\d+)\s*[–\-~至到]\s*(\d+)/);
+        if (!m2) m2 = (shot.duration || '').match(/(\d+)\s*-\s*(\d+)/);
+        if (m2) {
+          timeLabel = (parseInt(m2[1]) - segOffset) + '-' + (parseInt(m2[2]) - segOffset) + '秒';
+        }
+        out += (timeLabel || shot.duration || '') + '：\n';
+        out += buildShotProse(shot) + '\n';
+        if (shot.dialogue) out += '台词："' + shot.dialogue + '"\n';
+        out += '\n';
+      });
+
+      if (si < segments.length - 1) {
+        var lastShot = seg.shots[seg.shots.length - 1];
+        out += '**衔接点**：本段结尾——' + ((lastShot.scene || {}).environment || '') + '，' + (lastShot.shotType || '') + '，' + ((lastShot.subjects || []).map(function(s) { return s.characterName; }).filter(Boolean).join('、') || '画面') + '\n\n';
+      }
+    });
+  } else {
+    // Single segment (≤15s)
+    shots.forEach(function(shot, i) {
+      out += (shot.duration || '') + '：\n';
+      out += buildShotProse(shot) + '\n';
+      if (shot.dialogue) out += '台词："' + shot.dialogue + '"\n';
+      out += '\n';
+    });
+  }
+
+  out += '---\n\n';
+  out += '禁止：文字、字幕、LOGO、水印';
+
   copyToClipboard(out).then(function() {
-    alert('已复制即梦提示词到剪贴板');
+    alert('已复制即梦提示词到剪贴板（' + totalDur + '，' + ratio + '，' + fps + '）');
   });
 }
 

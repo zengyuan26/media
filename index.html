@@ -33,6 +33,13 @@
     <div class="sb-interview" id="sbInterview">
       <div class="sb-interview-inner">
 
+        <!-- 链接解析入口 -->
+        <div class="sb-link-parse" id="sbLinkParse">
+          <input class="sb-link-input" id="sbLinkInput" type="url" placeholder="粘贴抖音/小红书/B站/YouTube视频链接，自动提取文案…" autocomplete="off" onkeydown="if(event.key==='Enter')parseVideoLink()">
+          <button class="sb-link-btn" id="btnParseLink" onclick="parseVideoLink()">🔍 解析</button>
+        </div>
+        <div class="sb-link-status" id="sbLinkStatus" style="display:none"></div>
+
         <!-- 进度点 -->
         <div class="sb-progress-dots" id="sbProgressDots"></div>
 
