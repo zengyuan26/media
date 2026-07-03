@@ -108,6 +108,13 @@ var interviewAnswers = [];  // [{question, answer}, ...]
 // Storyboard state
 var currentStoryboard = null;  // the full storyboard JSON
 
+// Topic / Create page state
+var topicBizData = null;       // { biz, analysis, calendar, savedAt }
+var currentTopicFilter = 'all'; // 'all' | purpose label
+var selectedTopic = null;      // currently selected topic for content generation
+var topicContentText = '';     // generated content text
+var pendingRecordSource = 'link'; // 'link' | 'topic' — set before generateStoryboard()
+
 // ============================================================
 // PERSISTENCE
 // ============================================================
@@ -196,7 +203,8 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById(tabId).classList.add('active');
   document.querySelector('.tab-item[data-tab="' + tabId + '"]').classList.add('active');
-  if (tabId === 'tabMe') renderRecords();
+  if (tabId === 'tabMe') { recordsPage = 0; renderRecords(0); }
+  if (tabId === 'tabCreate') initCreatePage();
 }
 
 // ============================================================
@@ -1021,7 +1029,7 @@ function saveRecords() {
   try { localStorage.setItem('zimeiti-v3-records', JSON.stringify(generationRecords)); } catch(e) {}
 }
 
-function createRecord(answers) {
+function createRecord(answers, source) {
   var title = '';
   for (var i = 0; i < answers.length; i++) {
     if (answers[i] && answers[i].answer) { title = answers[i].answer.slice(0, 40); break; }
@@ -1032,7 +1040,8 @@ function createRecord(answers) {
     interviewAnswers: JSON.parse(JSON.stringify(answers)),
     status: 'generating',
     createdAt: new Date().toISOString(),
-    storyboard: null
+    storyboard: null,
+    source: source || 'link'
   };
   generationRecords.unshift(record);
   if (generationRecords.length > 20) generationRecords = generationRecords.slice(0, 20);
@@ -1047,26 +1056,53 @@ function updateRecord(id, updates) {
   saveRecords();
 }
 
-function renderRecords() {
+var recordsPage = 0;
+var RECORDS_PER_PAGE = 5;
+
+function renderRecords(page) {
   var container = document.getElementById('sbRecordList');
   if (!container) return;
   if (!generationRecords.length) {
     container.innerHTML = '<div style="font-size:.76rem;color:#a09888;text-align:center;padding:12px 0">暂无记录</div>';
     return;
   }
+
+  if (typeof page === 'number') recordsPage = page;
+  else if (recordsPage === undefined) recordsPage = 0;
+
+  var totalPages = Math.ceil(generationRecords.length / RECORDS_PER_PAGE);
+  if (recordsPage >= totalPages) recordsPage = totalPages - 1;
+  if (recordsPage < 0) recordsPage = 0;
+
+  var start = recordsPage * RECORDS_PER_PAGE;
+  var pageRecords = generationRecords.slice(start, start + RECORDS_PER_PAGE);
+
   var html = '';
-  generationRecords.forEach(function(r) {
+  pageRecords.forEach(function(r) {
     var icon = r.status === 'completed' ? '✅' : '⏳';
     var statusText = r.status === 'completed' ? '已完成' : r.status === 'failed' ? '失败' : '进行中';
     var date = new Date(r.createdAt);
     var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+    var sourceLabel = r.source === 'topic' ? '💡 自主创作' : '🔗 链接分析';
+    var sourceClass = r.source === 'topic' ? 'topic' : 'link';
     html += '<div class="mgr-item" onclick="resumeRecord(\'' + r.id + '\')" style="cursor:pointer">';
     html += '<div class="mgr-item-avatar">' + icon + '</div>';
     html += '<div class="mgr-item-info"><div class="mgr-item-name">' + escapeHtml(r.title) + '</div>';
     html += '<div class="mgr-item-detail">' + dateStr + ' · ' + statusText + '</div></div>';
+    html += '<span class="record-source ' + sourceClass + '">' + sourceLabel + '</span>';
     html += '<div class="mgr-item-actions"><button onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')" style="color:#e57373">删除</button></div>';
     html += '</div>';
   });
+
+  // Pagination
+  if (totalPages > 1) {
+    html += '<div class="records-pagination">';
+    html += '<button ' + (recordsPage === 0 ? 'disabled' : '') + ' onclick="renderRecords(' + (recordsPage - 1) + ')">上一页</button>';
+    html += '<span>第 ' + (recordsPage + 1) + '/' + totalPages + ' 页</span>';
+    html += '<button ' + (recordsPage >= totalPages - 1 ? 'disabled' : '') + ' onclick="renderRecords(' + (recordsPage + 1) + ')">下一页</button>';
+    html += '</div>';
+  }
+
   container.innerHTML = html;
 }
 
@@ -1237,7 +1273,14 @@ function buildDirectorSystemPrompt() {
     '      "emotionalTone": "情绪基调：整体色彩倾向/节奏感/语气风格，如 暖黄色调·快节奏·压迫感旁白（必填）",\n' +
     '      "visualReference": "视觉参考：像哪个账号/电影/摄影师的风格，如 日系生活美学·滨田英明风·低饱和暖调（必填）"\n' +
     '    },\n' +
-    '    "keyFrames": ["前3秒抓眼球的具体画面", "中间转折/反差的画面", "结尾情绪落点的画面"]\n' +
+    '    "keyFrames": ["前3秒抓眼球的具体画面", "中间转折/反差的画面", "结尾情绪落点的画面"],\n' +
+    '    "preShotHints": {\n' +
+    '      "suggestedCharacters": "建议角色数量和人设（如：1名主角·教导者风格·30岁男性 休闲装）",\n' +
+    '      "suggestedScene": "建议场景（如：居家厨房·温馨氛围）",\n' +
+    '      "suggestedProps": "建议关键道具（如：手机、灌肠模具）",\n' +
+    '      "suggestedDuration": "建议时长 15s/30s/45s/60s（如：30s）",\n' +
+    '      "suggestedRatio": "建议比例 9:16/16:9/1:1（如：9:16）"\n' +
+    '    }\n' +
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
@@ -1273,7 +1316,7 @@ function buildCharAssignHint() {
 }
 
 // Phase 2: shots based on confirmed director analysis
-function buildShotsSystemPrompt() {
+function buildShotsSystemPrompt(batchInfo) {
   var da = currentDirectorAnalysis || {};
   var db = da.directorBrief || {};
   var charList = characterProfiles.map(function(c) {
@@ -1283,7 +1326,7 @@ function buildShotsSystemPrompt() {
     return '- ' + s.id + ': ' + s.name + ' (' + [s.environment, s.atmosphere, s.lighting].filter(Boolean).join(' | ') + ')';
   }).join('\n');
 
-  return '你是短视频导演助手。根据已确认的导演分析，生成分镜脚本 JSON。\n\n' +
+  var prompt = '你是短视频导演助手。根据已确认的导演分析，生成分镜脚本 JSON。\n\n' +
     '## 已确认的导演分析\n' +
     '标题：' + (da.title || '') + '\n' +
     '总时长：' + (da.totalDuration || '') + '\n' +
@@ -1291,11 +1334,26 @@ function buildShotsSystemPrompt() {
     '钩子设计：' + (db.hookDesign || '') + '\n' +
     '情绪基调：' + (db.emotionalTone || '') + '\n' +
     '视觉参考：' + (db.visualReference || '') + '\n' +
-    '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n' +
-    (currentPreScene ? '主场景（所有镜头默认使用）：' + currentPreScene + '\n' : '') +
-    (currentPreCharIds.length > 0 ? '默认出场角色ID列表（必须全部出场）：' + currentPreCharIds.join(',') + '\n' : '') +
-    (keyProps ? '关键道具（必须在至少2个镜头中作为动作核心出现，不可仅作为背景）：' + keyProps + '\n' : '') +
-    '视频比例：' + currentPreRatio + '  帧率：' + currentPreFps + 'fps\n' +
+    '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n';
+
+  // Batch context
+  if (batchInfo) {
+    prompt += '\n## 分批生成信息\n' +
+      '- 当前批次：第 ' + (batchInfo.batchIndex + 1) + '/' + batchInfo.totalBatches + ' 批\n' +
+      '- 本批时间范围：' + batchInfo.startTime + 's - ' + batchInfo.endTime + 's（共约' + (batchInfo.endTime - batchInfo.startTime) + '秒）\n' +
+      '- 本批最多 6 个镜头，每镜 2-5 秒，自由分配\n';
+    if (batchInfo.prevBatchSummary) {
+      prompt += '\n## 上一批摘要（仅供连续性参考，严禁重复）\n' +
+        batchInfo.prevBatchSummary + '\n' +
+        '⚠️ 以上摘要描述的是已完成的内容。你必须生成全新的镜头，禁止出现摘要中提到的任何台词、动作或画面。故事要向前推进，不要原地踏步。\n';
+    }
+  }
+
+  prompt +=
+    (currentPreScene ? '\n主场景（所有镜头默认使用）：' + currentPreScene : '') +
+    (currentPreCharIds.length > 0 ? '\n默认出场角色ID列表（必须全部出场）：' + currentPreCharIds.join(',') : '') +
+    (keyProps ? '\n关键道具（必须在至少2个镜头中作为动作核心出现，不可仅作为背景）：' + keyProps : '') +
+    '\n视频比例：' + currentPreRatio + '  帧率：' + currentPreFps + 'fps\n' +
     '台词语言：' + currentDialect + '。所有 dialogue 字段必须用' + currentDialect + '书写，严禁使用其他语言\n' +
     buildCharAssignHint() + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
@@ -1327,9 +1385,16 @@ function buildShotsSystemPrompt() {
     '    }\n' +
     '  ]\n' +
     '}\n\n' +
-    '## 硬性要求\n' +
-    '- 所有镜头的 duration 总和必须等于视频总时长：' + currentPreDuration + 's。快速口播类视频每镜1-3秒，慢节奏每镜3-5秒。不得因时长限制而删减内容\n' +
-    '- 镜头数量不作硬性限制！根据视频内容合理决定，分析中提到几个关键信息点/对话/情节转折，就生成至少几个镜头，确保所有内容都被覆盖。对话数=镜头数\n' +
+    '## 硬性要求\n';
+
+  if (batchInfo) {
+    prompt += '- 本批时间范围：' + batchInfo.startTime + 's - ' + batchInfo.endTime + 's。每镜 2-5 秒，本批最多 6 个镜头\n';
+  } else {
+    prompt += '- 总时长：' + currentPreDuration + 's。每镜 2-5 秒，自动计算镜头数。\n' +
+      '- 镜头数量：最多 6 个镜头。只保留最关键的情节转折点和核心信息，合并重复场景的动作\n';
+  }
+
+  prompt +=
     (keyProps ? '- 关键道具 ' + keyProps + ' 必须在至少2个镜头的 action 中作为核心出现，keyProps 字段明确标注，写清楚道具如何被手持/展示/互动\n' : '') +
     '- 所有 dialogue 台词必须用' + currentDialect + '书写，包括语气词也要符合' + currentDialect + '的表达习惯\n' +
     '- 每个镜头的 action 必须具体到身体动作和物体变化，不要写"进行展示"这种空话\n' +
@@ -1340,6 +1405,8 @@ function buildShotsSystemPrompt() {
     '## 可用资源\n' +
     '角色库：\n' + (charList || '（空）') + '\n' +
     '场景库：\n' + (sceneList || '（空）') + '\n';
+
+  return prompt;
 }
 
 // Phase 1 normalize
@@ -1356,10 +1423,18 @@ function normalizeDirectorAnalysis(data) {
     // Try to derive from coreIdea
     da.keyFrames = [db.hookDesign || db.coreIdea || '开场画面', db.coreIdea || '核心画面', '结尾画面'];
   }
+  var hints = da.preShotHints = da.preShotHints || {};
+  hints.suggestedCharacters = hints.suggestedCharacters || '1名主角·自然风格';
+  hints.suggestedScene = hints.suggestedScene || '居家·温馨';
+  hints.suggestedProps = hints.suggestedProps || '';
+  hints.suggestedDuration = hints.suggestedDuration || '30s';
+  hints.suggestedRatio = hints.suggestedRatio || '9:16';
 }
 
-// Phase 2: generate shots after director confirmed
+// Phase 2: generate first batch of shots
 async function generateShots() {
+  inPreShotSettings = false;
+  preShotHintsApplied = false;
   console.log('[generateShots] CALLED, apiKey:', settings.apiKey ? 'yes' : 'no');
   if (!settings.apiKey) {
     alert('请先在「我的」→ 设置 中配置 API Key');
@@ -1369,36 +1444,27 @@ async function generateShots() {
   isGenerating = true;
   updateStopButton();
 
-  // Switch to loading page immediately
+  var totalDuration = parseInt(currentPreDuration) || 30;
+  var numBatches = Math.ceil(totalDuration / 15);
+  var batchSec = 15;
+
+  // Initialize batches
+  shotBatches = [];
+  for (var b = 0; b < numBatches; b++) {
+    var startT = b * batchSec;
+    var endT = Math.min((b + 1) * batchSec, totalDuration);
+    shotBatches.push({ shots: [], startTime: startT, endTime: endT, generated: false });
+  }
+  currentBatchTab = 0;
+
   var board = document.getElementById('sbBoard');
-  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成分镜脚本…</div><div style="font-size:.72rem">基于导演分析逐镜拆解</div></div>';
+  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成第 1/' + numBatches + ' 批分镜…</div><div style="font-size:.72rem">0s - ' + shotBatches[0].endTime + 's</div></div>';
 
   try {
-    console.log('[generateShots] building prompts...');
-    var systemPrompt = buildShotsSystemPrompt();
-    console.log('[generateShots] systemPrompt length:', systemPrompt.length);
-    var userPrompt = '请根据以上导演分析生成分镜脚本。';
-    console.log('[generateShots] calling API...');
-    var streamText = await doStoryboardApiCall(systemPrompt, userPrompt);
-    console.log('[generateShots] API returned, length:', streamText.length);
-    console.log('[generateShots] raw text:', streamText.slice(0, 300));
-
-    var jsonText = collectStreamJson(streamText);
-    if (!jsonText) {
-      console.log('[generateShots] PARSE FAILED, raw:', streamText);
-      throw new Error('未能解析分镜JSON（查看Console看原始返回）');
-    }
-    console.log('[generateShots] parsed jsonText:', jsonText.slice(0, 200));
-
-    var data = JSON.parse(jsonText);
-    var shots = Array.isArray(data) ? data : (data.shots || []);
-    if (!Array.isArray(shots) || shots.length === 0) throw new Error('分镜数据为空，返回了' + JSON.stringify(data).slice(0, 100));
-
-    currentDirectorAnalysis.shots = shots;
-    normalizeShots(currentDirectorAnalysis);
+    await generateOneBatch(0);
+    currentDirectorAnalysis.shots = mergeBatchShots();
     currentStoryboard = { storyboard: currentDirectorAnalysis };
     updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
-
     renderShotsPage();
   } catch(e) {
     console.error('[generateShots] error:', e.message || e);
@@ -1416,8 +1482,112 @@ async function generateShots() {
   updateStopButton();
 }
 
-function normalizeShots(da) {
-  (da.shots || []).forEach(function(shot, i) {
+async function generateOneBatch(batchIndex) {
+  console.log('[generateOneBatch] batch', batchIndex);
+  var batch = shotBatches[batchIndex];
+  var prevSummary = '';
+  if (batchIndex > 0) {
+    var prevBatch = shotBatches[batchIndex - 1];
+    if (prevBatch.generated) prevSummary = buildBatchSummary(prevBatch);
+  }
+
+  var batchInfo = {
+    batchIndex: batchIndex,
+    totalBatches: shotBatches.length,
+    startTime: batch.startTime,
+    endTime: batch.endTime,
+    prevBatchSummary: prevSummary
+  };
+
+  var systemPrompt = buildShotsSystemPrompt(batchInfo);
+  console.log('[generateOneBatch] systemPrompt length:', systemPrompt.length);
+  var userPrompt = '请生成第 ' + (batchIndex + 1) + ' 批分镜脚本（' + batch.startTime + 's-' + batch.endTime + 's）。';
+  var streamText = await doStoryboardApiCall(systemPrompt, userPrompt, { maxTokens: 8192, timeout: 120000, noStream: true });
+  console.log('[generateOneBatch] API returned, length:', streamText.length);
+
+  var jsonText = collectStreamJson(streamText);
+  if (!jsonText) {
+    console.log('[generateOneBatch] PARSE FAILED, raw:', streamText);
+    throw new Error('第' + (batchIndex + 1) + '批分镜JSON解析失败');
+  }
+
+  var data = JSON.parse(jsonText);
+  var shots = Array.isArray(data) ? data : (data.shots || []);
+  if (!Array.isArray(shots) || shots.length === 0) throw new Error('第' + (batchIndex + 1) + '批分镜数据为空');
+
+  // Assign global shot IDs
+  var startId = 0;
+  for (var i = 0; i < batchIndex; i++) {
+    startId += shotBatches[i].shots.length;
+  }
+  shots.forEach(function(shot, i) {
+    shot.id = 'shot_' + (startId + i + 1);
+  });
+  normalizeShotsArray(shots, batchIndex > 0);
+
+  batch.shots = shots;
+  batch.generated = true;
+  console.log('[generateOneBatch] batch', batchIndex, 'done:', shots.length, 'shots');
+}
+
+async function generateNextBatch(batchIndex) {
+  console.log('[generateNextBatch] batch', batchIndex);
+  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+
+  // Immediately show generating state on the button
+  var btn = document.querySelector('.sb-actions-bar .primary');
+  if (btn) { btn.textContent = '⏳ 生成中…'; btn.disabled = true; }
+
+  isGenerating = true;
+  updateStopButton();
+
+  var board = document.getElementById('sbBoard');
+  try {
+    await generateOneBatch(batchIndex);
+    currentDirectorAnalysis.shots = mergeBatchShots();
+    currentStoryboard = { storyboard: currentDirectorAnalysis };
+    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
+    currentBatchTab = batchIndex;
+    renderShotsPage();
+  } catch(e) {
+    console.error('[generateNextBatch] error:', e.message || e);
+    alert('第' + (batchIndex + 1) + '批生成失败：' + (e.message || '未知错误'));
+    renderShotsPage();
+  }
+
+  isGenerating = false;
+  updateStopButton();
+}
+
+function buildBatchSummary(batch) {
+  var shots = batch.shots || [];
+  if (!shots.length) return '';
+  var last = shots[shots.length - 1];
+
+  var subjects = (last.subjects || []).map(function(s) { return s.characterName || ''; }).filter(Boolean);
+  var lastEmotion = last.emotionBeat || '';
+  var sceneName = (last.scene || {}).sceneName || (last.scene || {}).environment || '';
+
+  var summary = '';
+  if (subjects.length) summary += '- 当前画面中的人物：' + subjects.join('、') + '\n';
+  if (sceneName) summary += '- 当前场景：' + sceneName + '\n';
+  if (lastEmotion) summary += '- 当前情绪位置：' + lastEmotion + '\n';
+  summary += '- 上一批时间范围：' + batch.startTime + 's - ' + batch.endTime + 's（已完成，不要重复）\n';
+  summary += '- 请从 ' + batch.endTime + 's 开始生成全新的下一段内容\n';
+  summary += '- 重要：以上是已完成的镜头，禁止复读上述台词、动作或画面。请延续故事发展，推进到下一个情节点\n';
+  return summary;
+}
+
+function mergeBatchShots() {
+  var all = [];
+  shotBatches.forEach(function(b) {
+    if (b.generated && b.shots.length) all = all.concat(b.shots);
+  });
+  return all;
+}
+
+function normalizeShotsArray(shots, isContinuation) {
+  shots.forEach(function(shot, i) {
     shot.id = shot.id || ('shot_' + (i + 1));
     shot.duration = shot.duration || '';
     shot.shotType = shot.shotType || '中景';
@@ -1430,8 +1600,10 @@ function normalizeShots(da) {
     shot.quality = shot.quality || { resolution: '4K', fps: 60 };
     shot.dialogue = shot.dialogue || '';
     shot.emotionBeat = shot.emotionBeat || '';
-    if (i > 0 && !shot.continuity) {
-      shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
+    if (i > 0 || isContinuation) {
+      if (!shot.continuity) {
+        shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
+      }
     }
   });
 }
@@ -1456,6 +1628,7 @@ function extractCharNamesFromDA(da) {
 // ============================================================
 // STORYBOARD — RENDER (Phase 1: Director Review)
 // ============================================================
+// Page 1: Director analysis only
 function renderDirectorReview() {
   var board = document.getElementById('sbBoard');
   var da = currentDirectorAnalysis;
@@ -1466,17 +1639,84 @@ function renderDirectorReview() {
   var html = '';
 
   // Title + duration
-  html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1.15rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
-  // Pre-shot selections: character, scene, props, dialect
+  // Director brief card
+  html += '<div class="sb-section">';
+  html += '<div class="sb-section-header"><span>📋 导演分析</span></div>';
+  html += '<div class="sb-section-body">';
+  html += '<div class="sb-director-brief">';
+
+  html += '<div class="da-field"><span class="da-label">💡 核心创意</span>';
+  html += '<p>' + escapeHtml(db.coreIdea || '') + '</p></div>';
+
+  html += '<div class="da-field"><span class="da-label">🪝 钩子设计</span>';
+  html += '<p>' + escapeHtml(db.hookDesign || '') + '</p></div>';
+
+  html += '<div class="da-field"><span class="da-label">🎨 情绪基调</span>';
+  html += '<p>' + escapeHtml(db.emotionalTone || '') + '</p></div>';
+
+  html += '<div class="da-field"><span class="da-label">📸 视觉参考</span>';
+  html += '<p>' + escapeHtml(db.visualReference || '') + '</p></div>';
+
+  html += '<div class="da-field"><span class="da-label">🖼 关键画面</span>';
+  html += '<ol style="margin:4px 0 0 16px;font-size:.82rem;line-height:1.7">';
+  kf.forEach(function(f) {
+    html += '<li>' + escapeHtml(f) + '</li>';
+  });
+  html += '</ol></div>';
+
+  html += '</div></div></div>';
+
+  // Pre-shot hints
+  var hints = da.preShotHints || {};
+  html += '<div class="sb-section" style="margin-top:10px">';
+  html += '<div class="sb-section-header"><span>💡 分镜设置建议</span></div>';
+  html += '<div class="sb-section-body" style="font-size:.78rem;line-height:1.8;color:#6b6560">';
+  html += '<div>👤 角色：' + escapeHtml(hints.suggestedCharacters || '1名主角') + '</div>';
+  html += '<div>🏠 场景：' + escapeHtml(hints.suggestedScene || '居家') + '</div>';
+  html += '<div>📦 道具：' + escapeHtml(hints.suggestedProps || '无特殊道具') + '</div>';
+  html += '<div>⏱ 时长建议：' + escapeHtml(hints.suggestedDuration || '30s') + ' &nbsp;|&nbsp; 📐 比例建议：' + escapeHtml(hints.suggestedRatio || '9:16') + '</div>';
+  html += '</div></div>';
+
+  // Confirm button → go to pre-shot settings
+  html += '<div style="text-align:center;padding:12px 0">';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">🔄 重新来</button>';
+  html += '<button class="dialog-btn primary" onclick="renderPreShotSettings()" style="font-size:.88rem;padding:10px 32px">确认，设置分镜参数 →</button>';
+  html += '</div>';
+
+  board.innerHTML = html;
+  board.style.display = 'flex';
+  inPreShotSettings = false;
+}
+
+// Page 2: Pre-shot settings (separate page)
+function renderPreShotSettings() {
+  inPreShotSettings = true;
+  var board = document.getElementById('sbBoard');
+  if (!board) return;
+
+  // Apply director hints as defaults on first entry only
+  if (!preShotHintsApplied) {
+    preShotHintsApplied = true;
+    var hints = (currentDirectorAnalysis || {}).preShotHints || {};
+    if (!currentPreScene && hints.suggestedScene) currentPreScene = hints.suggestedScene;
+    if (!keyProps && hints.suggestedProps) keyProps = hints.suggestedProps;
+    if (hints.suggestedDuration) currentPreDuration = hints.suggestedDuration;
+    if (hints.suggestedRatio) currentPreRatio = hints.suggestedRatio;
+  }
+
   var charNames = currentPreCharIds.map(function(id) {
     var ch = findCharById(id);
     return ch ? ch.name : '';
   }).filter(Boolean);
   var allSet = currentPreCharIds.length > 0 && currentPreScene && keyProps;
 
+  var html = '';
+
+  html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1rem;font-weight:700">🎯 分镜前设定</span><span style="font-size:.68rem;color:#8a8278;margin-left:6px">全部必选</span></div>';
+
   html += '<div class="sb-pre-shots">';
-  html += '<div class="sb-pre-shots-title">🎯 生成分镜前的设定（全部必选）</div>';
 
   // Character row
   html += '<div class="sb-pre-row" onclick="pickPreChar()"><span class="sb-pre-label">👤 角色</span>';
@@ -1526,45 +1766,24 @@ function renderDirectorReview() {
 
   // Confirm buttons
   html += '<div style="text-align:center;padding:4px 0 12px">';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">🔄 重新来</button>';
+  html += '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">← 返回导演分析</button>';
   html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.88rem;padding:10px 32px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 ✨</button>';
   if (!allSet) html += '<div style="font-size:.65rem;color:#e57373;margin-top:4px">请先选择角色、场景和道具（上方带虚线的项）</div>';
   html += '</div>';
-
-  // Director brief card
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header"><span>📋 导演分析</span></div>';
-  html += '<div class="sb-section-body">';
-  html += '<div class="sb-director-brief">';
-
-  html += '<div class="da-field"><span class="da-label">💡 核心创意</span>';
-  html += '<p>' + escapeHtml(db.coreIdea || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">🪝 钩子设计</span>';
-  html += '<p>' + escapeHtml(db.hookDesign || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">🎨 情绪基调</span>';
-  html += '<p>' + escapeHtml(db.emotionalTone || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">📸 视觉参考</span>';
-  html += '<p>' + escapeHtml(db.visualReference || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">🖼 关键画面</span>';
-  html += '<ol style="margin:4px 0 0 16px;font-size:.82rem;line-height:1.7">';
-  kf.forEach(function(f) {
-    html += '<li>' + escapeHtml(f) + '</li>';
-  });
-  html += '</ol></div>';
-
-  html += '</div></div></div>';
 
   board.innerHTML = html;
   board.style.display = 'flex';
 }
 
+var inPreShotSettings = false;
+var preShotHintsApplied = false;
+
 function rerenderBoard() {
   if (currentDirectorAnalysis && currentDirectorAnalysis.shots && currentDirectorAnalysis.shots.length > 0) {
+    inPreShotSettings = false;
     renderShotsPage();
+  } else if (inPreShotSettings) {
+    renderPreShotSettings();
   } else {
     renderDirectorReview();
   }
@@ -1573,8 +1792,15 @@ function rerenderBoard() {
 // Shot gallery state
 var galleryIndex = 0;
 
+function getCurrentBatchShots() {
+  if (shotBatches.length > 0 && currentBatchTab < shotBatches.length) {
+    return shotBatches[currentBatchTab].shots || [];
+  }
+  return (currentDirectorAnalysis || {}).shots || [];
+}
+
 function changeGallery(dir) {
-  var shots = (currentDirectorAnalysis || {}).shots || [];
+  var shots = getCurrentBatchShots();
   var newIdx = galleryIndex + dir;
   if (newIdx < 0 || newIdx >= shots.length) return;
   galleryIndex = newIdx;
@@ -1582,7 +1808,7 @@ function changeGallery(dir) {
 }
 
 function goGallery(idx) {
-  var shots = (currentDirectorAnalysis || {}).shots || [];
+  var shots = getCurrentBatchShots();
   if (idx < 0 || idx >= shots.length) return;
   galleryIndex = idx;
   renderGallerySlide();
@@ -1594,13 +1820,11 @@ function renderGallerySlide() {
   var counter = document.getElementById('sbGalleryCounter');
   var prevBtn = document.getElementById('sbGalleryPrev');
   var nextBtn = document.getElementById('sbGalleryNext');
-  var da = currentDirectorAnalysis || {};
-  var shots = da.shots || [];
+  var shots = getCurrentBatchShots();
   if (!container || !shots.length) return;
 
   container.innerHTML = renderOneShotCard(shots[galleryIndex], galleryIndex);
 
-  // Update dots
   if (dots) {
     var dotsHtml = '';
     for (var i = 0; i < shots.length; i++) {
@@ -1609,7 +1833,6 @@ function renderGallerySlide() {
     dots.innerHTML = dotsHtml;
   }
 
-  // Update emotion flow items
   for (var i = 0; i < shots.length; i++) {
     var item = document.getElementById('emotionItem' + i);
     if (item) item.classList.toggle('active', i === galleryIndex);
@@ -1620,53 +1843,76 @@ function renderGallerySlide() {
   if (nextBtn) nextBtn.disabled = galleryIndex >= shots.length - 1;
 }
 
-// Standalone shots page with gallery
+// Standalone shots page with gallery + batch tabs
 function renderShotsPage() {
   var board = document.getElementById('sbBoard');
   var da = currentDirectorAnalysis;
   if (!da || !board) return;
-  var shots = da.shots || [];
+  var batchShots = getCurrentBatchShots();
   galleryIndex = 0;
 
   var html = '';
 
+  // Batch tabs (only if multi-batch)
+  if (shotBatches.length > 1) {
+    html += '<div class="batch-tabs">';
+    shotBatches.forEach(function(b, i) {
+      var label = b.startTime + '-' + b.endTime + 's';
+      var cls = 'batch-tab';
+      if (i === currentBatchTab) cls += ' active';
+      if (b.generated) cls += ' done';
+      else cls += ' pending';
+      html += '<span class="' + cls + '" onclick="switchBatchTab(' + i + ')">';
+      html += b.generated ? '✓ ' : '';
+      html += label + ' (' + (b.shots.length || '待生成') + ')';
+      html += '</span>';
+    });
+    html += '</div>';
+  }
+
   // Header
+  var totalShots = (da.shots || []).length;
   html += '<div class="sb-shots-header">';
   html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 导演分析</button>';
   html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center">🎥 ' + escapeHtml(da.title || '分镜') + '</span>';
-  html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + shots.length + '镜</span>';
+  html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</span>';
   html += '</div>';
 
-  // Emotion flow strip
+  // Current batch label for multi-batch
+  if (shotBatches.length > 1 && batchShots.length > 0) {
+    var cb = shotBatches[currentBatchTab];
+    html += '<div style="text-align:center;font-size:.68rem;color:#5b9a8b;padding:2px 0 4px">第' + (currentBatchTab + 1) + '段 ' + cb.startTime + '-' + cb.endTime + 's</div>';
+  }
+
+  // Emotion flow strip (current batch only)
   html += '<div class="emotion-flow">';
-  shots.forEach(function(shot, i) {
+  batchShots.forEach(function(shot, i) {
     html += '<span class="emotion-flow-item' + (i === 0 ? ' active' : '') + '" onclick="goGallery(' + i + ')" id="emotionItem' + i + '">' + escapeHtml(shot.emotionBeat || '第'+(i+1)+'镜') + '</span>';
-    if (i < shots.length - 1) {
+    if (i < batchShots.length - 1) {
       var trans = (shot.continuity && shot.continuity.transition) ? shot.continuity.transition : '→';
       html += '<span class="emotion-flow-arrow">' + escapeHtml(trans) + '</span>';
     }
   });
   html += '</div>';
 
-  // Gallery navigation
+  // Gallery navigation (current batch only)
   html += '<div class="gallery-nav">';
   html += '<button class="gallery-arrow" id="sbGalleryPrev" onclick="changeGallery(-1)" disabled>◀</button>';
-  html += '<div class="gallery-viewport" id="sbShotCard">' + renderOneShotCard(shots[0], 0) + '</div>';
-  html += '<button class="gallery-arrow" id="sbGalleryNext" onclick="changeGallery(1)" ' + (shots.length < 2 ? 'disabled' : '') + '>▶</button>';
+  html += '<div class="gallery-viewport" id="sbShotCard">' + (batchShots.length > 0 ? renderOneShotCard(batchShots[0], 0) : '<div style="text-align:center;padding:40px;color:#8a8278">本段尚未生成</div>') + '</div>';
+  html += '<button class="gallery-arrow" id="sbGalleryNext" onclick="changeGallery(1)" ' + (batchShots.length < 2 ? 'disabled' : '') + '>▶</button>';
   html += '</div>';
 
-  // Counter + dots
+  // Counter + dots (current batch only)
   html += '<div style="text-align:center;padding:4px 0">';
-  html += '<span id="sbGalleryCounter" style="font-size:.72rem;color:#8a8278">第 1/' + shots.length + ' 镜</span>';
+  html += '<span id="sbGalleryCounter" style="font-size:.72rem;color:#8a8278">' + (batchShots.length > 0 ? '第 1/' + batchShots.length + ' 镜' : '') + '</span>';
   html += '</div>';
   html += '<div class="gallery-dots" id="sbGalleryDots">';
-  for (var i = 0; i < shots.length; i++) {
+  for (var i = 0; i < batchShots.length; i++) {
     html += '<span class="gallery-dot' + (i === 0 ? ' active' : '') + '" onclick="goGallery(' + i + ')"></span>';
   }
   html += '</div>';
 
   // Primary actions
-  // Character swap button (only when 2+ unique chars exist)
   var allChars = getStoryboardChars();
   if (allChars.length >= 2) {
     html += '<button class="sb-action-btn" onclick="swapStoryboardChars()" title="互换两个角色的所有出场">🔄 互换角色</button>';
@@ -1674,12 +1920,65 @@ function renderShotsPage() {
 
   html += '<div class="sb-actions-bar" style="border-top:1px solid #f0ece4;padding-top:10px">';
   html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 即梦提示词</button>';
-  html += '<button class="sb-action-btn primary" onclick="generateShots()">🎬 重新生成</button>';
-  html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">✏️ 镜头修改</button>';
+
+  // Regenerate current batch
+  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()" style="font-size:.68rem">🔄 重生成当前段</button>';
+
+  if (batchShots.length > 0) {
+    html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">✏️ 镜头修改</button>';
+  }
+
+  // Generate next batch button
+  var nextUngenerated = -1;
+  for (var b = 0; b < shotBatches.length; b++) {
+    if (!shotBatches[b].generated) { nextUngenerated = b; break; }
+  }
+  if (nextUngenerated >= 0) {
+    html += '<button class="sb-action-btn primary" onclick="generateNextBatch(' + nextUngenerated + ')" style="font-size:.78rem">▶ 生成下一段 (' + shotBatches[nextUngenerated].startTime + '-' + shotBatches[nextUngenerated].endTime + 's)</button>';
+  } else if (shotBatches.length > 1) {
+    html += '<span style="font-size:.72rem;color:#4a7c59;padding:6px 0">✅ 全部 ' + shotBatches.length + ' 段已生成</span>';
+  }
+
   html += '</div>';
 
   board.innerHTML = html;
   board.style.display = 'flex';
+}
+
+function switchBatchTab(idx) {
+  if (idx < 0 || idx >= shotBatches.length) return;
+  currentBatchTab = idx;
+  galleryIndex = 0;
+  renderShotsPage();
+}
+
+async function regenerateCurrentBatch() {
+  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+  // Fallback for old records without batches: regenerate everything
+  if (shotBatches.length === 0) {
+    generateShots();
+    return;
+  }
+  var bi = currentBatchTab;
+  shotBatches[bi].generated = false;
+  shotBatches[bi].shots = [];
+
+  var board = document.getElementById('sbBoard');
+  board.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🔄</div><div style="font-weight:600">正在重新生成第' + (bi + 1) + '段…</div></div>';
+
+  isGenerating = true;
+  updateStopButton();
+  try {
+    await generateOneBatch(bi);
+    currentDirectorAnalysis.shots = mergeBatchShots();
+    currentStoryboard = { storyboard: currentDirectorAnalysis };
+    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
+  } catch(e) {
+    alert('重新生成失败：' + (e.message || '未知错误'));
+  }
+  isGenerating = false;
+  updateStopButton();
+  renderShotsPage();
 }
 
 function buildStoryboardPrompt() {
@@ -1761,7 +2060,8 @@ async function generateStoryboard() {
   for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
     answersToSave.push(interviewAnswers[i] || { question: INTERVIEW_QUESTIONS[i], answer: '' });
   }
-  var record = createRecord(answersToSave);
+  var record = createRecord(answersToSave, pendingRecordSource);
+  pendingRecordSource = 'link';  // reset
   activeRecordId = record.id;
 
   isGenerating = true;
@@ -1782,6 +2082,7 @@ async function generateStoryboard() {
     var data = JSON.parse(jsonText);
     currentDirectorAnalysis = data.directorAnalysis || data;
     normalizeDirectorAnalysis(currentDirectorAnalysis);
+    preShotHintsApplied = false;
     currentStoryboard = { storyboard: currentDirectorAnalysis };  // partial, shots not yet generated
     renderDirectorReview();
     renderRecords();
@@ -1927,31 +2228,35 @@ function collectStreamJson(text) {
   return null;
 }
 
-async function doStoryboardApiCall(systemPrompt, userPrompt) {
+async function doStoryboardApiCall(systemPrompt, userPrompt, opts) {
   abortController = new AbortController();
   var model = settings.model === 'custom' ? settings.customModel : settings.model;
+  opts = opts || {};
   console.log('[doStoryboardApiCall] endpoint:', settings.endpoint, 'model:', model);
 
-  // 30s timeout
-  var timeoutId = setTimeout(function() { abortController.abort(); }, 30000);
+  // timeout
+  var timeoutMs = opts.timeout || 30000;
+  var timeoutId = setTimeout(function() { abortController.abort(); }, timeoutMs);
 
   var messages = [
     { role: 'system', content: '[System Prompt]\n' + systemPrompt },
     { role: 'user', content: userPrompt }
   ];
 
+  var body = {
+    model: model,
+    messages: messages,
+    stream: !opts.noStream,
+    temperature: 0.7,
+    max_tokens: opts.maxTokens || 4096
+  };
+  if (!opts.noJsonFormat) { body.response_format = { type: 'json_object' }; }
+
   try {
   var resp = await fetch(settings.endpoint + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 4096,
-      response_format: { type: 'json_object' }
-    }),
+    body: JSON.stringify(body),
     signal: abortController.signal
   });
   clearTimeout(timeoutId);
@@ -1963,6 +2268,15 @@ async function doStoryboardApiCall(systemPrompt, userPrompt) {
     if (resp.status === 401) errMsg = 'API Key 无效，请在设置中检查';
     else if (resp.status === 404) errMsg = 'Endpoint 不存在，请检查地址';
     throw new Error(errMsg);
+  }
+
+  // Non-streaming: parse single response
+  if (opts.noStream) {
+    clearTimeout(timeoutId);
+    var json = await resp.json();
+    var content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+    console.log('[doStoryboardApiCall] non-stream response, length:', content ? content.length : 0);
+    return content || '';
   }
 
   var fullText = '';
@@ -2033,7 +2347,7 @@ function renderOneShotCard(shot, index) {
   html += '<span class="shot-info-icon">👤</span>';
   var charNames = subjects.map(function(s, i) {
     var name = s.characterName || '未指定';
-    return '<span class="shot-char-name" onclick="pickCharForSubject(' + index + ',' + i + ')" title="点击切换角色">' + escapeHtml(name) + '</span>';
+    return '<span class="shot-char-name" onclick="pickCharForSubject(\'' + escapeHtml(shot.id) + '\',' + i + ')" title="点击切换角色">' + escapeHtml(name) + '</span>';
   });
   html += '<span class="shot-info-text">' + charNames.join(' → ') + '</span>';
   html += '</div>';
@@ -2083,12 +2397,20 @@ function renderContinuityBar(continuity) {
 var editingShotIndex = -1;
 
 function openShotEditor(index) {
-  editingShotIndex = index;
   var sb = currentStoryboard.storyboard || currentStoryboard;
-  var shot = sb.shots[index];
+  var batchShots = getCurrentBatchShots();
+  var shot = batchShots[index];
   if (!shot) return;
+  // Find global index in merged shots
+  var allShots = sb.shots || [];
+  var globalIndex = -1;
+  for (var g = 0; g < allShots.length; g++) {
+    if (allShots[g].id === shot.id) { globalIndex = g; break; }
+  }
+  if (globalIndex < 0) return;
+  editingShotIndex = globalIndex;
 
-  document.getElementById('seIndex').value = index;
+  document.getElementById('seIndex').value = globalIndex;
 
   // Subject
   var firstSubject = (shot.subjects && shot.subjects[0]) || {};
@@ -2378,15 +2700,19 @@ function swapStoryboardChars() {
   rerenderBoard();
 }
 
-function pickCharForSubject(shotIndex, subjIndex) {
+function pickCharForSubject(shotId, subjIndex) {
   var sb = (currentStoryboard && (currentStoryboard.storyboard || currentStoryboard)) || {};
-  var shot = (sb.shots || [])[shotIndex];
-  if (!shot) return;
+  var allShots = sb.shots || [];
+  var shotIndex = -1;
+  for (var i = 0; i < allShots.length; i++) {
+    if (allShots[i].id === shotId) { shotIndex = i; break; }
+  }
+  if (shotIndex < 0) return;
+  var shot = allShots[shotIndex];
   var subject = (shot.subjects || [])[subjIndex];
   if (!subject) return;
   pickerFromName = subject.characterName || '';
   pickerMode = 'char-single';
-  // On confirm, replace this specific subject
   window._pickCharForSubjectTarget = { shotIndex: shotIndex, subjIndex: subjIndex };
 
   document.getElementById('pickerTitle').textContent = '👤 切换角色';
@@ -2505,7 +2831,9 @@ function confirmDialect(name) {
   updateAccountUI();
   closePicker();
   // Refresh pre-shot panel if visible
-  if (currentDirectorAnalysis && !currentDirectorAnalysis.shots) {
+  if (inPreShotSettings) {
+    renderPreShotSettings();
+  } else if (currentDirectorAnalysis && !(currentDirectorAnalysis.shots && currentDirectorAnalysis.shots.length > 0)) {
     renderDirectorReview();
   }
 }
@@ -2529,6 +2857,8 @@ var currentPreCharIds = [];  // pre-shot character selections (multi)
 var currentPreDuration = '30';  // pre-shot duration: 15/30/45/60
 var currentPreRatio = '9:16';   // pre-shot aspect ratio
 var currentPreFps = '24';       // pre-shot frame rate
+var shotBatches = [];           // [{shots, startTime, endTime, generated}]
+var currentBatchTab = 0;        // active batch tab index
 
 function pickSceneForPreShot(fromName) {
   pickerFromName = fromName;
@@ -2551,28 +2881,28 @@ function pickSceneForPreShot(fromName) {
 function confirmPreScene(name) {
   currentPreScene = name || '';
   closePicker();
-  renderDirectorReview();
+  renderPreShotSettings();
 }
 
 function setPreDuration(val) {
   currentPreDuration = val;
-  renderDirectorReview();
+  renderPreShotSettings();
 }
 
 function setPreRatio(val) {
   currentPreRatio = val;
-  renderDirectorReview();
+  renderPreShotSettings();
 }
 
 function setPreFps(val) {
   currentPreFps = val;
-  renderDirectorReview();
+  renderPreShotSettings();
 }
 
 function confirmPreChar(id, name) {
   currentPreCharId = id || '';
   closePicker();
-  renderDirectorReview();
+  renderPreShotSettings();
 }
 
 function pickPreProps() {
@@ -2580,7 +2910,7 @@ function pickPreProps() {
   var input = prompt('输入要植入的关键道具（产品/物品）：\n例如：桶装水、某品牌手机、定制杯子\n多个用逗号分隔', current);
   if (input === null) return;
   keyProps = input.trim();
-  renderDirectorReview();
+  renderPreShotSettings();
 }
 
 function pickPreChar() {
@@ -2656,7 +2986,7 @@ function pickPreChar() {
     }
     if (e.target.closest('.pre-char-confirm-btn')) {
       closePicker();
-      renderDirectorReview();
+      renderPreShotSettings();
     }
   };
 
@@ -2807,13 +3137,25 @@ function buildShotProse(shot) {
 
 function exportStoryboardPrompts() {
   var sb = currentStoryboard.storyboard || currentStoryboard;
-  var shots = sb.shots || [];
-  if (!shots.length) { alert('没有分镜数据'); return; }
+  var allShots = sb.shots || [];
+  if (!allShots.length) { alert('没有分镜数据'); return; }
+
+  // If batches exist, export current batch only
+  var shots;
+  var segLabel = '';
+  if (shotBatches.length > 0 && currentBatchTab < shotBatches.length) {
+    var batch = shotBatches[currentBatchTab];
+    if (!batch.generated || !batch.shots.length) { alert('当前段尚未生成'); return; }
+    shots = batch.shots;
+    segLabel = batch.startTime + '-' + batch.endTime + '秒';
+  } else {
+    shots = allShots;
+  }
 
   var ratio = currentPreRatio || '9:16';
   var fps = currentPreFps || '24';
 
-  // Calculate total duration
+  // Calculate duration for current batch
   var totalSec = 0;
   shots.forEach(function(s) {
     var m = (s.duration || '').match(/(\d+)\s*[–\-~至到]\s*(\d+)\s*s?/i);
@@ -2822,13 +3164,20 @@ function exportStoryboardPrompts() {
     else { var n = parseInt(s.duration); if (n) totalSec += n; }
   });
   if (!totalSec) totalSec = shots.length * 5;
-  var totalDur = totalSec + '秒';
+  var totalDur = segLabel || (totalSec + '秒');
 
-  // Collect style hints from shots
+  // Collect style hints + char/scene IDs from current shots
   var styles = [];
+  var usedCharIds = [];
+  var usedSceneIds = [];
   shots.forEach(function(s) {
     var st = (s.style || {}).visualStyle;
     if (st && styles.indexOf(st) === -1) styles.push(st);
+    (s.subjects || []).forEach(function(su) {
+      if (su.characterId && usedCharIds.indexOf(su.characterId) < 0) usedCharIds.push(su.characterId);
+    });
+    var scId = (s.scene || {}).sceneId;
+    if (scId && usedSceneIds.indexOf(scId) < 0) usedSceneIds.push(scId);
   });
 
   // Build output
@@ -2838,126 +3187,31 @@ function exportStoryboardPrompts() {
   if (styles.length) out += '**风格**：' + styles.join(' · ') + '\n';
   out += '\n---\n\n';
 
-  // Determine if we need multi-segment (>15s)
-  var maxSingleShot = 15;
-  var needSegments = totalSec > maxSingleShot;
-
-  // Collect unique char IDs and scene IDs used in shots
-  var usedCharIds = [];
-  var usedSceneIds = [];
-  shots.forEach(function(shot) {
-    (shot.subjects || []).forEach(function(s) {
-      if (s.characterId && usedCharIds.indexOf(s.characterId) < 0) usedCharIds.push(s.characterId);
-    });
-    var scId = (shot.scene || {}).sceneId;
-    if (scId && usedSceneIds.indexOf(scId) < 0) usedSceneIds.push(scId);
-  });
-
-  if (needSegments) {
-    // Multi-segment strategy
-    var segments = [];
-    var segStart = 0;
-    var segShots = [];
-    var segDur = 0;
-    shots.forEach(function(shot, i) {
-      var dur = 5;
-      var m = (shot.duration || '').match(/(\d+)\s*[–\-~至到]\s*(\d+)/);
-      if (!m) m = (shot.duration || '').match(/(\d+)\s*-\s*(\d+)/);
-      if (m) dur = parseInt(m[2]) - parseInt(m[1]);
-      else { var n = parseInt(shot.duration); if (n) dur = n; }
-      if (segDur + dur > maxSingleShot && segShots.length > 0) {
-        segments.push({ shots: segShots, start: segStart, end: segStart + segDur });
-        segStart = segStart + segDur;
-        segShots = [];
-        segDur = 0;
-      }
-      segShots.push(shot);
-      segDur += dur;
-    });
-    if (segShots.length) segments.push({ shots: segShots, start: segStart, end: segStart + segDur });
-
-    out += '**总段数**：' + segments.length + '段（每段在即梦单独生成，用「视频延长」拼接）\n\n';
-
-    segments.forEach(function(seg, si) {
-      var segLabel = seg.start + '-' + seg.end + '秒';
-      out += '### 第' + (si + 1) + '段（' + segLabel + '）\n\n';
-      out += '**生成时长**：' + (seg.end - seg.start) + '秒\n\n';
-
-      // Collect chars/scenes used in this segment
-      var segCharIds = [];
-      var segSceneIds = [];
-      seg.shots.forEach(function(shot) {
-        (shot.subjects || []).forEach(function(s) {
-          if (s.characterId && segCharIds.indexOf(s.characterId) < 0) segCharIds.push(s.characterId);
-        });
-        var scId = (shot.scene || {}).sceneId;
-        if (scId && segSceneIds.indexOf(scId) < 0) segSceneIds.push(scId);
-      });
-
-      // Character descriptions for this segment
-      var charDescs = segCharIds.map(describeCharacter).filter(Boolean);
-      if (charDescs.length) {
-        out += '**角色设定（本段必须保持一致）**：\n';
-        charDescs.forEach(function(d) { out += '- ' + d + '\n'; });
-        out += '\n';
-      }
-
-      // Scene descriptions for this segment
-      var sceneDescs = segSceneIds.map(describeScene).filter(Boolean);
-      if (sceneDescs.length) {
-        out += '**场景设定**：\n';
-        sceneDescs.forEach(function(d) { out += '- ' + d + '\n'; });
-        out += '\n';
-      }
-
-      out += '**分镜**：\n\n';
-      var segOffset = seg.start;
-      seg.shots.forEach(function(shot) {
-        var timeLabel = '';
-        var m2 = (shot.duration || '').match(/(\d+)\s*[–\-~至到]\s*(\d+)/);
-        if (!m2) m2 = (shot.duration || '').match(/(\d+)\s*-\s*(\d+)/);
-        if (m2) {
-          timeLabel = (parseInt(m2[1]) - segOffset) + '-' + (parseInt(m2[2]) - segOffset) + '秒';
-        }
-        out += (timeLabel || shot.duration || '') + '：\n';
-        out += buildShotProse(shot) + '\n';
-        if (shot.dialogue) out += '台词："' + shot.dialogue + '"\n';
-        out += '\n';
-      });
-
-      if (si < segments.length - 1) {
-        var lastShot = seg.shots[seg.shots.length - 1];
-        out += '**衔接点**：本段结尾——' + ((lastShot.scene || {}).environment || '') + '，' + (lastShot.shotType || '') + '，' + ((lastShot.subjects || []).map(function(s) { return s.characterName; }).filter(Boolean).join('、') || '画面') + '\n\n';
-      }
-    });
-  } else {
-    // Single segment (≤15s)
-    var charDescs = usedCharIds.map(describeCharacter).filter(Boolean);
-    if (charDescs.length) {
-      out += '**角色设定**：\n';
-      charDescs.forEach(function(d) { out += '- ' + d + '\n'; });
-      out += '\n';
-    }
-    var sceneDescs = usedSceneIds.map(describeScene).filter(Boolean);
-    if (sceneDescs.length) {
-      out += '**场景设定**：\n';
-      sceneDescs.forEach(function(d) { out += '- ' + d + '\n'; });
-      out += '\n';
-    }
-    out += '**分镜**：\n\n';
-    shots.forEach(function(shot, i) {
-      out += (shot.duration || '') + '：\n';
-      out += buildShotProse(shot) + '\n';
-      if (shot.dialogue) out += '台词："' + shot.dialogue + '"\n';
-      out += '\n';
-    });
+  var charDescs = usedCharIds.map(describeCharacter).filter(Boolean);
+  if (charDescs.length) {
+    out += '**角色设定**：\n';
+    charDescs.forEach(function(d) { out += '- ' + d + '\n'; });
+    out += '\n';
   }
+  var sceneDescs = usedSceneIds.map(describeScene).filter(Boolean);
+  if (sceneDescs.length) {
+    out += '**场景设定**：\n';
+    sceneDescs.forEach(function(d) { out += '- ' + d + '\n'; });
+    out += '\n';
+  }
+  out += '**分镜**：\n\n';
+  shots.forEach(function(shot, i) {
+    out += (shot.duration || '') + '：\n';
+    out += buildShotProse(shot) + '\n';
+    if (shot.dialogue) out += '台词："' + shot.dialogue + '"\n';
+    out += '\n';
+  });
 
   out += '---\n\n';
   out += '禁止：文字、字幕、LOGO、水印';
 
   copyToClipboard(out).then(function() {
-    alert('已复制即梦提示词到剪贴板（' + totalDur + '，' + ratio + '，' + fps + '）');
+    alert('已复制即梦提示词（' + totalDur + '，' + ratio + '）');
   });
 }
 
@@ -3182,6 +3436,392 @@ var _origSaveScene = saveSceneProfiles;
 saveSceneProfiles = function() {
   _origSaveScene();
 };
+
+// ============================================================
+// TOPIC / CREATE PAGE
+// ============================================================
+
+function toggleBizEdit() {
+  var bar = document.getElementById('topicBizBar');
+  var edit = document.getElementById('topicBizEdit');
+  var calendar = document.getElementById('topicCalendarSection');
+  if (edit.style.display === 'none' || !edit.style.display) {
+    edit.style.display = 'block';
+    calendar.style.display = 'none';
+    bar.style.display = 'none';
+  } else {
+    edit.style.display = 'none';
+    if (topicBizData && topicBizData.analysis) {
+      bar.style.display = 'flex';
+      calendar.style.display = 'block';
+    }
+  }
+}
+
+function loadTopicBiz() {
+  try {
+    var raw = localStorage.getItem('zimeiti-topic-biz');
+    if (raw) { topicBizData = JSON.parse(raw); return topicBizData; }
+  } catch(e) {}
+  return null;
+}
+
+function saveTopicBiz() {
+  try { localStorage.setItem('zimeiti-topic-biz', JSON.stringify(topicBizData)); } catch(e) {}
+}
+
+function initCreatePage() {
+  loadTopicBiz();
+  if (topicBizData && topicBizData.analysis) {
+    // Business already saved — show calendar
+    document.getElementById('topicBizEdit').style.display = 'none';
+    document.getElementById('topicBizBar').style.display = 'flex';
+    document.getElementById('topicBizLabel').textContent = '业务：' + (topicBizData.biz || '').slice(0, 40);
+    var phase = topicBizData.analysis.currentPhase || '';
+    var seasonLabel = topicBizData.analysis.peakSeason || '';
+    document.getElementById('topicBizSeason').textContent = (phase ? phase + ' | ' : '') + seasonLabel;
+    document.getElementById('topicCalendarSection').style.display = 'block';
+    renderTopicCalendar();
+    renderTopicList(currentTopicFilter);
+    var hasTopics = topicBizData && topicBizData.topics && topicBizData.topics.length > 0;
+    document.getElementById('btnRefreshTopics').textContent = hasTopics ? '🔄 换一批' : '✨ 生成选题';
+  } else {
+    // First time — show business input
+    document.getElementById('topicBizEdit').style.display = 'block';
+    document.getElementById('topicBizBar').style.display = 'none';
+    document.getElementById('topicCalendarSection').style.display = 'none';
+    document.getElementById('topicContentSection').style.display = 'none';
+  }
+}
+
+function buildTopicAnalysisPrompt(biz) {
+  return '你是一个短视频内容策划专家。用户描述了自己的业务，请分析并输出 JSON。\n\n' +
+    '用户业务：' + biz + '\n' +
+    '当前日期：' + new Date().toISOString().slice(0, 10) + '\n\n' +
+    '## 分析要求\n' +
+    '1. 判断行业，识别淡旺季月份\n' +
+    '2. 根据当前日期判断处于什么阶段（旺季/淡季/平季）\n' +
+    '3. 给出 2-4 种选题目的分类（不限于人设打造/流量类/成交型，可根据行业特点补充）\n' +
+    '4. 淡季偏人设打造和流量类，旺季偏成交型\n' +
+    '5. 标注近期（一周内）可能的热点方向（节日/行业节点/季节性话题）\n' +
+    '6. 推荐当前最适合的选题目的\n\n' +
+    '## 输出 JSON 格式\n' +
+    '{\n' +
+    '  "industry": "行业名称",\n' +
+    '  "peakSeason": "旺季月份",\n' +
+    '  "lowSeason": "淡季月份",\n' +
+    '  "currentPhase": "当前阶段（旺季/淡季/平季）",\n' +
+    '  "phaseTip": "当前阶段的内容策略建议（一句话）",\n' +
+    '  "purposeLabels": ["人设打造", "流量类", "成交型"],\n' +
+    '  "recommendedPurposes": ["最推荐的目的1", "次推荐的目的2"],\n' +
+    '  "recentHotspots": ["近期热点1", "近期热点2"],\n' +
+    '  "defaultNarrativePersona": "最合适的叙事人设（陪伴者/教导者/崇拜者/陪衬者/搞笑者，选一个）"\n' +
+    '}\n\n' +
+    '纯 JSON 输出，不要 ```json``` 包裹。';
+}
+
+function buildTopicListPrompt(biz, analysis, purposeFilter) {
+  return '你是一个短视频内容策划专家。根据以下信息，推荐 6-10 个选题。\n\n' +
+    '业务：' + biz + '\n' +
+    '行业：' + (analysis.industry || '') + '\n' +
+    '当前阶段：' + (analysis.currentPhase || '') + '\n' +
+    '推荐的选题目的：' + (analysis.recommendedPurposes || []).join('、') + '\n' +
+    '近期热点方向：' + (analysis.recentHotspots || []).join('、') + '\n' +
+    '叙事人设：' + (analysis.defaultNarrativePersona || '陪伴者') + '\n' +
+    (purposeFilter && purposeFilter !== 'all' ? '筛选目的：' + purposeFilter + '\n' : '') +
+    '\n## 要求\n' +
+    '1. 给 6-10 个选题，每个选题含 title（标题）、angle（角度说明）、purpose（选题目的）、estimatedEffect（预估效果）\n' +
+    '2. 标注每个选题主要触发哪种观众心理（从以下选：想纠正你/想看结果/想证明自己/想看你翻车/想给你出招/想看看真假/想代入自己）\n' +
+    '3. 根据选题内容匹配最合适的叙事人设 persona（陪伴者/教导者/崇拜者/陪衬者/搞笑者，选一个）\n' +
+    '4. 淡季偏人设类，旺季偏成交型\n' +
+    '5. 结合近期热点方向给出热点选题\n\n' +
+    '## 输出 JSON 格式\n' +
+    '[{"title":"...","angle":"...","purpose":"人设打造","estimatedEffect":"高互动","psychology":"想代入自己","persona":"陪伴者","hotTip":""}]\n\n' +
+    '纯 JSON 数组输出，不要 ```json``` 包裹。';
+}
+
+function buildTopicContentPrompt(biz, analysis, topic) {
+  return '你是' + (topic.persona || '陪伴者') + '风格的短视频脚本写手。\n\n' +
+    '业务背景：' + biz + '\n' +
+    '行业：' + (analysis.industry || '') + '\n' +
+    '选题：' + topic.title + '\n' +
+    '角度：' + (topic.angle || '') + '\n' +
+    '心理钩子：' + (topic.psychology || '想代入自己') + '\n\n' +
+    '## 写作规则（必须遵守）\n\n' +
+    '### 口语化脚本规则\n' +
+    '- 每镜不超过 50 字\n' +
+    '- 每句话不超过 12 个字，用句号断开（呼吸单位）\n' +
+    '- 情绪写进脚本，不写进标注：用换行停顿、短句强调、单字反转\n' +
+    '- 念一遍才算是脚本，念不顺就删掉重写\n\n' +
+    '### 可拿走性原则\n' +
+    '- 观众看完能拿走什么？"了解了X"不合格，"能判断X/能算出Y/能避开Z"合格\n\n' +
+    '### 内容温度模型\n' +
+    '- 有趣 + 有用 + 共鸣，至少满足两个\n\n' +
+    '### 七种观众心理钩子\n' +
+    '- 1想纠正你 2想看结果 3想证明自己 4想看你翻车 5想给你出招 6想看看真假 7想代入自己\n' +
+    '- 每篇内容至少触发一种，否则观众不会互动\n\n' +
+    '## 输出格式\n' +
+    '输出完整短视频脚本，包含：\n' +
+    '1. 标题（吸引人的）\n' +
+    '2. 视频类型（带货/知识/搞笑/剧情/励志/生活技巧）\n' +
+    '3. 开头方式（视觉冲击/抛问题/数据对比/制造冲突/音乐卡点/对话直入）\n' +
+    '4. 人物设置（几个人、什么穿着的描述）\n' +
+    '5. 场景+氛围\n' +
+    '6. 完整脚本内容（按镜头分，每个镜头注明时长、画面描述、口播文案）\n' +
+    '7. 结尾 CTA\n\n' +
+    '用自然语言输出，不要 JSON。让读的人能直接念出来。';
+}
+
+async function saveBizAndAnalyze() {
+  var bizInput = document.getElementById('topicBizInput');
+  var biz = bizInput.value.trim();
+  if (!biz) { alert('请输入业务描述'); return; }
+  if (!settings.apiKey) { alert('请先在「我的」→ 设置 中配置 API Key'); return; }
+
+  var loading = document.getElementById('topicBizLoading');
+  var editPanel = document.getElementById('topicBizEdit');
+  var btn = document.getElementById('btnSaveBiz');
+
+  loading.style.display = 'flex';
+  btn.disabled = true;
+
+  var analysis = null;
+  var topics = null;
+
+  try {
+    // Step 1: business analysis
+    var sysPrompt1 = '你是一个商业分析和短视频策划专家。严格按 JSON 格式回复。';
+    var result1 = await doStoryboardApiCall(sysPrompt1, buildTopicAnalysisPrompt(biz));
+    var json1 = collectStreamJson(result1);
+    if (!json1) throw new Error('无法解析行业分析结果');
+    analysis = JSON.parse(json1);
+
+    // Step 2: generate topics
+    var sysPrompt2 = '你是一个短视频内容策划专家。严格按 JSON 格式回复。';
+    var result2 = await doStoryboardApiCall(sysPrompt2, buildTopicListPrompt(biz, analysis, 'all'));
+    var json2 = collectStreamJson(result2);
+    if (!json2) throw new Error('无法解析选题列表');
+    topics = JSON.parse(json2);
+
+    // Both succeed — save
+    topicBizData = { biz: biz, analysis: analysis, topics: topics, savedAt: new Date().toISOString() };
+    saveTopicBiz();
+
+    editPanel.style.display = 'none';
+    document.getElementById('topicBizBar').style.display = 'flex';
+    document.getElementById('topicBizLabel').textContent = '业务：' + biz.slice(0, 40);
+    var phase = analysis.currentPhase || '';
+    var seasonLabel = analysis.peakSeason || '';
+    document.getElementById('topicBizSeason').textContent = (phase ? phase + ' | ' : '') + seasonLabel;
+
+    document.getElementById('topicCalendarSection').style.display = 'block';
+    currentTopicFilter = 'all';
+    renderTopicCalendar();
+    renderTopicList('all');
+    document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
+
+  } catch(e) {
+    console.error('[saveBizAndAnalyze] error:', e);
+    alert('分析失败：' + (e.message || '未知错误') + '\n\n请检查 API Key 和网络后重试');
+    // Full reset — nothing persisted on failure
+    topicBizData = null;
+    editPanel.style.display = 'block';
+    document.getElementById('topicBizBar').style.display = 'none';
+    document.getElementById('topicCalendarSection').style.display = 'none';
+    document.getElementById('topicContentSection').style.display = 'none';
+  }
+
+  loading.style.display = 'none';
+  btn.disabled = false;
+}
+
+function renderTopicCalendar() {
+  if (!topicBizData || !topicBizData.analysis) return;
+
+  var analysis = topicBizData.analysis;
+
+  // Season card
+  var seasonCard = document.getElementById('topicSeasonCard');
+  var phaseClass = '';
+  if (analysis.currentPhase === '旺季') phaseClass = 'peak';
+  else if (analysis.currentPhase === '淡季') phaseClass = 'low';
+  else phaseClass = 'flat';
+
+  seasonCard.innerHTML =
+    '<div><strong>' + (analysis.industry || '') + '</strong> · ' +
+    '<span class="season-phase ' + phaseClass + '">' + (analysis.currentPhase || '') + '</span>' +
+    ' 旺季：' + (analysis.peakSeason || '') + ' | 淡季：' + (analysis.lowSeason || '') + '</div>' +
+    '<div class="season-tip">💡 ' + (analysis.phaseTip || '') + '</div>' +
+    '<div class="season-tip" style="margin-top:2px">🔥 热点：' + (analysis.recentHotspots || []).slice(0, 3).join('、') + '</div>';
+
+  // Render purpose filter chips
+  var chips = document.getElementById('topicFilterChips');
+  var labels = analysis.purposeLabels || ['人设打造', '流量类', '成交型'];
+  var chipHtml = '<span class="topic-filter-chip' + (currentTopicFilter === 'all' ? ' active' : '') + '" data-filter="all" onclick="filterTopics(\'all\')">全部</span>';
+  for (var i = 0; i < labels.length; i++) {
+    var lbl = labels[i];
+    chipHtml += '<span class="topic-filter-chip' + (currentTopicFilter === lbl ? ' active' : '') + '" data-filter="' + escapeHtml(lbl) + '" onclick="filterTopics(\'' + escapeHtml(lbl) + '\')">' + escapeHtml(lbl) + '</span>';
+  }
+  chips.innerHTML = chipHtml;
+}
+
+function filterTopics(purpose) {
+  currentTopicFilter = purpose;
+  // Update chip active states
+  document.querySelectorAll('.topic-filter-chip').forEach(function(c) {
+    c.classList.remove('active');
+    if (c.dataset.filter === purpose) c.classList.add('active');
+  });
+  renderTopicList(purpose);
+}
+
+function renderTopicList(purpose) {
+  if (!topicBizData || !topicBizData.topics) return;
+
+  var allTopics = (topicBizData.topics || []).filter(function(t) {
+    return purpose === 'all' || t.purpose === purpose;
+  });
+
+  var list = document.getElementById('topicList');
+  var btn = document.getElementById('btnRefreshTopics');
+  if (!allTopics.length) {
+    list.innerHTML = '<div style="text-align:center;color:#a09888;padding:20px;font-size:.76rem">暂无选题，点击「生成选题」重新生成</div>';
+    if (btn) btn.textContent = '✨ 生成选题';
+    return;
+  }
+  if (btn) btn.textContent = '🔄 换一批';
+
+  var html = '';
+  allTopics.forEach(function(t, idx) {
+    var purClass = t.purpose === '流量类' ? 'traffic' : (t.purpose === '成交型' ? 'deal' : 'persona');
+    html += '<div class="topic-card' + (selectedTopic === t ? ' selected' : '') + '" onclick="selectTopicCard(' + idx + ')" data-idx="' + idx + '">';
+    html += '<div class="topic-card-header">';
+    html += '<span class="topic-card-purpose ' + purClass + '">' + escapeHtml(t.purpose || '') + '</span>';
+    html += '<span class="topic-card-effect">📊 ' + escapeHtml(t.estimatedEffect || '') + '</span>';
+    html += '</div>';
+    html += '<div class="topic-card-title">' + escapeHtml(t.title || '') + '</div>';
+    html += '<div class="topic-card-angle">' + escapeHtml(t.angle || '') + '</div>';
+    var metaLine = [];
+    if (t.persona) metaLine.push('🎭 ' + escapeHtml(t.persona));
+    if (t.psychology) metaLine.push('🎯 ' + escapeHtml(t.psychology));
+    if (metaLine.length) html += '<div class="topic-card-psych">' + metaLine.join('  ') + '</div>';
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function selectTopicCard(idx) {
+  var allTopics = (topicBizData.topics || []).filter(function(t) {
+    return currentTopicFilter === 'all' || t.purpose === currentTopicFilter;
+  });
+  var topic = allTopics[idx];
+  if (!topic) return;
+  selectedTopic = topic;
+
+  // Highlight
+  document.querySelectorAll('.topic-card').forEach(function(c) { c.classList.remove('selected'); });
+  var cardEl = document.querySelector('.topic-card[data-idx="' + idx + '"]');
+  if (cardEl) cardEl.classList.add('selected');
+
+  // Show content generation
+  document.getElementById('topicCalendarSection').style.display = 'none';
+  document.getElementById('topicContentSection').style.display = 'block';
+  document.getElementById('topicContentResult').innerHTML = '';
+  document.getElementById('topicContentActions').style.display = 'none';
+
+  // Show meta
+  document.getElementById('topicContentMeta').innerHTML =
+    '<div class="meta-topic">' + escapeHtml(topic.title || '') + '</div>' +
+    '<div class="meta-info"><span>目的：' + escapeHtml(topic.purpose || '') + '</span><span>预估：' + escapeHtml(topic.estimatedEffect || '') + '</span><span>心理钩子：' + escapeHtml(topic.psychology || '') + '</span></div>';
+
+  // Generate content
+  generateTopicContent(topic);
+}
+
+async function generateTopicContent(topic) {
+  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+
+  document.getElementById('topicContentLoading').style.display = 'flex';
+  document.getElementById('topicContentResult').innerHTML = '';
+  document.getElementById('topicContentActions').style.display = 'none';
+
+  try {
+    var systemPrompt = '你是一个短视频脚本专家。按用户要求输出完整脚本，自然语言格式，不要 JSON。';
+    var resultText = await doStoryboardApiCall(systemPrompt, buildTopicContentPrompt(topicBizData.biz, topicBizData.analysis, topic), { noJsonFormat: true });
+    topicContentText = resultText || '';
+    if (topicContentText) {
+      document.getElementById('topicContentResult').innerHTML = '<div style="white-space:pre-wrap;line-height:1.8">' + escapeHtml(topicContentText) + '</div>';
+      document.getElementById('topicContentActions').style.display = 'flex';
+    } else {
+      document.getElementById('topicContentResult').innerHTML = '<div style="color:#a09888;text-align:center;padding:30px">生成内容为空，请点击「重新生成」重试</div>';
+      document.getElementById('topicContentActions').style.display = 'flex';
+    }
+  } catch(e) {
+    console.error('[generateTopicContent] error:', e);
+    document.getElementById('topicContentResult').innerHTML =
+      '<div style="color:#e57373;text-align:center;padding:20px">生成失败：' + escapeHtml(e.message || '') + '</div>';
+  }
+  document.getElementById('topicContentLoading').style.display = 'none';
+}
+
+function regenerateTopicContent() {
+  if (selectedTopic) generateTopicContent(selectedTopic);
+}
+
+function backToCalendar() {
+  document.getElementById('topicContentSection').style.display = 'none';
+  document.getElementById('topicCalendarSection').style.display = 'block';
+  selectedTopic = null;
+  topicContentText = '';
+}
+
+function confirmToStoryboard() {
+  if (!topicContentText) { alert('请先生成内容'); return; }
+  if (!topicBizData || !topicBizData.analysis) { alert('请先完成选题分析'); return; }
+
+  var analysis = topicBizData.analysis;
+
+  // Fill interviewAnswers from generated content
+  var videoType = guessVideoType(topicContentText, '');
+  interviewAnswers = [];
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[0].question, answer: videoType });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[1].question, answer: '抛问题', supplement: '' });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[2].question, answer: '一个人', supplement: '日常休闲装' });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[3].question, answer: { a: '居家', b: '温馨' } });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[4].question, answer: topicContentText });
+
+  // Set source to topic for the record
+  pendingRecordSource = 'topic';
+
+  // Switch to storyboard tab and trigger generation
+  switchTab('tabStoryboard');
+  generateStoryboard();
+}
+
+async function refreshTopics() {
+  if (!topicBizData || !topicBizData.analysis || !settings.apiKey) return;
+
+  var btn = document.getElementById('btnRefreshTopics');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中…';
+
+  try {
+    var systemPrompt = '你是一个商业分析和短视频策划专家。严格按 JSON 格式回复。';
+    var calPrompt = buildTopicListPrompt(topicBizData.biz, topicBizData.analysis, currentTopicFilter);
+    var calResult = await doStoryboardApiCall(systemPrompt, calPrompt);
+    var calJson = collectStreamJson(calResult);
+    if (!calJson) throw new Error('无法解析选题列表');
+    topicBizData.topics = JSON.parse(calJson);
+    saveTopicBiz();
+    renderTopicCalendar();
+    renderTopicList(currentTopicFilter);
+  } catch(e) {
+    console.error('[refreshTopics] error:', e);
+    alert('刷新失败：' + (e.message || '未知错误'));
+  }
+  btn.disabled = false;
+  btn.textContent = '🔄 换一批';
+}
 
 // ============================================================
 // STARTUP

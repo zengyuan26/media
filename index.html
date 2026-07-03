@@ -95,6 +95,66 @@
   </div>
 
   <!-- TAB 2: 我的 -->
+  <!-- TAB 2: 创作 -->
+  <div class="tab-panel" id="tabCreate">
+
+    <!-- 业务栏（折叠态） -->
+    <div class="topic-biz-bar" id="topicBizBar" style="display:none">
+      <div class="topic-biz-info">
+        <span class="topic-biz-icon">🏷</span>
+        <span class="topic-biz-text" id="topicBizLabel"></span>
+        <span class="topic-biz-season" id="topicBizSeason"></span>
+      </div>
+      <button class="topic-biz-edit-btn" id="btnEditBiz" onclick="toggleBizEdit()">修改</button>
+    </div>
+
+    <!-- 业务编辑面板 -->
+    <div class="topic-biz-edit" id="topicBizEdit">
+      <div class="topic-biz-edit-title">✨ 一句话描述你的业务</div>
+      <textarea class="topic-biz-input" id="topicBizInput" placeholder="例如：我是做手工灌香肠的，主要做川味和广味，想通过短视频吸引本地客户…"></textarea>
+      <button class="topic-biz-save-btn" id="btnSaveBiz" onclick="saveBizAndAnalyze()">💡 分析选题方向</button>
+      <div class="topic-biz-loading" id="topicBizLoading" style="display:none">
+        <div class="loading-spinner"></div>
+        <span>AI 正在分析你的行业和选题方向…</span>
+      </div>
+    </div>
+
+    <!-- 选题日历 -->
+    <div class="topic-calendar-section" id="topicCalendarSection" style="display:none">
+
+      <!-- 季节分析卡片 -->
+      <div class="topic-season-card" id="topicSeasonCard"></div>
+
+      <!-- 筛选栏 -->
+      <div class="topic-filter-bar" id="topicFilterBar">
+        <span class="topic-filter-label">目的：</span>
+        <div class="topic-filter-chips" id="topicFilterChips"></div>
+        <button class="topic-refresh-btn" id="btnRefreshTopics" onclick="refreshTopics()">✨ 生成选题</button>
+      </div>
+
+      <!-- 选题列表 -->
+      <div class="topic-list" id="topicList"></div>
+    </div>
+
+    <!-- 内容生成区 -->
+    <div class="topic-content-section" id="topicContentSection" style="display:none">
+      <div class="topic-content-back" onclick="backToCalendar()">← 返回选题日历</div>
+      <div class="topic-content-meta" id="topicContentMeta"></div>
+      <div class="topic-content-preview" id="topicContentPreview">
+        <div class="topic-content-loading" id="topicContentLoading" style="display:none">
+          <div class="loading-spinner"></div>
+          <span>AI 正在生成内容…</span>
+        </div>
+        <div class="topic-content-result" id="topicContentResult"></div>
+      </div>
+      <div class="topic-content-actions" id="topicContentActions" style="display:none">
+        <button class="dialog-btn secondary" onclick="regenerateTopicContent()">🔄 重新生成</button>
+        <button class="dialog-btn primary" id="btnConfirmToStoryboard" onclick="confirmToStoryboard()">🎬 确认，进入故事板</button>
+      </div>
+    </div>
+
+  </div>
+
   <div class="tab-panel" id="tabMe">
     <!-- Header with menu button -->
     <div class="me-header">
@@ -145,6 +205,10 @@
   <div class="tab-item active" data-tab="tabStoryboard">
     <span class="tab-icon">🎬</span>
     <span class="tab-label">故事板</span>
+  </div>
+  <div class="tab-item" data-tab="tabCreate">
+    <span class="tab-icon">💡</span>
+    <span class="tab-label">创作</span>
   </div>
   <div class="tab-item" data-tab="tabMe">
     <span class="tab-icon">👤</span>
