@@ -5,7 +5,7 @@ var https = require('https');
 var fs = require('fs');
 var path = require('path');
 
-var PORT = process.env.PORT || 3456;
+var PORT = process.env.PORT || 80;
 var MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
 // --- Video link analyzer ---
