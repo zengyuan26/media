@@ -64,41 +64,53 @@ async function analyze(url) {
 
 // --- Server ---
 var server = http.createServer(async function(req, res) {
-  var u = require('url').parse(req.url);
-  var pn = u.pathname;
+  try {
+    var u = require('url').parse(req.url);
+    var pn = u.pathname;
 
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.writeHead(200); res.end(); return;
-  }
-
-  if (pn === '/api/analyze' && req.method === 'POST') {
-    var body = '';
-    req.on('data', function(d) { body += d; });
-    req.on('end', async function() {
-      var parsed = {}; try { parsed = JSON.parse(body); } catch(e){}
-      var result = await analyze(parsed.url || '');
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Content-Type', 'application/json');
-      res.writeHead(200);
-      res.end(JSON.stringify(result));
-    });
-    return;
-  }
+      res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.writeHead(200); res.end(); return;
+    }
 
-  // Static files
-  var fp = path.join(__dirname, pn === '/' ? 'index.html' : pn);
-  var ext = path.extname(fp);
-  if (!ext) { fp = path.join(__dirname, 'index.html'); ext = '.html'; }
-  fs.readFile(fp, function(err, data) {
-    if (err) { res.writeHead(404); res.end('404'); return; }
-    res.setHeader('Content-Type', MIME[ext] || 'text/plain');
-    res.writeHead(200);
-    res.end(data);
-  });
+    if (pn === '/api/analyze' && req.method === 'POST') {
+      var body = '';
+      req.on('data', function(d) { body += d; });
+      req.on('end', async function() {
+        try {
+          var parsed = {}; try { parsed = JSON.parse(body); } catch(e){}
+          var result = await analyze(parsed.url || '');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Content-Type', 'application/json');
+          res.writeHead(200);
+          res.end(JSON.stringify(result));
+        } catch(e) {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Content-Type', 'application/json');
+          res.writeHead(200);
+          res.end(JSON.stringify({ error: e.message || '分析失败' }));
+        }
+      });
+      return;
+    }
+
+    // Static files
+    var fp = path.join(__dirname, pn === '/' ? 'index.html' : pn);
+    var ext = path.extname(fp);
+    if (!ext) { fp = path.join(__dirname, 'index.html'); ext = '.html'; }
+    fs.readFile(fp, function(err, data) {
+      try {
+        if (err) { res.writeHead(404); res.end('404'); return; }
+        res.setHeader('Content-Type', MIME[ext] || 'text/plain');
+        res.writeHead(200);
+        res.end(data);
+      } catch(e) { /* connection closed */ }
+    });
+  } catch(e) { /* malformed request, ignore */ }
 });
 
+process.on('uncaughtException', function(e) { console.error('uncaught:', e.message); });
 server.listen(PORT, function() { console.log('Server running on port ' + PORT); });

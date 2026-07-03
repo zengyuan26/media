@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS api_configs (
   endpoint TEXT DEFAULT 'https://api.deepseek.com/v1',
   model TEXT DEFAULT 'deepseek-chat',
   custom_model TEXT DEFAULT '',
+  zhiling_key TEXT DEFAULT '',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

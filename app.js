@@ -162,21 +162,11 @@ function init() {
   if (typeof initSupabase !== 'undefined') initSupabase();
   loadSettings();
   loadZhilingKey();
-  document.getElementById('loginPage').classList.remove('hidden');
 
-  if (typeof sbGetSession !== 'undefined') {
-    sbGetSession().then(function(session) {
-      if (session) {
-        sbUser = session.user;
-        loadAllFromCloud().then(function() {
-          applyAllSettings();
-          renderCharacterList();
-          updateAccountUI();
-          dismissLoginPage();
-        });
-      }
-    });
-  }
+  // Don't show login page yet — Supabase may not be loaded.
+  // Session check happens in tryRestoreSession() which runs either
+  // now (if supabase.js already loaded) or when supabase.js finishes loading.
+
   loadCharacterProfiles();
   loadSceneProfiles();
   loadRecords();
@@ -185,6 +175,9 @@ function init() {
   bindEvents();
   renderCharacterList();
   updateAccountUI();
+
+  // Try to restore session now (supabase.js might already be loaded)
+  tryRestoreSession();
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', function() {
@@ -570,6 +563,27 @@ function deleteSceneFromManager(id) {
 // ============================================================
 // LOGIN / AUTH
 // ============================================================
+function tryRestoreSession() {
+  if (typeof sbGetSession === 'undefined') {
+    // Supabase not loaded yet — wait, will be re-triggered when supabase.js loads.
+    // If it never loads (CDN down), show login after timeout.
+    return;
+  }
+  sbGetSession().then(function(session) {
+    if (session) {
+      sbUser = session.user;
+      loadAllFromCloud().then(function() {
+        applyAllSettings();
+        renderCharacterList();
+        updateAccountUI();
+        dismissLoginPage();
+      });
+    } else {
+      document.getElementById('loginPage').classList.remove('hidden');
+    }
+  });
+}
+
 function dismissLoginPage() {
   document.getElementById('loginPage').classList.add('hidden');
   switchTab('tabStoryboard');
@@ -696,7 +710,7 @@ async function doResetPassword() {
 // CLOUD SYNC
 // ============================================================
 async function loadAllFromCloud() {
-  if (!sb) return;
+  if (!sbUser || !sbUser.id || !sb) return;
   try { await sbLoadProfile(); } catch(e) {}
   try { await sbLoadApiConfig(); } catch(e) {}
   try { await sbLoadCharacters(); } catch(e) {}
@@ -764,6 +778,11 @@ function backToLinkInput() {
   if (preview) preview.style.display = 'none';
   if (el) el.style.display = 'flex';
   _pendingZhilingContent = '';
+  // Restore link input, hide analyzing page
+  restoreLinkInput();
+  // Clear status
+  var statusEl = document.getElementById('sbLinkStatus');
+  if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
 }
 
 function confirmAndGenerate() {
@@ -828,17 +847,21 @@ async function parseVideoLink() {
 
   isParsingLink = true;
   btn.disabled = true;
-  btn.textContent = '⏳ 解析中…';
-  statusEl.style.display = 'block';
-  statusEl.className = 'sb-link-status';
-  statusEl.textContent = '正在提取视频信息…';
+
+  // Transition to analyzing page
+  var interviewInner = document.getElementById('sbInterviewInner');
+  var analyzingEl = document.getElementById('sbAnalyzing');
+  var analyzingStatus = document.getElementById('sbAnalyzingStatus');
+  if (interviewInner) interviewInner.style.display = 'none';
+  if (analyzingEl) analyzingEl.style.display = 'flex';
+  analyzingStatus.textContent = '正在提取视频信息…';
 
   try {
     var data = null;
 
     // Try Electron IPC first (local, no geo-blocking)
     if (window.electronAPI && window.electronAPI.parseLink) {
-      statusEl.textContent = '正在通过本地提取视频信息…';
+      analyzingStatus.textContent = '正在通过本地提取视频信息…';
       data = await window.electronAPI.parseLink(url);
     }
 
@@ -858,7 +881,7 @@ async function parseVideoLink() {
     // If Phase 1 got a fallback result AND zhilingKey available → try zhiling directly
     var phase1Failed = !data || data._fallback;
     if (phase1Failed && zhilingKey) {
-      statusEl.textContent = '🎬 正在通过 AI 分析视频（约15-30秒）…';
+      analyzingStatus.textContent = '🎬 正在通过 AI 分析视频（约15-30秒）…';
       var zhilingResult = await callZhilingDirect(zhilingKey, url);
       if (zhilingResult && zhilingResult.success && zhilingResult.content) {
         data = {
@@ -868,30 +891,37 @@ async function parseVideoLink() {
           _zhilingContent: zhilingResult.content
         };
       } else {
-        statusEl.className = 'sb-link-status warning';
-        statusEl.textContent = '解析失败：' + ((zhilingResult && zhilingResult.error) || '未知错误') + '。请手动填写问答';
+        // zhiling failed — go back to link input with error
+        restoreLinkInput();
+        showLinkStatus('解析失败：' + ((zhilingResult && zhilingResult.error) || '未知错误'), 'error');
         isParsingLink = false;
-        btn.disabled = false;
-        btn.textContent = '🔍 解析';
         return;
       }
     }
 
     if (!data) {
-      statusEl.className = 'sb-link-status warning';
-      statusEl.textContent = '无法提取视频详情，请手动填写问答。链接可能已失效或需要登录。';
+      restoreLinkInput();
+      showLinkStatus('无法提取视频详情，链接可能已失效或需要登录。', 'warning');
       isParsingLink = false;
-      btn.disabled = false;
-      btn.textContent = '🔍 解析';
       return;
     }
 
     if (data._fallback && !data._zhilingContent) {
-      statusEl.className = 'sb-link-status warning';
-      statusEl.textContent = data._message || '无法提取视频详情，请手动填写问答';
+      if (!zhilingKey) {
+        var hintHtml = '请先配置「视频分析 Key」— <a href="#" id="gotoZhilingKey" style="color:#5b9a8b;text-decoration:underline">去设置</a>';
+        restoreLinkInput();
+        showLinkStatus(hintHtml, 'warning');
+        var gotoLink = document.getElementById('gotoZhilingKey');
+        if (gotoLink) gotoLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          switchTab('tabMe');
+          openZhilingDialog();
+        });
+      } else {
+        restoreLinkInput();
+        showLinkStatus(data._message || '无法提取视频详情，请手动填写问答', 'warning');
+      }
       isParsingLink = false;
-      btn.disabled = false;
-      btn.textContent = '🔍 解析';
       return;
     }
 
@@ -899,18 +929,16 @@ async function parseVideoLink() {
     fillInterviewFromLink(data);
 
     if (data._zhilingContent) {
-      // Show preview instead of auto-generating
+      // Phase 1 failed, zhiling was primary source — show preview
       showZhilingPreview(data._zhilingContent);
       input.value = '';
-    } else {
-      statusEl.className = 'sb-link-status success';
-      var phase1Msg = '已提取「' + (data.platform || '视频') + '」' + (data.title ? '：' + data.title : '') + ' — 问答已预填';
-      statusEl.textContent = phase1Msg;
+    } else if (zhilingKey) {
+      // Phase 1 succeeded, now run zhiling for AI analysis
+      document.getElementById('sbAnalyzingIcon').textContent = '🎬';
+      document.getElementById('sbAnalyzingTitle').textContent = 'AI 正在分析视频画面';
+      analyzingStatus.textContent = '预计 15-30 秒…';
       input.value = '';
 
-      // Phase 2: enrich with zhiling if not already done
-    if (zhilingKey) {
-      statusEl.textContent = phase1Msg + ' | 🎬 正在 AI 分析视频画面（约15-30秒）…';
       var zhilingPromise;
       if (window.electronAPI && window.electronAPI.callZhiling) {
         zhilingPromise = window.electronAPI.callZhiling(zhilingKey, url);
@@ -919,6 +947,7 @@ async function parseVideoLink() {
       }
       zhilingPromise.then(function(result) {
         if (result && result.success && result.content) {
+          // Merge zhiling result into interview content answer
           var contentIdx = -1;
           for (var i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
             if (INTERVIEW_QUESTIONS[i].id === 'content') { contentIdx = i; break; }
@@ -930,28 +959,58 @@ async function parseVideoLink() {
               enrichedText = existing.answer + '\n\n---\nAI 视频分析：\n\n' + result.content;
             }
             interviewAnswers[contentIdx] = { question: INTERVIEW_QUESTIONS[contentIdx].question, answer: enrichedText, supplement: '' };
-            renderInterview();
           }
-          statusEl.className = 'sb-link-status success';
-          statusEl.textContent = phase1Msg + ' | ✅ AI 画面分析完成';
+          // Show zhiling result preview, then user confirms → director analysis
+          showZhilingPreview(result.content);
         } else {
-          statusEl.className = 'sb-link-status warning';
-          statusEl.textContent = phase1Msg + ' | ⚠️ AI 分析失败：' + ((result && result.error) || '未知错误');
+          restoreLinkInput();
+          showLinkStatus('⚠️ AI 分析失败：' + ((result && result.error) || '未知错误'), 'warning');
         }
       }).catch(function(e) {
-        statusEl.className = 'sb-link-status warning';
-        statusEl.textContent = phase1Msg + ' | ⚠️ AI 分析失败：' + (e.message || '网络错误');
+        restoreLinkInput();
+        showLinkStatus('⚠️ AI 分析失败：' + (e.message || '网络错误'), 'warning');
       });
-    }
+    } else {
+      // No zhilingKey — guide user to configure it
+      restoreLinkInput();
+      var noKeyHtml = '请先配置「视频分析 Key」— <a href="#" id="gotoZhilingKey2" style="color:#5b9a8b;text-decoration:underline">去设置</a>';
+      showLinkStatus(noKeyHtml, 'warning');
+      var gotoLink2 = document.getElementById('gotoZhilingKey2');
+      if (gotoLink2) gotoLink2.addEventListener('click', function(e) {
+        e.preventDefault();
+        switchTab('tabMe');
+        openZhilingDialog();
+      });
+      input.value = '';
     }
   } catch (e) {
-    statusEl.className = 'sb-link-status error';
-    statusEl.textContent = '解析失败：' + (e.message || '网络错误');
+    restoreLinkInput();
+    showLinkStatus('解析失败：' + (e.message || '网络错误'), 'error');
   }
 
   isParsingLink = false;
-  btn.disabled = false;
-  btn.textContent = '🔍 解析';
+}
+
+// Helper: restore link input view, hide analyzing page
+function restoreLinkInput() {
+  var interviewInner = document.getElementById('sbInterviewInner');
+  var analyzingEl = document.getElementById('sbAnalyzing');
+  if (interviewInner) interviewInner.style.display = '';
+  if (analyzingEl) analyzingEl.style.display = 'none';
+  document.getElementById('sbAnalyzingIcon').textContent = '🔍';
+  document.getElementById('sbAnalyzingTitle').textContent = '正在分析视频…';
+}
+
+// Helper: show status message on the link input page
+function showLinkStatus(msg, className) {
+  var el = document.getElementById('sbLinkStatus');
+  el.style.display = 'block';
+  el.className = 'sb-link-status ' + (className || '');
+  if (msg.indexOf('<') >= 0) {
+    el.innerHTML = msg;
+  } else {
+    el.textContent = msg;
+  }
 }
 
 function fillInterviewFromLink(data) {
@@ -1000,7 +1059,17 @@ function fillInterviewFromLink(data) {
     }
   });
 
-  renderInterview();
+  // Answers filled silently; caller decides what to display
+}
+
+function detectPlatformFromUrl(u) {
+  if (/douyin\.com|iesdouyin\.com/.test(u)) return '抖音';
+  if (/tiktok\.com/.test(u)) return 'TikTok';
+  if (/bilibili\.com|b23\.tv/.test(u)) return 'B站';
+  if (/xiaohongshu\.com|xhslink\.com/.test(u)) return '小红书';
+  if (/youtube\.com|youtu\.be/.test(u)) return 'YouTube';
+  if (/kuaishou\.com/.test(u)) return '快手';
+  return '';
 }
 
 function guessVideoType(text, platform) {
@@ -1261,15 +1330,27 @@ function toggleVoiceInput() {
 // ============================================================
 // Phase 1: director analysis only
 function buildDirectorSystemPrompt() {
-  return '你是短视频导演助手。根据用户对爆款视频的描述，输出导演分析 JSON。\n\n' +
+  return '你是短视频改编导演助手。你的任务是将已有视频内容改编为新版本，而非从零创作。\n\n' +
+    '## 核心原则：骨架移植，只换皮肤\n\n' +
+    '原视频能火，是因为它的结构（节奏、情绪曲线、钩子位置、信息密度）已经被市场验证。你是"翻译官"，不是"创作者"。\n\n' +
+    '以下内容**必须原样保留**：\n' +
+    '- 情绪曲线的形状和位置：哪里紧张、哪里放松、哪里反转，一个都不准动\n' +
+    '- 节奏和时长感：快切/慢镜/停顿的位置不变，信息释放的密度不变\n' +
+    '- 钩子的类型和出现时机：原视频用什么方式勾住人，你就用什么方式\n' +
+    '- 关键转折点和信息释放的顺序：先后次序、因果逻辑、信息量分布全部保留\n\n' +
+    '以下内容**可以替换**：\n' +
+    '- 人物 → 换成用户形象库中的角色，保留原角色的"功能"（教导者→教导者，搞笑者→搞笑者）\n' +
+    '- 道具/产品 → 功能等价替换。原产品在视频中扮演什么角色（解决方案？冲突来源？情感载体？），新产品就扮演同样的角色\n' +
+    '- 场景 → 可以换地点，但保持原场景的空间功能和氛围功能不变（户外开阔→室内开阔，不是户外→狭小角落）\n' +
+    '- 语言 → 换用指定方言，保留原台词的核心信息量和情绪分量，不要因为翻译而缩水或注水\n\n' +
     '## 输出格式（所有字段必填，不得为空）\n\n' +
     '{\n' +
     '  "directorAnalysis": {\n' +
     '    "title": "吸引人的标题",\n' +
-    '    "totalDuration": "预估总时长（必填）",\n' +
+    '    "totalDuration": "内容预估总时长，如实反映内容密度和语速。通常每100字约15秒（必填，如：40s）",\n' +
     '    "directorBrief": {\n' +
     '      "coreIdea": "核心创意一句话：这个视频讲什么、为什么能火（必填）",\n' +
-    '      "hookDesign": "前3秒钩子设计：具体画面是什么 + 为什么能抓住人（必填）",\n' +
+    '      "hookDesign": "前3秒钩子设计：基于用户提供的信息，不要自己发明新的钩子（必填）",\n' +
     '      "emotionalTone": "情绪基调：整体色彩倾向/节奏感/语气风格，如 暖黄色调·快节奏·压迫感旁白（必填）",\n' +
     '      "visualReference": "视觉参考：像哪个账号/电影/摄影师的风格，如 日系生活美学·滨田英明风·低饱和暖调（必填）"\n' +
     '    },\n' +
@@ -1278,17 +1359,18 @@ function buildDirectorSystemPrompt() {
     '      "suggestedCharacters": "建议角色数量和人设（如：1名主角·教导者风格·30岁男性 休闲装）",\n' +
     '      "suggestedScene": "建议场景（如：居家厨房·温馨氛围）",\n' +
     '      "suggestedProps": "建议关键道具（如：手机、灌肠模具）",\n' +
-    '      "suggestedDuration": "建议时长 15s/30s/45s/60s（如：30s）",\n' +
+    '      "suggestedDuration": "建议时长，取最接近且≥totalDuration的档位（15s/30s/45s/60s）。如totalDuration为40s则填45s（必填）",\n' +
     '      "suggestedRatio": "建议比例 9:16/16:9/1:1（如：9:16）"\n' +
     '    }\n' +
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- totalDuration 如实反映视频时长\n' +
+    '- totalDuration 根据内容字数、信息密度、正常语速如实估算。每100字≈15秒\n' +
+    '- suggestedDuration 取 totalDuration 向上取整到最近的档位：15s/30s/45s/60s。如 totalDuration 为 38s → 填 45s\n' +
     '- keyFrames 必须覆盖用户描述中所有重要情节/对话/转折点！如果用户提到了6个要点，keyFrames就至少要6个！禁止缩减内容，15秒也可以有6个画面\n' +
     '- 用户描述中的所有台词、情节、要点都必须保留，不得省略任何一个\n' +
-    '- hookDesign 要说清楚前3秒的画面内容，不是"用悬念吸引"这种空话\n' +
-    '- visualReference 要具体到风格/摄影师/账号名，不要写"现代简约"\n' +
+    '- hookDesign 要基于用户提供的信息，不要自己发明新的钩子方式\n' +
+    '- 不要添加用户描述中没有的情节或转折\n' +
     (currentDialect !== '普通话' ? '- 台词语言：' + currentDialect + '。所有 dialogue 字段必须用' + currentDialect + '书写\n' : '') +
     '- 纯 JSON 输出，不要 ```json``` 包裹';
 }
@@ -1395,7 +1477,8 @@ function buildShotsSystemPrompt(batchInfo) {
   }
 
   prompt +=
-    (keyProps ? '- 关键道具 ' + keyProps + ' 必须在至少2个镜头的 action 中作为核心出现，keyProps 字段明确标注，写清楚道具如何被手持/展示/互动\n' : '') +
+    (keyProps ? '- 关键道具 ' + keyProps + ' 必须在至少2个镜头的 action 中作为核心出现，keyProps 字段明确标注，写清楚道具如何被手持/展示/互动\n' +
+    '- dialogue 中如出现其他道具/产品名称，一律替换为 ' + keyProps + '。只替换名词，不要改写台词结构和含义\n' : '') +
     '- 所有 dialogue 台词必须用' + currentDialect + '书写，包括语气词也要符合' + currentDialect + '的表达习惯\n' +
     '- 每个镜头的 action 必须具体到身体动作和物体变化，不要写"进行展示"这种空话\n' +
     '- 运镜必须从运镜手法参考中选择，写出完整名称如"缓推 dolly in"\n' +
@@ -1636,7 +1719,7 @@ function renderDirectorReview() {
   var db = da.directorBrief || {};
   var kf = da.keyFrames || [];
 
-  var html = '';
+  var html = '<div class="sb-board-scroll">';
 
   // Title + duration
   html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
@@ -1679,10 +1762,12 @@ function renderDirectorReview() {
   html += '<div>⏱ 时长建议：' + escapeHtml(hints.suggestedDuration || '30s') + ' &nbsp;|&nbsp; 📐 比例建议：' + escapeHtml(hints.suggestedRatio || '9:16') + '</div>';
   html += '</div></div>';
 
-  // Confirm button → go to pre-shot settings
-  html += '<div style="text-align:center;padding:12px 0">';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">🔄 重新来</button>';
-  html += '<button class="dialog-btn primary" onclick="renderPreShotSettings()" style="font-size:.88rem;padding:10px 32px">确认，设置分镜参数 →</button>';
+  html += '</div>';  // close sb-board-scroll
+
+  // Confirm button → go to pre-shot settings (fixed at bottom)
+  html += '<div class="sb-board-actions">';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.82rem;padding:10px 24px">🔄 重新来</button>';
+  html += '<button class="dialog-btn primary" onclick="renderPreShotSettings()" style="font-size:.92rem;padding:12px 36px">确认，设置分镜参数 →</button>';
   html += '</div>';
 
   board.innerHTML = html;
@@ -1702,7 +1787,7 @@ function renderPreShotSettings() {
     var hints = (currentDirectorAnalysis || {}).preShotHints || {};
     if (!currentPreScene && hints.suggestedScene) currentPreScene = hints.suggestedScene;
     if (!keyProps && hints.suggestedProps) keyProps = hints.suggestedProps;
-    if (hints.suggestedDuration) currentPreDuration = hints.suggestedDuration;
+    if (hints.suggestedDuration) currentPreDuration = hints.suggestedDuration.replace('s', '');
     if (hints.suggestedRatio) currentPreRatio = hints.suggestedRatio;
   }
 
@@ -1712,7 +1797,7 @@ function renderPreShotSettings() {
   }).filter(Boolean);
   var allSet = currentPreCharIds.length > 0 && currentPreScene && keyProps;
 
-  var html = '';
+  var html = '<div class="sb-board-scroll">';
 
   html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1rem;font-weight:700">🎯 分镜前设定</span><span style="font-size:.68rem;color:#8a8278;margin-left:6px">全部必选</span></div>';
 
@@ -1762,14 +1847,25 @@ function renderPreShotSettings() {
   html += '<span class="sb-pre-val">' + escapeHtml(currentDialect || '普通话') + '</span>';
   html += '<span class="sb-pre-edit">选方言 →</span></div>';
 
-  html += '</div>';
+  // Subtitle toggle row
+  html += '<div class="sb-pre-row" onclick="toggleSubtitle()"><span class="sb-pre-label">💬 字幕</span>';
+  html += '<span class="sb-pre-val">' + (subtitleEnabled ? '开启' : '关闭') + '</span>';
+  html += '<span class="sb-pre-toggle"><span class="toggle-switch' + (subtitleEnabled ? ' on' : '') + '"><span class="toggle-knob"></span></span></span></div>';
 
-  // Confirm buttons
-  html += '<div style="text-align:center;padding:4px 0 12px">';
-  html += '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px;font-size:.78rem;padding:8px 20px">← 返回导演分析</button>';
-  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.88rem;padding:10px 32px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 ✨</button>';
+  // BGM toggle row
+  html += '<div class="sb-pre-row" onclick="toggleBgm()"><span class="sb-pre-label">🎵 BGM</span>';
+  html += '<span class="sb-pre-val">' + (bgmEnabled ? '开启' : '关闭') + '</span>';
+  html += '<span class="sb-pre-toggle"><span class="toggle-switch' + (bgmEnabled ? ' on' : '') + '"><span class="toggle-knob"></span></span></span></div>';
+
+  html += '</div>';  // close sb-pre-shots
+  html += '</div>';  // close sb-board-scroll
+
+  // Confirm buttons (fixed at bottom)
+  html += '<div class="sb-board-actions">';
+  html += '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px;font-size:.82rem;padding:10px 24px">← 返回导演分析</button>';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.92rem;padding:12px 36px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 ✨</button>';
   if (!allSet) html += '<div style="font-size:.65rem;color:#e57373;margin-top:4px">请先选择角色、场景和道具（上方带虚线的项）</div>';
-  html += '</div>';
+  html += '</div>';  // close sb-board-actions
 
   board.innerHTML = html;
   board.style.display = 'flex';
@@ -1851,7 +1947,7 @@ function renderShotsPage() {
   var batchShots = getCurrentBatchShots();
   galleryIndex = 0;
 
-  var html = '';
+  var html = '<div class="sb-board-scroll">';
 
   // Batch tabs (only if multi-batch)
   if (shotBatches.length > 1) {
@@ -1912,13 +2008,16 @@ function renderShotsPage() {
   }
   html += '</div>';
 
-  // Primary actions
+  html += '</div>';  // close sb-board-scroll
+
+  // Primary actions (fixed at bottom)
+  html += '<div class="sb-board-actions">';
   var allChars = getStoryboardChars();
   if (allChars.length >= 2) {
     html += '<button class="sb-action-btn" onclick="swapStoryboardChars()" title="互换两个角色的所有出场">🔄 互换角色</button>';
   }
 
-  html += '<div class="sb-actions-bar" style="border-top:1px solid #f0ece4;padding-top:10px">';
+  html += '<div class="sb-actions-bar">';
   html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 即梦提示词</button>';
 
   // Regenerate current batch
@@ -1939,7 +2038,8 @@ function renderShotsPage() {
     html += '<span style="font-size:.72rem;color:#4a7c59;padding:6px 0">✅ 全部 ' + shotBatches.length + ' 段已生成</span>';
   }
 
-  html += '</div>';
+  html += '</div>';  // close sb-actions-bar
+  html += '</div>';  // close sb-board-actions
 
   board.innerHTML = html;
   board.style.display = 'flex';
@@ -2028,13 +2128,12 @@ function buildStoryboardPrompt() {
   }
 
   lines += '\n\n## 重要约束\n';
-  lines += '- 视频风格和节奏必须匹配' + (type || '通用') + '类短视频的特点\n';
-  lines += '- 场景设定为' + (scene || '通用场景') + '，氛围' + (mood || '中性') + '\n';
-  lines += '- 人物数量：' + (characters || '根据内容推断') + '\n';
-  lines += '- 开场hook方式：' + (opening || '根据内容自由设计') + '\n';
-  if (content) lines += '- 从用户描述中提取具体情节、画面、台词，不要凭空编造\n';
+  lines += '- 以上信息来自对原视频的拆解。你是改编者，不是创作者。请忠实还原原始骨架——包括情绪曲线形状、节奏快慢分布、钩子时机、信息释放顺序\n';
+  lines += '- 人物、场景、道具可以替换为用户指定的版本，但每个镜头的情感功能和节奏定位必须保留\n';
+  lines += '- 开场hook方式严格使用：' + (opening || '根据内容推断') + '，不要改成其他方式\n';
+  if (content) lines += '- 从用户描述中提取具体情节、画面、台词，不要凭空编造，也不要遗漏任何要点\n';
 
-  return '## 用户对爆款视频的描述\n\n' + lines + '\n\n请根据以上信息，输出完整的导演分镜表JSON。';
+  return '## 用户对原视频的拆解描述\n\n' + lines + '\n\n请根据以上信息，忠实改编为导演分镜表JSON。不要自行增减情节。';
 }
 
 var activeRecordId = null;  // current generating record
@@ -2857,24 +2956,36 @@ var currentPreCharIds = [];  // pre-shot character selections (multi)
 var currentPreDuration = '30';  // pre-shot duration: 15/30/45/60
 var currentPreRatio = '9:16';   // pre-shot aspect ratio
 var currentPreFps = '24';       // pre-shot frame rate
+var subtitleEnabled = false;    // subtitle toggle, default off
+var bgmEnabled = true;          // BGM toggle, default on
 var shotBatches = [];           // [{shots, startTime, endTime, generated}]
 var currentBatchTab = 0;        // active batch tab index
 
 function pickSceneForPreShot(fromName) {
   pickerFromName = fromName;
   pickerMode = 'scene-preset';
-  if (!sceneProfiles.length) { alert('请先在「我的」中创建场景'); return; }
 
   document.getElementById('pickerTitle').textContent = '🏠 选择主场景';
   document.getElementById('pickerCurrentList').innerHTML = currentPreScene ? '<span class="picker-tag selected" style="background:#5b9a8b;color:#fff">当前：' + escapeHtml(currentPreScene) + '</span>' : '';
-  document.getElementById('pickerList').innerHTML = sceneProfiles.map(function(s) {
-    var sel = s.name === currentPreScene ? ' style="border-color:#5b9a8b;background:#eef7f4"' : '';
-    return '<div class="picker-item"' + sel + ' onclick="confirmPreScene(\'' + s.name + '\')">' +
-      '<span class="picker-avatar">🏠</span>' +
-      '<div><div class="picker-name">' + escapeHtml(s.name) + '</div>' +
-      '<div class="picker-detail">' + escapeHtml([s.environment, s.atmosphere].filter(Boolean).join(' · ') || '场景') + '</div></div>' +
+
+  if (!sceneProfiles.length) {
+    document.getElementById('pickerList').innerHTML =
+      '<div style="padding:20px;text-align:center;color:#a09880;font-size:.78rem">暂无场景。</div>' +
+      '<div style="text-align:center;padding:0 20px 20px"><button class="dialog-btn primary" onclick="closePicker();openSceneManager()" style="font-size:.82rem;padding:10px 24px">➕ 新增场景</button></div>';
+  } else {
+    document.getElementById('pickerList').innerHTML = sceneProfiles.map(function(s) {
+      var sel = s.name === currentPreScene ? ' style="border-color:#5b9a8b;background:#eef7f4"' : '';
+      return '<div class="picker-item"' + sel + ' onclick="confirmPreScene(\'' + s.name + '\')">' +
+        '<span class="picker-avatar">🏠</span>' +
+        '<div><div class="picker-name">' + escapeHtml(s.name) + '</div>' +
+        '<div class="picker-detail">' + escapeHtml([s.environment, s.atmosphere].filter(Boolean).join(' · ') || '场景') + '</div></div>' +
+        '</div>';
+    }).join('') +
+      '<div class="picker-item" onclick="confirmPreScene(\'\')" style="color:#e57373">✕ 清除场景</div>' +
+      '<div style="border-top:1px solid #e0dcd3;margin-top:10px;padding-top:10px">' +
+      '<button class="dialog-btn secondary" onclick="closePicker();openSceneManager()" style="font-size:.78rem;padding:8px 16px">➕ 新增场景</button>' +
       '</div>';
-  }).join('') + '<div class="picker-item" onclick="confirmPreScene(\'\')" style="color:#e57373">✕ 清除场景</div>';
+  }
   document.getElementById('pickerOverlay').classList.add('open');
 }
 
@@ -2899,6 +3010,16 @@ function setPreFps(val) {
   renderPreShotSettings();
 }
 
+function toggleSubtitle() {
+  subtitleEnabled = !subtitleEnabled;
+  renderPreShotSettings();
+}
+
+function toggleBgm() {
+  bgmEnabled = !bgmEnabled;
+  renderPreShotSettings();
+}
+
 function confirmPreChar(id, name) {
   currentPreCharId = id || '';
   closePicker();
@@ -2920,11 +3041,12 @@ function pickPreChar() {
   var pcurrent = document.getElementById('pickerCurrentList');
   if (!ptitle || !plist || !pcurrent) return;
 
-  ptitle.textContent = '👤 选择角色（可多选）';
+  ptitle.textContent = '👤 选择角色（最多2人同时出镜）';
 
   if (characterProfiles.length === 0) {
     pcurrent.innerHTML = '';
-    plist.innerHTML = '<div style="padding:20px;text-align:center;color:#a09880;font-size:.78rem">暂无形象。<br>请先在「我的」→ 形象管理 中创建角色。</div>';
+    plist.innerHTML = '<div style="padding:20px;text-align:center;color:#a09880;font-size:.78rem">暂无形象。</div>' +
+      '<div style="text-align:center;padding:0 20px 20px"><button class="dialog-btn primary" onclick="closePicker();openCharacterEditor()" style="font-size:.82rem;padding:10px 24px">➕ 新增形象</button></div>';
     document.getElementById('pickerOverlay').classList.add('open');
     return;
   }
@@ -2952,18 +3074,23 @@ function pickPreChar() {
   if (selectedChars.length > 0) {
     h += '<div class="picker-item pre-char-clear-btn" style="color:#e57373;cursor:pointer">✕ 清空全部（已选' + selectedChars.length + '个）</div>';
   }
-  h += '<div style="font-size:.72rem;color:#8a8278;margin:8px 0 4px">可选角色：</div>';
-  h += availableChars.length > 0
-    ? availableChars.map(function(c) {
-        return '<div class="picker-item" data-char-id="' + c.id + '" style="cursor:pointer">' +
-          '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
-          '<div><div class="picker-name">' + escapeHtml(c.name) + '</div>' +
-          '<div class="picker-detail">' + escapeHtml([c.gender, c.age, c.clothing].filter(Boolean).join(' · ') || '无详细信息') + '</div></div>' +
-          '</div>';
-      }).join('')
-    : '<div style="color:#a09880;font-size:.78rem;padding:10px">所有角色已选中</div>';
+  if (selectedChars.length >= 2) {
+    h += '<div style="color:#e57373;font-size:.72rem;padding:10px;text-align:center">已达上限（最多2人），请先移除已选角色</div>';
+  } else {
+    h += '<div style="font-size:.72rem;color:#8a8278;margin:8px 0 4px">可选角色：</div>';
+    h += availableChars.length > 0
+      ? availableChars.map(function(c) {
+          return '<div class="picker-item" data-char-id="' + c.id + '" style="cursor:pointer">' +
+            '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
+            '<div><div class="picker-name">' + escapeHtml(c.name) + '</div>' +
+            '<div class="picker-detail">' + escapeHtml([c.gender, c.age, c.clothing].filter(Boolean).join(' · ') || '无详细信息') + '</div></div>' +
+            '</div>';
+        }).join('')
+      : '<div style="color:#a09880;font-size:.78rem;padding:10px">所有角色已选中</div>';
+  }
 
-  h += '<div style="border-top:1px solid #e0dcd3;margin-top:10px;padding-top:10px;text-align:right">';
+  h += '<div style="border-top:1px solid #e0dcd3;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">';
+  h += '<button class="dialog-btn secondary" onclick="closePicker();openCharacterEditor()" style="font-size:.78rem;padding:8px 16px">➕ 新增形象</button>';
   h += '<button class="dialog-btn primary pre-char-confirm-btn" style="font-size:.78rem;padding:8px 20px">确定</button>';
   h += '</div>';
 
@@ -2975,7 +3102,10 @@ function pickPreChar() {
     var el = e.target.closest('[data-char-id]');
     if (el) {
       var id = el.getAttribute('data-char-id');
-      if (currentPreCharIds.indexOf(id) < 0) currentPreCharIds.push(id);
+      if (currentPreCharIds.indexOf(id) < 0) {
+        if (currentPreCharIds.length >= 2) { alert('最多选择2个角色同时出镜'); return; }
+        currentPreCharIds.push(id);
+      }
       pickPreChar();
       return;
     }
@@ -3132,7 +3262,7 @@ function buildShotProse(shot) {
   // 情绪
   if (shot.emotionBeat) parts.push('情绪节奏：' + shot.emotionBeat);
 
-  return parts.join('。\n') + '。';
+  return parts.join('。') + '。';
 }
 
 function exportStoryboardPrompts() {
@@ -3180,34 +3310,28 @@ function exportStoryboardPrompts() {
     if (scId && usedSceneIds.indexOf(scId) < 0) usedSceneIds.push(scId);
   });
 
-  // Build output
-  var out = '## 🎬 ' + (sb.title || '未命名') + '\n\n';
-  out += '**时长**：' + totalDur + '  **比例**：' + ratio + '  **帧率**：' + fps + '  **方言**：' + (currentDialect || '普通话') + '\n';
-  if (keyProps) out += '**关键道具**：' + keyProps + '\n';
-  if (styles.length) out += '**风格**：' + styles.join(' · ') + '\n';
-  out += '\n---\n\n';
+  // Build output — compact format to fit 即梦 input limits
+  var out = '🎬 ' + (sb.title || '未命名');
+  out += ' | ' + totalDur + ' | ' + ratio + ' | ' + fps + 'fps';
+  if (currentDialect && currentDialect !== '普通话') out += ' | ' + currentDialect;
+  if (subtitleEnabled) out += ' | 字幕';
+  if (bgmEnabled) out += ' | BGM';
+  if (keyProps) out += ' | 道具：' + keyProps;
+  if (styles.length) out += ' | ' + styles.join('·');
+  out += '\n';
 
   var charDescs = usedCharIds.map(describeCharacter).filter(Boolean);
-  if (charDescs.length) {
-    out += '**角色设定**：\n';
-    charDescs.forEach(function(d) { out += '- ' + d + '\n'; });
-    out += '\n';
-  }
+  if (charDescs.length) out += '角色：' + charDescs.join('；') + '\n';
   var sceneDescs = usedSceneIds.map(describeScene).filter(Boolean);
-  if (sceneDescs.length) {
-    out += '**场景设定**：\n';
-    sceneDescs.forEach(function(d) { out += '- ' + d + '\n'; });
-    out += '\n';
-  }
-  out += '**分镜**：\n\n';
+  if (sceneDescs.length) out += '场景：' + sceneDescs.join('；') + '\n';
+
   shots.forEach(function(shot, i) {
-    out += (shot.duration || '') + '：\n';
-    out += buildShotProse(shot) + '\n';
-    if (shot.dialogue) out += '台词："' + shot.dialogue + '"\n';
+    out += (i + 1) + '. ' + (shot.duration || '') + ' ';
+    out += buildShotProse(shot);
+    if (shot.dialogue) out += ' 台词："' + shot.dialogue + '"';
     out += '\n';
   });
 
-  out += '---\n\n';
   out += '禁止：文字、字幕、LOGO、水印';
 
   copyToClipboard(out).then(function() {
@@ -3725,7 +3849,7 @@ function selectTopicCard(idx) {
 
   // Show content generation
   document.getElementById('topicCalendarSection').style.display = 'none';
-  document.getElementById('topicContentSection').style.display = 'block';
+  document.getElementById('topicContentSection').style.display = 'flex';
   document.getElementById('topicContentResult').innerHTML = '';
   document.getElementById('topicContentActions').style.display = 'none';
 
@@ -3859,6 +3983,20 @@ function confirmToStoryboard() {
   interviewAnswers.push({ question: INTERVIEW_QUESTIONS[3].question, answer: { a: scene, b: mood } });
   interviewAnswers.push({ question: INTERVIEW_QUESTIONS[4].question, answer: parsed.scriptContent });
 
+  // Reset storyboard state so create flow starts clean (independent from link flow)
+  currentStoryboard = null;
+  currentDirectorAnalysis = null;
+  keyProps = '';
+  currentPreScene = '';
+  currentPreCharIds = [];
+  currentPreDuration = '30';
+  currentPreRatio = '9:16';
+  currentPreFps = '24';
+  preShotHintsApplied = false;
+  shotBatches = [];
+  currentBatchTab = 0;
+  inPreShotSettings = false;
+
   pendingRecordSource = 'topic';
   switchTab('tabStoryboard');
   generateStoryboard();
@@ -3892,4 +4030,5 @@ async function refreshTopics() {
 // ============================================================
 // STARTUP
 // ============================================================
+window._tryRestoreSession = tryRestoreSession;
 init();

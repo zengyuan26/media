@@ -59,7 +59,7 @@ async function sbGetSession() {
 // PROFILE
 // ============================================================
 async function sbLoadProfile() {
-  if (!sbUser) return null;
+  if (!sbUser || !sbUser.id) return null;
   if (!sb) return null;
   var _a, _b, _c;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').select('*').eq('id', sbUser.id).single());
@@ -68,7 +68,7 @@ async function sbLoadProfile() {
 }
 
 async function sbSaveProfile() {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('profiles').upsert({
     id: sbUser.id,
@@ -80,7 +80,7 @@ async function sbSaveProfile() {
 // API CONFIG
 // ============================================================
 async function sbLoadApiConfig() {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a, _b, _c, _d, _e;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('api_configs').select('*').eq('user_id', sbUser.id).single());
   if (r.data) {
@@ -94,7 +94,7 @@ async function sbLoadApiConfig() {
 }
 
 async function sbSaveApiConfig() {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('api_configs').upsert({
     user_id: sbUser.id,
@@ -110,7 +110,7 @@ async function sbSaveApiConfig() {
 // CHARACTERS
 // ============================================================
 async function sbLoadCharacters() {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('characters').select('*').eq('user_id', sbUser.id).order('created_at'));
   if (r.data && r.data.length) {
@@ -120,7 +120,7 @@ async function sbLoadCharacters() {
 }
 
 async function sbSaveCharacter(ch) {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   var _b, _c, _d, _e, _f, _g, _h, _j;
   var data = {
@@ -141,7 +141,7 @@ async function sbSaveCharacter(ch) {
 }
 
 async function sbDeleteCharacter(id) {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('characters').delete().eq('id', id));
   await sbLoadCharacters();
@@ -159,7 +159,7 @@ function mapChar(c) {
 // SCENES
 // ============================================================
 async function sbLoadScenes() {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('scenes').select('*').eq('user_id', sbUser.id).order('created_at'));
   if (r.data && r.data.length) {
@@ -169,7 +169,7 @@ async function sbLoadScenes() {
 }
 
 async function sbSaveScene(s) {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('scenes').upsert({
     id: s.id && s.id.length > 20 ? s.id : undefined,
@@ -184,9 +184,13 @@ async function sbSaveScene(s) {
 }
 
 async function sbDeleteScene(id) {
-  if (!sbUser) return;
+  if (!sbUser || !sbUser.id) return;
   var _a;
   await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('scenes').delete().eq('id', id));
   await sbLoadScenes();
 }
+
+// Init Supabase client and notify app.js to restore session
+initSupabase();
+if (window._tryRestoreSession) window._tryRestoreSession();
 

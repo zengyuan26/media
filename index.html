@@ -31,7 +31,7 @@
 
     <!-- 链接输入区 -->
     <div class="sb-interview" id="sbInterview">
-      <div class="sb-interview-inner">
+      <div class="sb-interview-inner" id="sbInterviewInner">
         <div class="sb-interview-icon">🔗</div>
         <div class="sb-interview-title">粘贴视频链接，AI 自动拆解为导演分镜表</div>
         <div class="sb-interview-subtitle">支持抖音 / 小红书 / B站 / YouTube / 快手</div>
@@ -41,6 +41,13 @@
           <button class="sb-link-btn" id="btnParseLink" onclick="parseVideoLink()">🎬 解析生成</button>
         </div>
         <div class="sb-link-status" id="sbLinkStatus" style="display:none"></div>
+      </div>
+
+      <!-- 分析中过渡页 -->
+      <div class="sb-interview-inner" id="sbAnalyzing" style="display:none">
+        <div class="sb-analyzing-icon" id="sbAnalyzingIcon">🔍</div>
+        <div class="sb-analyzing-title" id="sbAnalyzingTitle">正在分析视频…</div>
+        <div class="sb-analyzing-status" id="sbAnalyzingStatus"></div>
       </div>
     </div>
 
@@ -410,7 +417,7 @@
 <!-- ============================================================
      LOGIN PAGE
      ============================================================ -->
-<div class="overlay" id="loginPage" style="background:#f7f3ed">
+<div class="overlay hidden" id="loginPage" style="background:#f7f3ed">
   <div style="display:flex;flex-direction:column;align-items:center;gap:20px;width:340px;max-width:90vw;text-align:center">
     <div style="font-size:3rem">🎬</div>
     <div>
@@ -600,8 +607,16 @@ script.onload = function() {
   script2.src = 'supabase.js';
   document.head.appendChild(script2);
 };
-script.onerror = function() { console.log('Supabase CDN unavailable, running in offline mode'); };
+script.onerror = function() { console.log('Supabase CDN unavailable, running in offline mode'); showLoginFallback(); };
 document.head.appendChild(script);
+// Fallback: if Supabase doesn't load within 5s, show login
+setTimeout(function() {
+  if (typeof sbGetSession === 'undefined') { showLoginFallback(); }
+}, 5000);
+function showLoginFallback() {
+  var lp = document.getElementById('loginPage');
+  if (lp && lp.classList.contains('hidden')) lp.classList.remove('hidden');
+}
 </script>
 </body>
 </html>

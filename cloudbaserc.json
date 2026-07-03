@@ -1,5 +1,5 @@
 {
-  "envId": "{{env.ENV_ID}}",
+  "envId": "fitness-h5-d5goy2q1ufeaf6ca4",
   "version": "2.0",
   "framework": {
     "name": "zimeiti-creator",
@@ -9,7 +9,20 @@
         "inputs": {
           "outputPath": ".",
           "cloudPath": "/",
-          "ignore": [".git", ".github", "node_modules", "cloudbase", "netlify", "edge-functions", "dist", "*.md", "main.js", "preload.js", "dev-server.js", "test-*.js"]
+          "ignore": [
+            ".git",
+            ".github",
+            "node_modules",
+            "cloudbase",
+            "netlify",
+            "edge-functions",
+            "dist",
+            "*.md",
+            "main.js",
+            "preload.js",
+            "dev-server.js",
+            "test-*.js"
+          ]
         }
       },
       "api": {
@@ -26,7 +39,9 @@
                 {
                   "name": "http",
                   "type": "http",
-                  "config": { "path": "/api/analyze" }
+                  "config": {
+                    "path": "/api/analyze"
+                  }
                 }
               ]
             }
@@ -34,5 +49,8 @@
         }
       }
     }
+  },
+  "cloudrun": {
+    "name": "copyboom"
   }
 }
