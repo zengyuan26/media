@@ -37,11 +37,23 @@ async function sbSignIn(email, password) {
   if (!r.ok) { var e = await r.json(); throw new Error(e.message || '用户名或密码错误'); }
   var data = await r.json();
   sbUser = { id: data.user_id, email: email };
+  try { localStorage.setItem('zimeiti-v3-session', JSON.stringify(sbUser)); } catch(e) {}
   return data;
 }
 
-async function sbSignOut() { sbUser = null; }
-async function sbGetSession() { return sbUser ? { user: sbUser } : null; }
+async function sbSignOut() {
+  sbUser = null;
+  try { localStorage.removeItem('zimeiti-v3-session'); } catch(e) {}
+}
+async function sbGetSession() {
+  if (!sbUser) {
+    try {
+      var s = JSON.parse(localStorage.getItem('zimeiti-v3-session'));
+      if (s && s.id) sbUser = s;
+    } catch(e) {}
+  }
+  return sbUser ? { user: sbUser } : null;
+}
 
 // ============================================================
 // PROFILE

@@ -156,14 +156,12 @@
   </div>
 
   <div class="tab-panel" id="tabMe">
-    <!-- Header with menu button -->
+    <!-- Header -->
     <div class="me-header">
-      <span class="me-header-title">我的</span>
-      <button class="me-menu-btn" id="btnMeMenu" onclick="toggleMeMenu()">⋮</button>
-      <div class="me-menu-dropdown" id="meMenuDropdown" style="display:none">
-        <div class="me-menu-item" onclick="openModelDialog(); closeMeMenu()">⚙ Model 设置</div>
-        <div class="me-menu-item" onclick="openZhilingDialog(); closeMeMenu()">🔑 视频分析 Key</div>
-        <div class="me-menu-item" style="color:#e57373" onclick="closeMeMenu(); doLogout()">退出登录</div>
+      <span></span>
+      <div class="me-header-btns">
+        <button class="me-hdr-btn" onclick="openModelDialog()">🔑 模型 Key</button>
+        <button class="me-hdr-btn" onclick="openZhilingDialog()">🎬 视频分析 Key</button>
       </div>
     </div>
 
@@ -195,6 +193,9 @@
         <div class="me-section-head"><span>📋 生成记录</span></div>
         <div id="sbRecordList" style="font-size:.76rem;color:#a09888;text-align:center;padding:12px 0">暂无记录</div>
       </div>
+
+      <!-- 退出登录 -->
+      <button class="me-logout-btn" id="btnMeLogout" onclick="doLogout()">退出登录</button>
     </div>
   </div>
 
