@@ -1266,7 +1266,7 @@ function buildDirectorSystemPrompt() {
     '{\n' +
     '  "directorAnalysis": {\n' +
     '    "title": "吸引人的标题",\n' +
-    '    "totalDuration": "预估总时长。短视频通常10-15秒，不要超过20秒（必填）",\n' +
+    '    "totalDuration": "预估总时长（必填）",\n' +
     '    "directorBrief": {\n' +
     '      "coreIdea": "核心创意一句话：这个视频讲什么、为什么能火（必填）",\n' +
     '      "hookDesign": "前3秒钩子设计：具体画面是什么 + 为什么能抓住人（必填）",\n' +
@@ -1284,7 +1284,7 @@ function buildDirectorSystemPrompt() {
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- totalDuration 如实反映视频时长。如果是15秒短视频就写15s，不要人为拉长\n' +
+    '- totalDuration 如实反映视频时长\n' +
     '- keyFrames 必须覆盖用户描述中所有重要情节/对话/转折点！如果用户提到了6个要点，keyFrames就至少要6个！禁止缩减内容，15秒也可以有6个画面\n' +
     '- 用户描述中的所有台词、情节、要点都必须保留，不得省略任何一个\n' +
     '- hookDesign 要说清楚前3秒的画面内容，不是"用悬念吸引"这种空话\n' +
@@ -3775,25 +3775,91 @@ function backToCalendar() {
   topicContentText = '';
 }
 
+function parseTopicContent(text) {
+  // Extract structured fields from the LLM-generated topic content
+  var result = {
+    videoType: '', opening: '', characters: '', charSuppl: '',
+    scene: '居家', mood: '温馨', scriptContent: text
+  };
+
+  var lines = text.split('\n');
+  var scriptStart = -1;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+
+    // 2. 视频类型
+    var m = line.match(/^2[\.\s、]+视频类型[：:]\s*(.+)/);
+    if (m) { result.videoType = m[1].trim(); continue; }
+
+    // 3. 开头方式
+    m = line.match(/^3[\.\s、]+开头方式[：:]\s*(.+)/);
+    if (m) { result.opening = m[1].trim(); continue; }
+
+    // 4. 人物设置
+    m = line.match(/^4[\.\s、]+人物设置[：:]\s*(.+)/);
+    if (m) {
+      var charText = m[1].trim();
+      // Try "几个人，什么穿着" pattern
+      var parts = charText.split(/[,，]/);
+      result.characters = parts[0].trim();
+      result.charSuppl = parts.slice(1).join('，').trim();
+      continue;
+    }
+
+    // 5. 场景+氛围 / 场景与氛围 / 场景和氛围
+    m = line.match(/^5[\.\s、]+场景[+与和]?氛围[：:]\s*(.+)/);
+    if (m) {
+      var sceneText = m[1].trim();
+      var sp = sceneText.split(/[,，·、+]/);
+      result.scene = (sp[0] || '').trim() || '居家';
+      result.mood = (sp[1] || '').trim() || '温馨';
+      continue;
+    }
+
+    // 6. 脚本内容 / 完整脚本 — mark where script begins
+    if (/^6[\.\s、]+(完整)?脚本/.test(line)) {
+      scriptStart = i + 1;
+      break;
+    }
+  }
+
+  // Extract just the script content (from section 6 onward)
+  if (scriptStart > 0 && scriptStart < lines.length) {
+    var scriptLines = [];
+    for (var j = scriptStart; j < lines.length; j++) {
+      var l = lines[j].trim();
+      // Stop at section 7 (结尾CTA) or next numbered section
+      if (/^7[\.\s、]|^#/.test(l)) break;
+      scriptLines.push(lines[j]);
+    }
+    if (scriptLines.length > 0) result.scriptContent = scriptLines.join('\n').trim();
+  }
+
+  return result;
+}
+
 function confirmToStoryboard() {
   if (!topicContentText) { alert('请先生成内容'); return; }
   if (!topicBizData || !topicBizData.analysis) { alert('请先完成选题分析'); return; }
 
-  var analysis = topicBizData.analysis;
+  var parsed = parseTopicContent(topicContentText);
+  var videoType = parsed.videoType || guessVideoType(topicContentText, '');
+  var opening = parsed.opening || '抛问题';
+  var characters = parsed.characters || '一个人';
+  var charSuppl = parsed.charSuppl || '日常休闲装';
+  var scene = parsed.scene || '居家';
+  var mood = parsed.mood || '温馨';
 
-  // Fill interviewAnswers from generated content
-  var videoType = guessVideoType(topicContentText, '');
   interviewAnswers = [];
   interviewAnswers.push({ question: INTERVIEW_QUESTIONS[0].question, answer: videoType });
-  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[1].question, answer: '抛问题', supplement: '' });
-  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[2].question, answer: '一个人', supplement: '日常休闲装' });
-  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[3].question, answer: { a: '居家', b: '温馨' } });
-  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[4].question, answer: topicContentText });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[1].question, answer: opening, supplement: '' });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[2].question, answer: characters, supplement: charSuppl });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[3].question, answer: { a: scene, b: mood } });
+  interviewAnswers.push({ question: INTERVIEW_QUESTIONS[4].question, answer: parsed.scriptContent });
 
-  // Set source to topic for the record
   pendingRecordSource = 'topic';
-
-  // Switch to storyboard tab and trigger generation
   switchTab('tabStoryboard');
   generateStoryboard();
 }
