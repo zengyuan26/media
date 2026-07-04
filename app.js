@@ -356,7 +356,7 @@ function randomizeCharacter() {
   document.getElementById('charEditFeatures').value = pick(RANDOM_CHAR.features);
 
   var btn = document.getElementById('btnRandomChar');
-  if (btn) { btn.textContent = '🎲 重新随机'; }
+  if (btn) { btn.innerHTML = '<span class="material-symbols-outlined">casino</span> 重新随机'; }
 }
 
 async function aiGenerateCharacter() {
@@ -388,7 +388,7 @@ async function aiGenerateCharacter() {
     alert('AI生成失败，改用随机');
     randomizeCharacter();
   }
-  btn.textContent = '✨ AI 生成';
+  btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span> AI 生成';
   btn.disabled = false;
 }
 
@@ -407,7 +407,7 @@ function openCharacterEditor(charId) {
   document.querySelectorAll('#charEditGender .chip').forEach(function(c) { c.classList.toggle('active', c.dataset.value === gender); });
 
   document.getElementById('btnCharDelete').style.display = ch ? 'block' : 'none';
-  document.getElementById('btnRandomChar').textContent = '🎲 随机';
+  document.getElementById('btnRandomChar').innerHTML = '<span class="material-symbols-outlined">casino</span> 随机';
   document.getElementById('charEditorOverlay').classList.add('open');
 }
 
@@ -509,7 +509,7 @@ async function aiGenerateScene() {
     alert('AI生成失败，改用随机：' + (e.message || ''));
     randomScene();
   }
-  btn.textContent = '✨ AI 生成';
+  btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span> AI 生成';
   btn.disabled = false;
 }
 
@@ -524,7 +524,7 @@ function renderSceneManagerList() {
   var html = '';
   sceneProfiles.forEach(function(s) {
     html += '<div class="mgr-item">';
-    html += '<div class="mgr-item-avatar">🏠</div>';
+    html += '<div class="mgr-item-avatar"><span class="material-symbols-outlined">home</span></div>';
     html += '<div class="mgr-item-info"><div class="mgr-item-name">' + escapeHtml(s.name || '未命名') + '</div>';
     html += '<div class="mgr-item-detail">' + escapeHtml([s.environment, s.atmosphere].filter(Boolean).join(' · ') || s.description || '') + '</div></div>';
     html += '<div class="mgr-item-actions">';
@@ -994,7 +994,7 @@ async function parseVideoLink() {
     // If Phase 1 got a fallback result AND zhilingKey available → try zhiling directly
     var phase1Failed = !data || data._fallback;
     if (phase1Failed && zhilingKey) {
-      analyzingStatus.textContent = '🎬 正在通过 AI 分析视频（约15-30秒）…';
+      analyzingStatus.innerHTML = '<span class=\"material-symbols-outlined\">movie</span> 正在通过 AI 分析视频（约15-30秒）…';
       var zhilingResult = await callZhilingDirect(zhilingKey, url);
       if (zhilingResult && zhilingResult.success && zhilingResult.content) {
         data = {
@@ -1047,7 +1047,7 @@ async function parseVideoLink() {
       input.value = '';
     } else if (zhilingKey) {
       // Phase 1 succeeded, now run zhiling for AI analysis
-      document.getElementById('sbAnalyzingIcon').textContent = '🎬';
+      document.getElementById('sbAnalyzingIcon').innerHTML = '<span class="material-symbols-outlined" style="font-size:3rem">movie</span>';
       document.getElementById('sbAnalyzingTitle').textContent = 'AI 正在分析视频画面';
       analyzingStatus.textContent = '预计 15-30 秒…';
       input.value = '';
@@ -1110,7 +1110,7 @@ function restoreLinkInput() {
   var analyzingEl = document.getElementById('sbAnalyzing');
   if (interviewInner) interviewInner.style.display = '';
   if (analyzingEl) analyzingEl.style.display = 'none';
-  document.getElementById('sbAnalyzingIcon').textContent = '🔍';
+  document.getElementById('sbAnalyzingIcon').innerHTML = '<span class="material-symbols-outlined" style="font-size:3rem">search</span>';
   document.getElementById('sbAnalyzingTitle').textContent = '正在分析视频…';
   // Re-enable parse button
   var btn = document.getElementById('btnParseLink');
@@ -1271,7 +1271,7 @@ function renderRecords(page) {
     var statusText = r.status === 'completed' ? '已完成' : r.status === 'failed' ? '失败' : '进行中';
     var date = new Date(r.createdAt);
     var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
-    var sourceLabel = r.source === 'topic' ? '💡 自主创作' : '🔗 链接分析';
+    var sourceLabel = r.source === 'topic' ? '<span class="material-symbols-outlined">lightbulb</span> 自主创作' : '<span class="material-symbols-outlined">link</span> 链接分析';
     var sourceClass = r.source === 'topic' ? 'topic' : 'link';
     html += '<div class="mgr-item" onclick="resumeRecord(\'' + r.id + '\')" style="cursor:pointer">';
     html += '<div class="mgr-item-avatar">' + icon + '</div>';
@@ -1654,7 +1654,7 @@ async function generateShots() {
   currentBatchTab = 0;
 
   var board = document.getElementById('sbBoard');
-  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成全部分镜…</div><div style="font-size:.72rem">总时长 ' + totalDuration + 's，一次性生成所有镜头</div></div>';
+  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px"><span class="material-symbols-outlined" style="font-size:3rem">videocam</span></div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成全部分镜…</div><div style="font-size:.72rem">总时长 ' + totalDuration + 's，一次性生成所有镜头</div></div>';
 
   try {
     var allShots = await generateAllShots(totalDuration);
@@ -1671,7 +1671,7 @@ async function generateShots() {
       '<div style="font-weight:600;margin-bottom:8px">分镜生成失败</div>' +
       '<div style="font-size:.78rem;margin-bottom:20px;color:#8a8278">' + escapeHtml(e.message || '未知错误') + '</div>' +
       '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px">← 返回导演分析</button>' +
-      '<button class="dialog-btn primary" onclick="generateShots()">🔄 重试</button>' +
+      '<button class="dialog-btn primary" onclick="generateShots()"><span class="material-symbols-outlined">refresh</span> 重试</button>' +
       '</div>';
   }
 
@@ -1787,21 +1787,21 @@ function renderDirectorReview() {
   var html = '<div class="sb-board-scroll">';
 
   // Title + duration
-  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700">🎬 ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700"><span class="material-symbols-outlined">movie</span> ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
   // Director brief card
   html += '<div class="sb-section">';
-  html += '<div class="sb-section-header"><span>📋 导演分析</span></div>';
+  html += '<div class="sb-section-header"><span><span class="material-symbols-outlined">description</span> 导演分析</span></div>';
   html += '<div class="sb-section-body">';
   html += '<div class="sb-director-brief">';
 
-  html += '<div class="da-field"><span class="da-label">💡 核心创意</span>';
+  html += '<div class="da-field"><span class="da-label"><span class="material-symbols-outlined">lightbulb</span> 核心创意</span>';
   html += '<p>' + escapeHtml(db.coreIdea || '') + '</p></div>';
 
   html += '<div class="da-field"><span class="da-label">🪝 钩子设计</span>';
   html += '<p>' + escapeHtml(db.hookDesign || '') + '</p></div>';
 
-  html += '<div class="da-field"><span class="da-label">🎨 情绪基调</span>';
+  html += '<div class="da-field"><span class="da-label"><span class="material-symbols-outlined">palette</span> 情绪基调</span>';
   html += '<p>' + escapeHtml(db.emotionalTone || '') + '</p></div>';
 
   html += '<div class="da-field"><span class="da-label">📸 视觉参考</span>';
@@ -1819,19 +1819,19 @@ function renderDirectorReview() {
   // Pre-shot hints
   var hints = da.preShotHints || {};
   html += '<div class="sb-section" style="margin-top:10px">';
-  html += '<div class="sb-section-header"><span>💡 分镜设置建议</span></div>';
+  html += '<div class="sb-section-header"><span><span class="material-symbols-outlined">lightbulb</span> 分镜设置建议</span></div>';
   html += '<div class="sb-section-body" style="font-size:.78rem;line-height:1.8;color:#6b6560">';
-  html += '<div>👤 角色：' + escapeHtml(hints.suggestedCharacters || '1名主角') + '</div>';
-  html += '<div>🏠 场景：' + escapeHtml(hints.suggestedScene || '居家') + '</div>';
-  html += '<div>📦 道具：' + escapeHtml(hints.suggestedProps || '无特殊道具') + '</div>';
-  html += '<div>⏱ 时长建议：' + escapeHtml(hints.suggestedDuration || '30s') + ' &nbsp;|&nbsp; 📐 比例建议：' + escapeHtml(hints.suggestedRatio || '9:16') + '</div>';
+  html += '<div><span class="material-symbols-outlined">person</span> 角色：' + escapeHtml(hints.suggestedCharacters || '1名主角') + '</div>';
+  html += '<div><span class="material-symbols-outlined">home</span> 场景：' + escapeHtml(hints.suggestedScene || '居家') + '</div>';
+  html += '<div><span class="material-symbols-outlined">inventory_2</span> 道具：' + escapeHtml(hints.suggestedProps || '无特殊道具') + '</div>';
+  html += '<div><span class="material-symbols-outlined">timer</span> 时长建议：' + escapeHtml(hints.suggestedDuration || '30s') + ' &nbsp;|&nbsp; <span class="material-symbols-outlined">aspect_ratio</span> 比例建议：' + escapeHtml(hints.suggestedRatio || '9:16') + '</div>';
   html += '</div></div>';
 
   html += '</div>';  // close sb-board-scroll
 
   // Confirm button → go to pre-shot settings (fixed at bottom)
   html += '<div class="sb-board-actions">';
-  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.82rem;padding:10px 24px">🔄 重新来</button>';
+  html += '<button class="dialog-btn secondary" onclick="resetToInterview()" style="margin-right:8px;font-size:.82rem;padding:10px 24px"><span class="material-symbols-outlined">refresh</span> 重新来</button>';
   html += '<button class="dialog-btn primary" onclick="renderPreShotSettings()" style="font-size:.92rem;padding:12px 36px">确认，设置分镜参数 →</button>';
   html += '</div>';
 
@@ -1864,17 +1864,17 @@ function renderPreShotSettings() {
 
   var html = '<div class="sb-board-scroll">';
 
-  html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1rem;font-weight:700">🎯 分镜前设定</span><span style="font-size:.68rem;color:#8a8278;margin-left:6px">全部必选</span></div>';
+  html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1rem;font-weight:700"><span class="material-symbols-outlined">tune</span> 分镜前设定</span><span style="font-size:.68rem;color:#8a8278;margin-left:6px">全部必选</span></div>';
 
   html += '<div class="sb-pre-shots">';
 
   // Character row
-  html += '<div class="sb-pre-row" onclick="pickPreChar()"><span class="sb-pre-label">👤 角色</span>';
+  html += '<div class="sb-pre-row" onclick="pickPreChar()"><span class="sb-pre-label"><span class="material-symbols-outlined">person</span> 角色</span>';
   html += '<span class="sb-pre-val ' + (charNames.length > 0 ? '' : 'empty') + '">' + (charNames.length > 0 ? charNames.join('、') : '点击选择') + '</span>';
   html += '<span class="sb-pre-edit">选角色 →</span></div>';
 
   // Scene row
-  html += '<div class="sb-pre-row" onclick="pickSceneForPreShot(\'' + (currentPreScene || '') + '\')"><span class="sb-pre-label">🏠 场景</span>';
+  html += '<div class="sb-pre-row" onclick="pickSceneForPreShot(\'' + (currentPreScene || '') + '\')"><span class="sb-pre-label"><span class="material-symbols-outlined">home</span> 场景</span>';
   html += '<span class="sb-pre-val ' + (currentPreScene ? '' : 'empty') + '">' + (currentPreScene || '点击选择') + '</span>';
   html += '<span class="sb-pre-edit">选场景 →</span></div>';
 
@@ -1884,7 +1884,7 @@ function renderPreShotSettings() {
   html += '<span class="sb-pre-edit">设道具 →</span></div>';
 
   // Duration row
-  html += '<div class="sb-pre-row"><span class="sb-pre-label">⏱ 时长</span>';
+  html += '<div class="sb-pre-row"><span class="sb-pre-label"><span class="material-symbols-outlined">timer</span> 时长</span>';
   html += '<span class="sb-pre-val">';
   ['15','30','45','60'].forEach(function(d) {
     html += '<span class="sb-dur-chip' + (currentPreDuration === d ? ' active' : '') + '" onclick="setPreDuration(\'' + d + '\')">' + d + 's</span>';
@@ -1908,7 +1908,7 @@ function renderPreShotSettings() {
   html += '</span></div>';
 
   // Dialect row
-  html += '<div class="sb-pre-row" onclick="pickDialect()"><span class="sb-pre-label">🗣 方言</span>';
+  html += '<div class="sb-pre-row" onclick="pickDialect()"><span class="sb-pre-label"><span class="material-symbols-outlined">record_voice_over</span> 方言</span>';
   html += '<span class="sb-pre-val">' + escapeHtml(currentDialect || '普通话') + '</span>';
   html += '<span class="sb-pre-edit">选方言 →</span></div>';
 
@@ -1937,7 +1937,7 @@ function renderPreShotSettings() {
   // Confirm buttons (fixed at bottom)
   html += '<div class="sb-board-actions">';
   html += '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px;font-size:.82rem;padding:10px 24px">← 返回导演分析</button>';
-  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.92rem;padding:12px 36px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 ✨</button>';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.92rem;padding:12px 36px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 <span class="material-symbols-outlined">auto_awesome</span></button>';
   if (!allSet) html += '<div style="font-size:.65rem;color:#e57373;margin-top:4px">请先选择角色、场景和道具（上方带虚线的项）</div>';
   html += '</div>';  // close sb-board-actions
 
@@ -2022,15 +2022,15 @@ function renderShotsPage() {
   var totalShots = (da.shots || []).length;
   html += '<div class="sb-shots-header">';
   html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 导演分析</button>';
-  html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center">🎥 ' + escapeHtml(da.title || '分镜') + '</span>';
+  html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center"><span class="material-symbols-outlined">videocam</span> ' + escapeHtml(da.title || '分镜') + '</span>';
   html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</span>';
   html += '</div>';
 
   // Gallery navigation (current batch only)
   html += '<div class="gallery-nav">';
-  html += '<button class="gallery-arrow" id="sbGalleryPrev" onclick="changeGallery(-1)" disabled>◀</button>';
+  html += '<button class="gallery-arrow" id="sbGalleryPrev" onclick="changeGallery(-1)" disabled><span class="material-symbols-outlined">chevron_left</span></button>';
   html += '<div class="gallery-viewport" id="sbShotCard">' + (batchShots.length > 0 ? renderOneShotCard(batchShots[0], 0) : '<div style="text-align:center;padding:40px;color:#8a8278">本段尚未生成</div>') + '</div>';
-  html += '<button class="gallery-arrow" id="sbGalleryNext" onclick="changeGallery(1)" ' + (batchShots.length < 2 ? 'disabled' : '') + '>▶</button>';
+  html += '<button class="gallery-arrow" id="sbGalleryNext" onclick="changeGallery(1)" ' + (batchShots.length < 2 ? 'disabled' : '') + '><span class="material-symbols-outlined">chevron_right</span></button>';
   html += '</div>';
 
   // Counter + dots (current batch only)
@@ -2049,17 +2049,17 @@ function renderShotsPage() {
   html += '<div class="sb-board-actions">';
   var allChars = getStoryboardChars();
   if (allChars.length >= 2) {
-    html += '<button class="sb-action-btn" onclick="swapStoryboardChars()" title="互换两个角色的所有出场">🔄 互换角色</button>';
+    html += '<button class="sb-action-btn" onclick="swapStoryboardChars()" title="互换两个角色的所有出场"><span class="material-symbols-outlined">swap_horiz</span> 互换角色</button>';
   }
 
   html += '<div class="sb-actions-bar">';
-  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 即梦提示词</button>';
+  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()"><span class="material-symbols-outlined">content_paste</span> 即梦提示词</button>';
 
   if (batchShots.length > 0) {
-    html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)">✏️ 镜头修改</button>';
+    html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)"><span class="material-symbols-outlined">edit</span> 镜头修改</button>';
   }
 
-  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()">🔄 重新生成全部</button>';
+  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()"><span class="material-symbols-outlined">refresh</span> 重新生成全部</button>';
   html += '</div>';  // close sb-actions-bar
 
   // Segment navigation for multi-batch
@@ -2073,9 +2073,9 @@ function renderShotsPage() {
     });
     html += '</div>';
     html += '<div class="sb-seg-nav">';
-    html += '<button class="sb-seg-nav-btn" onclick="switchBatchTab(' + (currentBatchTab - 1) + ')"' + (currentBatchTab <= 0 ? ' disabled' : '') + '>◀ 上一段</button>';
+    html += '<button class="sb-seg-nav-btn" onclick="switchBatchTab(' + (currentBatchTab - 1) + ')"' + (currentBatchTab <= 0 ? ' disabled' : '') + '><span class="material-symbols-outlined">chevron_left</span> 上一段</button>';
     html += '<span class="sb-seg-nav-label">第 ' + (currentBatchTab + 1) + ' / ' + shotBatches.length + ' 段</span>';
-    html += '<button class="sb-seg-nav-btn" onclick="switchBatchTab(' + (currentBatchTab + 1) + ')"' + (currentBatchTab >= shotBatches.length - 1 ? ' disabled' : '') + '>下一段 ▶</button>';
+    html += '<button class="sb-seg-nav-btn" onclick="switchBatchTab(' + (currentBatchTab + 1) + ')"' + (currentBatchTab >= shotBatches.length - 1 ? ' disabled' : '') + '>下一段 <span class="material-symbols-outlined">chevron_right</span></button>';
     html += '</div>';
   }
 
