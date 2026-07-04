@@ -573,6 +573,21 @@ function tryRestoreSession() {
     if (session) {
       sbUser = session.user;
       loadAllFromCloud().then(function() {
+        // Push local data to cloud if cloud is empty
+        if (!settings.apiKey) {
+          // Cloud had no API config — push whatever is in localStorage
+          try {
+            var localS = JSON.parse(localStorage.getItem('zimeiti-v3-settings'));
+            if (localS && localS.apiKey) {
+              settings.apiKey = localS.apiKey;
+              settings.endpoint = localS.endpoint || settings.endpoint;
+              settings.model = localS.model || settings.model;
+              settings.customModel = localS.customModel || '';
+              saveSettingsToStorage();
+              if (typeof sbSaveApiConfig !== 'undefined') sbSaveApiConfig().catch(function(){});
+            }
+          } catch(e) {}
+        }
         applyAllSettings();
         renderCharacterList();
         updateAccountUI();
@@ -622,8 +637,11 @@ async function doLoginOrRegister(mode) {
     var prevEndpoint = settings.endpoint;
     var prevModel = settings.model;
     var prevCustomModel = settings.customModel;
+    var prevZhilingKey = zhilingKey;
     var prevChars = characterProfiles.slice();
     var prevScenes = sceneProfiles.slice();
+    var prevDialects = dialects.slice();
+    var prevDialect = currentDialect;
 
     settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     // Don't reset characters/scenes — keep local data, cloud will merge if it has newer data
@@ -636,6 +654,10 @@ async function doLoginOrRegister(mode) {
       settings.model = prevModel;
       settings.customModel = prevCustomModel;
     }
+    if (!zhilingKey && prevZhilingKey) {
+      zhilingKey = prevZhilingKey;
+      saveZhilingKey();
+    }
     if (!characterProfiles.length && prevChars.length) {
       characterProfiles = prevChars;
       saveCharacterProfiles();
@@ -643,6 +665,17 @@ async function doLoginOrRegister(mode) {
     if (!sceneProfiles.length && prevScenes.length) {
       sceneProfiles = prevScenes;
       saveSceneProfiles();
+    }
+    if (!dialects.length && prevDialects.length) {
+      dialects = prevDialects;
+      currentDialect = prevDialect;
+      saveDialects();
+    }
+    // Persist restored settings to localStorage (they were backed up in memory only)
+    saveSettingsToStorage();
+    // Push restored API config to cloud
+    if (settings.apiKey && typeof sbSaveApiConfig !== 'undefined') {
+      try { await sbSaveApiConfig(); } catch(e) {}
     }
     // Also ensure cloud has our local data
     if (characterProfiles.length && typeof sbUser !== 'undefined' && sbUser) {
@@ -3660,8 +3693,8 @@ function buildTopicListPrompt(biz, analysis, purposeFilter) {
     '4. 淡季偏人设类，旺季偏成交型\n' +
     '5. 结合近期热点方向给出热点选题\n\n' +
     '## 输出 JSON 格式\n' +
-    '[{"title":"...","angle":"...","purpose":"人设打造","estimatedEffect":"高互动","psychology":"想代入自己","persona":"陪伴者","hotTip":""}]\n\n' +
-    '纯 JSON 数组输出，不要 ```json``` 包裹。';
+    '{"topics":[{"title":"...","angle":"...","purpose":"人设打造","estimatedEffect":"高互动","psychology":"想代入自己","persona":"陪伴者","hotTip":""}]}\n\n' +
+    '纯 JSON 输出，不要 ```json``` 包裹。';
 }
 
 function buildTopicContentPrompt(biz, analysis, topic) {
@@ -3725,7 +3758,8 @@ async function saveBizAndAnalyze() {
     var result2 = await doStoryboardApiCall(sysPrompt2, buildTopicListPrompt(biz, analysis, 'all'));
     var json2 = collectStreamJson(result2);
     if (!json2) throw new Error('无法解析选题列表');
-    topics = JSON.parse(json2);
+    var topicsData = JSON.parse(json2);
+    topics = Array.isArray(topicsData) ? topicsData : (topicsData.topics || []);
 
     // Both succeed — save
     topicBizData = { biz: biz, analysis: analysis, topics: topics, savedAt: new Date().toISOString() };
@@ -4015,7 +4049,8 @@ async function refreshTopics() {
     var calResult = await doStoryboardApiCall(systemPrompt, calPrompt);
     var calJson = collectStreamJson(calResult);
     if (!calJson) throw new Error('无法解析选题列表');
-    topicBizData.topics = JSON.parse(calJson);
+    var parsedTopics = JSON.parse(calJson);
+    topicBizData.topics = Array.isArray(parsedTopics) ? parsedTopics : (parsedTopics.topics || []);
     saveTopicBiz();
     renderTopicCalendar();
     renderTopicList(currentTopicFilter);

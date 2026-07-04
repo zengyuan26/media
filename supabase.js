@@ -84,11 +84,12 @@ async function sbLoadApiConfig() {
   var _a, _b, _c, _d, _e;
   var r = await ((_a = sb) === null || _a === void 0 ? void 0 : _a.from('api_configs').select('*').eq('user_id', sbUser.id).single());
   if (r.data) {
-    settings.apiKey = (_b = r.data.api_key) !== null && _b !== void 0 ? _b : '';
-    settings.endpoint = (_c = r.data.endpoint) !== null && _c !== void 0 ? _c : 'https://api.deepseek.com/v1';
-    settings.model = (_d = r.data.model) !== null && _d !== void 0 ? _d : 'deepseek-chat';
-    settings.customModel = (_e = r.data.custom_model) !== null && _e !== void 0 ? _e : '';
-    saveSettingsToStorage();
+    var changed = false;
+    if ((_b = r.data.api_key)) { settings.apiKey = _b; changed = true; }
+    if ((_c = r.data.endpoint)) { settings.endpoint = _c; changed = true; }
+    if ((_d = r.data.model)) { settings.model = _d; changed = true; }
+    if ((_e = r.data.custom_model)) { settings.customModel = _e; changed = true; }
+    if (changed) saveSettingsToStorage();
   }
   // If no cloud data, keep whatever is in localStorage — don't clear it
 }
