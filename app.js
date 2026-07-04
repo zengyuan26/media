@@ -107,13 +107,17 @@ var interviewAnswers = [];  // [{question, answer}, ...]
 
 // Storyboard state
 var currentStoryboard = null;  // the full storyboard JSON
+var originalScriptText = '';   // original script skeleton — preserved across rebuilds
 
 // Topic / Create page state
 var topicBizData = null;       // { biz, analysis, calendar, savedAt }
-var currentTopicFilter = 'all'; // 'all' | purpose label
 var selectedTopic = null;      // currently selected topic for content generation
 var topicContentText = '';     // generated content text
 var pendingRecordSource = 'link'; // 'link' | 'topic' — set before generateStoryboard()
+var topicContentAngle = 'product';  // 'product' | 'personal'
+var topicFormat = 'single';        // 'single' | 'dual'
+var topicDuration = '30';          // '15' | '30' | '45' | '60'
+var topicContentStyle = 'normal';  // 'normal' | 'comedy' | 'emotional'
 
 // ============================================================
 // PERSISTENCE
@@ -588,6 +592,45 @@ function tryRestoreSession() {
             }
           } catch(e) {}
         }
+        // Ensure characters/scenes/dialects are restored from localStorage if cloud was empty
+        if (!characterProfiles.length) {
+          try {
+            var localC = JSON.parse(localStorage.getItem('zimeiti-v3-characters'));
+            if (Array.isArray(localC) && localC.length) {
+              characterProfiles = localC;
+              saveCharacterProfiles();
+            }
+          } catch(e) {}
+        }
+        if (!sceneProfiles.length) {
+          try {
+            var localSc = JSON.parse(localStorage.getItem('zimeiti-v3-scenes'));
+            if (Array.isArray(localSc) && localSc.length) {
+              sceneProfiles = localSc;
+              saveSceneProfiles();
+            }
+          } catch(e) {}
+        }
+        if (!zhilingKey) {
+          try {
+            var localZ = localStorage.getItem('zimeiti-v3-zhiling-key');
+            if (localZ) { zhilingKey = localZ; saveZhilingKey(); }
+          } catch(e) {}
+        }
+        if (!dialects.length) {
+          try {
+            var localD = JSON.parse(localStorage.getItem('zimeiti-v3-dialects'));
+            if (Array.isArray(localD) && localD.length) {
+              dialects = localD;
+              saveDialects();
+            }
+          } catch(e) {}
+        }
+        // Force save everything to localStorage after cloud+local merge
+        saveSettingsToStorage();
+        saveCharacterProfiles();
+        saveSceneProfiles();
+        saveDialects();
         applyAllSettings();
         renderCharacterList();
         updateAccountUI();
@@ -765,6 +808,7 @@ function renderInterview() {
   var board = document.getElementById('sbBoard');
   var preview = document.getElementById('sbPreview');
   if (!el || !board) return;
+  restoreLinkInput();  // hide analyzing animation, show link input
   el.style.display = 'flex';
   if (preview) preview.style.display = 'none';
   board.style.display = 'none';
@@ -807,15 +851,23 @@ function showZhilingPreview(content) {
 
 function backToLinkInput() {
   var preview = document.getElementById('sbPreview');
-  var el = document.getElementById('sbInterview');
   if (preview) preview.style.display = 'none';
-  if (el) el.style.display = 'flex';
   _pendingZhilingContent = '';
-  // Restore link input, hide analyzing page
-  restoreLinkInput();
-  // Clear status
-  var statusEl = document.getElementById('sbLinkStatus');
-  if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
+  // Restore saved URL and re-run analysis
+  if (_lastParsedUrl) {
+    var input = document.getElementById('sbLinkInput');
+    if (input) input.value = _lastParsedUrl;
+    var el = document.getElementById('sbInterview');
+    if (el) el.style.display = 'flex';
+    parseVideoLink();
+  } else {
+    // Fallback: show link input page
+    var el = document.getElementById('sbInterview');
+    if (el) el.style.display = 'flex';
+    restoreLinkInput();
+    var statusEl = document.getElementById('sbLinkStatus');
+    if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
+  }
 }
 
 function confirmAndGenerate() {
@@ -831,6 +883,18 @@ function confirmAndGenerate() {
 var API_BASE = '';
 
 var isParsingLink = false;
+var cancelZhilingFlag = false;
+var _lastParsedUrl = '';
+
+function cancelParseLink() {
+  cancelZhilingFlag = true;
+  isParsingLink = false;
+  restoreLinkInput();
+  var statusEl = document.getElementById('sbLinkStatus');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.className = 'sb-link-status warning'; statusEl.textContent = '已取消分析'; }
+  var input = document.getElementById('sbLinkInput');
+  if (input) input.value = '';
+}
 
 // Direct 17zhiling call from browser (no Electron needed)
 async function callZhilingDirect(key, videoUrl) {
@@ -850,7 +914,9 @@ async function callZhilingDirect(key, videoUrl) {
   // Step 2: Poll (max 120s, 3s interval)
   var deadline = Date.now() + 120000;
   while (Date.now() < deadline) {
+    if (cancelZhilingFlag) return { success: false, error: '用户取消' };
     await new Promise(function(r) { setTimeout(r, 3000); });
+    if (cancelZhilingFlag) return { success: false, error: '用户取消' };
     var pollRes = await fetch('https://api.17zhiling.com/api/video-inference/task-status?key=' + encodeURIComponent(key) + '&taskId=' + encodeURIComponent(taskId));
     var pollJson = await pollRes.json();
     if (pollJson.code !== 200 || !pollJson.data) continue;
@@ -878,7 +944,9 @@ async function parseVideoLink() {
     return;
   }
 
+  _lastParsedUrl = url;
   isParsingLink = true;
+  cancelZhilingFlag = false;
   btn.disabled = true;
 
   // Transition to analyzing page
@@ -886,7 +954,19 @@ async function parseVideoLink() {
   var analyzingEl = document.getElementById('sbAnalyzing');
   var analyzingStatus = document.getElementById('sbAnalyzingStatus');
   if (interviewInner) interviewInner.style.display = 'none';
-  if (analyzingEl) analyzingEl.style.display = 'flex';
+  if (analyzingEl) {
+    analyzingEl.style.display = 'flex';
+    // Inject cancel button if not already present
+    if (!document.getElementById('btnCancelParse')) {
+      var cancelBtn = document.createElement('button');
+      cancelBtn.id = 'btnCancelParse';
+      cancelBtn.className = 'dialog-btn secondary';
+      cancelBtn.style.cssText = 'margin-top:20px;font-size:.78rem;padding:8px 28px';
+      cancelBtn.textContent = '取消';
+      cancelBtn.onclick = cancelParseLink;
+      analyzingEl.appendChild(cancelBtn);
+    }
+  }
   analyzingStatus.textContent = '正在提取视频信息…';
 
   try {
@@ -1032,6 +1112,9 @@ function restoreLinkInput() {
   if (analyzingEl) analyzingEl.style.display = 'none';
   document.getElementById('sbAnalyzingIcon').textContent = '🔍';
   document.getElementById('sbAnalyzingTitle').textContent = '正在分析视频…';
+  // Re-enable parse button
+  var btn = document.getElementById('btnParseLink');
+  if (btn) btn.disabled = false;
 }
 
 // Helper: show status message on the link input page
@@ -1091,6 +1174,9 @@ function fillInterviewFromLink(data) {
       interviewAnswers[idx] = entry;
     }
   });
+
+  // Store the original script text for Stage 2 skeleton preservation
+  originalScriptText = contentText || '';
 
   // Answers filled silently; caller decides what to display
 }
@@ -1398,7 +1484,9 @@ function buildDirectorSystemPrompt() {
     '  }\n' +
     '}\n\n' +
     '## 硬性要求\n' +
-    '- totalDuration 根据内容字数、信息密度、正常语速如实估算。每100字≈15秒\n' +
+    (currentSpeechSpeed === 'slow' ? '- ⚡ 当前语速设置：慢速。每100字≈20秒。根据内容字数、信息密度、慢语速如实估算 totalDuration\n' : '') +
+    (currentSpeechSpeed === 'fast' ? '- ⚡ 当前语速设置：快速。每100字≈10秒。根据内容字数、信息密度、快语速如实估算 totalDuration\n' : '') +
+    (currentSpeechSpeed === 'normal' ? '- totalDuration 根据内容字数、信息密度、正常语速如实估算。每100字≈15秒\n' : '') +
     '- suggestedDuration 取 totalDuration 向上取整到最近的档位：15s/30s/45s/60s。如 totalDuration 为 38s → 填 45s\n' +
     '- keyFrames 必须覆盖用户描述中所有重要情节/对话/转折点！如果用户提到了6个要点，keyFrames就至少要6个！禁止缩减内容，15秒也可以有6个画面\n' +
     '- 用户描述中的所有台词、情节、要点都必须保留，不得省略任何一个\n' +
@@ -1431,7 +1519,7 @@ function buildCharAssignHint() {
 }
 
 // Phase 2: shots based on confirmed director analysis
-function buildShotsSystemPrompt(batchInfo) {
+function buildShotsSystemPrompt() {
   var da = currentDirectorAnalysis || {};
   var db = da.directorBrief || {};
   var charList = characterProfiles.map(function(c) {
@@ -1440,36 +1528,40 @@ function buildShotsSystemPrompt(batchInfo) {
   var sceneList = sceneProfiles.map(function(s) {
     return '- ' + s.id + ': ' + s.name + ' (' + [s.environment, s.atmosphere, s.lighting].filter(Boolean).join(' | ') + ')';
   }).join('\n');
+  var totalDuration = parseInt(currentPreDuration) || 30;
 
-  var prompt = '你是短视频导演助手。根据已确认的导演分析，生成分镜脚本 JSON。\n\n' +
-    '## 已确认的导演分析\n' +
+  var prompt = '你是分镜翻译员。你的唯一工作是：把下面的内容原文逐字、逐句、逐动作地还原为分镜脚本 JSON。你没有创作权限，不允许发挥想象。\n\n' +
+    '## 内容原文（逐字还原，禁止任何改动）\n' +
+    (originalScriptText ? originalScriptText + '\n' : '（无内容原文）\n') +
+    '\n⚠️ 以上是最终内容标准。你必须逐句、逐动作、逐情绪地还原为镜头语言。\n' +
+    '严格禁止：\n' +
+    '- 增删或改写任何一句台词\n' +
+    '- 调整情节顺序或情绪节奏\n' +
+    '- 添加原文中没有的情节、角色、对话、动作\n' +
+    '允许的替换（仅此四项，超出即为违规）：\n' +
+    '- 角色外观 → 换为形象库或指定的角色\n' +
+    '- 场景环境 → 换为场景库或指定的场景\n' +
+    '- 道具 → 换为指定的道具\n' +
+    '- 语言口音 → 翻译为指定的方言\n' +
+    '除此之外的一切——台词内容、情节结构、情绪走向、信息顺序——必须与原文完全一致。\n\n' +
+    '## 导演分析（仅供视觉风格参考，不影响内容）\n' +
     '标题：' + (da.title || '') + '\n' +
     '总时长：' + (da.totalDuration || '') + '\n' +
     '核心创意：' + (db.coreIdea || '') + '\n' +
     '钩子设计：' + (db.hookDesign || '') + '\n' +
     '情绪基调：' + (db.emotionalTone || '') + '\n' +
     '视觉参考：' + (db.visualReference || '') + '\n' +
-    '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n';
-
-  // Batch context
-  if (batchInfo) {
-    prompt += '\n## 分批生成信息\n' +
-      '- 当前批次：第 ' + (batchInfo.batchIndex + 1) + '/' + batchInfo.totalBatches + ' 批\n' +
-      '- 本批时间范围：' + batchInfo.startTime + 's - ' + batchInfo.endTime + 's（共约' + (batchInfo.endTime - batchInfo.startTime) + '秒）\n' +
-      '- 本批最多 6 个镜头，每镜 2-5 秒，自由分配\n';
-    if (batchInfo.prevBatchSummary) {
-      prompt += '\n## 上一批摘要（仅供连续性参考，严禁重复）\n' +
-        batchInfo.prevBatchSummary + '\n' +
-        '⚠️ 以上摘要描述的是已完成的内容。你必须生成全新的镜头，禁止出现摘要中提到的任何台词、动作或画面。故事要向前推进，不要原地踏步。\n';
-    }
-  }
-
-  prompt +=
+    '关键画面：' + ((da.keyFrames || []).join(' / ')) + '\n' +
+    '⚠️ 导演分析仅影响画面的视觉呈现（光影、色调、构图）。不影响台词和情节。内容以「内容原文」为唯一标准。\n' +
+    '\n## 生成要求\n' +
+    '- 视频总时长：' + totalDuration + 's。每镜 2-5 秒，均匀分配，按内容原文的情节节奏自然分段\n' +
+    '- 全文一次性生成所有镜头。每个镜头的 duration 字段标注累计时间范围如 "0s-3s"、"3s-7s"……\n' +
     (currentPreScene ? '\n主场景（所有镜头默认使用）：' + currentPreScene : '') +
     (currentPreCharIds.length > 0 ? '\n默认出场角色ID列表（必须全部出场）：' + currentPreCharIds.join(',') : '') +
     (keyProps ? '\n关键道具（必须在至少2个镜头中作为动作核心出现，不可仅作为背景）：' + keyProps : '') +
     '\n视频比例：' + currentPreRatio + '  帧率：' + currentPreFps + 'fps\n' +
     '台词语言：' + currentDialect + '。所有 dialogue 字段必须用' + currentDialect + '书写，严禁使用其他语言\n' +
+    '语速：' + ({slow:'慢速',normal:'正常',fast:'快速'})[currentSpeechSpeed] + '。对白节奏和镜头时长按此语速调整\n' +
     buildCharAssignHint() + '\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
@@ -1500,14 +1592,12 @@ function buildShotsSystemPrompt(batchInfo) {
     '    }\n' +
     '  ]\n' +
     '}\n\n' +
-    '## 硬性要求\n';
-
-  if (batchInfo) {
-    prompt += '- 本批时间范围：' + batchInfo.startTime + 's - ' + batchInfo.endTime + 's。每镜 2-5 秒，本批最多 6 个镜头\n';
-  } else {
-    prompt += '- 总时长：' + currentPreDuration + 's。每镜 2-5 秒，自动计算镜头数。\n' +
-      '- 镜头数量：最多 6 个镜头。只保留最关键的情节转折点和核心信息，合并重复场景的动作\n';
-  }
+    '## 硬性要求\n' +
+    '- ⚠️ 内容原文是唯一真相来源。你的工作是逐句翻译为镜头语言，不是创作\n' +
+    '- 原文中的每一句台词必须在对应分镜的 dialogue 字段中逐字出现\n' +
+    '- 原文中的每一个动作描述必须映射到对应分镜的 action 字段\n' +
+    '- 不得增删情节、不得调整顺序、不得改变情绪走向、不得添加原文没有的内容\n' +
+    '- 总时长：' + totalDuration + 's。每镜 2-5 秒，按内容节奏均匀分配镜头数\n';
 
   prompt +=
     (keyProps ? '- 关键道具 ' + keyProps + ' 必须在至少2个镜头的 action 中作为核心出现，keyProps 字段明确标注，写清楚道具如何被手持/展示/互动\n' +
@@ -1561,24 +1651,15 @@ async function generateShots() {
   updateStopButton();
 
   var totalDuration = parseInt(currentPreDuration) || 30;
-  var numBatches = Math.ceil(totalDuration / 15);
-  var batchSec = 15;
-
-  // Initialize batches
-  shotBatches = [];
-  for (var b = 0; b < numBatches; b++) {
-    var startT = b * batchSec;
-    var endT = Math.min((b + 1) * batchSec, totalDuration);
-    shotBatches.push({ shots: [], startTime: startT, endTime: endT, generated: false });
-  }
   currentBatchTab = 0;
 
   var board = document.getElementById('sbBoard');
-  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成第 1/' + numBatches + ' 批分镜…</div><div style="font-size:.72rem">0s - ' + shotBatches[0].endTime + 's</div></div>';
+  board.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#8a8278"><div style="font-size:3rem;margin-bottom:16px">🎥</div><div style="font-size:.95rem;font-weight:600;margin-bottom:8px">AI 正在生成全部分镜…</div><div style="font-size:.72rem">总时长 ' + totalDuration + 's，一次性生成所有镜头</div></div>';
 
   try {
-    await generateOneBatch(0);
-    currentDirectorAnalysis.shots = mergeBatchShots();
+    var allShots = await generateAllShots(totalDuration);
+    distributeShotsToBatches(allShots, totalDuration);
+    currentDirectorAnalysis.shots = allShots;
     currentStoryboard = { storyboard: currentDirectorAnalysis };
     updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
     renderShotsPage();
@@ -1598,100 +1679,51 @@ async function generateShots() {
   updateStopButton();
 }
 
-async function generateOneBatch(batchIndex) {
-  console.log('[generateOneBatch] batch', batchIndex);
-  var batch = shotBatches[batchIndex];
-  var prevSummary = '';
-  if (batchIndex > 0) {
-    var prevBatch = shotBatches[batchIndex - 1];
-    if (prevBatch.generated) prevSummary = buildBatchSummary(prevBatch);
-  }
-
-  var batchInfo = {
-    batchIndex: batchIndex,
-    totalBatches: shotBatches.length,
-    startTime: batch.startTime,
-    endTime: batch.endTime,
-    prevBatchSummary: prevSummary
-  };
-
-  var systemPrompt = buildShotsSystemPrompt(batchInfo);
-  console.log('[generateOneBatch] systemPrompt length:', systemPrompt.length);
-  var userPrompt = '请生成第 ' + (batchIndex + 1) + ' 批分镜脚本（' + batch.startTime + 's-' + batch.endTime + 's）。';
-  var streamText = await doStoryboardApiCall(systemPrompt, userPrompt, { maxTokens: 8192, timeout: 120000, noStream: true });
-  console.log('[generateOneBatch] API returned, length:', streamText.length);
+async function generateAllShots(duration) {
+  var totalDuration = parseInt(duration) || 30;
+  var maxTokens = totalDuration <= 45 ? 8192 : 16384;
+  var systemPrompt = buildShotsSystemPrompt();
+  console.log('[generateAllShots] systemPrompt length:', systemPrompt.length, 'maxTokens:', maxTokens);
+  var userPrompt = '请生成完整的' + totalDuration + '秒分镜脚本，一次性输出所有镜头。';
+  var streamText = await doStoryboardApiCall(systemPrompt, userPrompt, { maxTokens: maxTokens, timeout: 180000, noStream: true });
+  console.log('[generateAllShots] API returned, length:', streamText.length);
 
   var jsonText = collectStreamJson(streamText);
   if (!jsonText) {
-    console.log('[generateOneBatch] PARSE FAILED, raw:', streamText);
-    throw new Error('第' + (batchIndex + 1) + '批分镜JSON解析失败');
+    console.log('[generateAllShots] PARSE FAILED, raw:', streamText);
+    throw new Error('分镜JSON解析失败');
   }
 
   var data = JSON.parse(jsonText);
   var shots = Array.isArray(data) ? data : (data.shots || []);
-  if (!Array.isArray(shots) || shots.length === 0) throw new Error('第' + (batchIndex + 1) + '批分镜数据为空');
+  if (!Array.isArray(shots) || shots.length === 0) throw new Error('分镜数据为空');
 
   // Assign global shot IDs
-  var startId = 0;
-  for (var i = 0; i < batchIndex; i++) {
-    startId += shotBatches[i].shots.length;
-  }
   shots.forEach(function(shot, i) {
-    shot.id = 'shot_' + (startId + i + 1);
+    shot.id = 'shot_' + (i + 1);
   });
-  normalizeShotsArray(shots, batchIndex > 0);
-
-  batch.shots = shots;
-  batch.generated = true;
-  console.log('[generateOneBatch] batch', batchIndex, 'done:', shots.length, 'shots');
+  normalizeShotsArray(shots, false);
+  console.log('[generateAllShots] done:', shots.length, 'shots');
+  return shots;
 }
 
-async function generateNextBatch(batchIndex) {
-  console.log('[generateNextBatch] batch', batchIndex);
-  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+function distributeShotsToBatches(allShots, totalDuration) {
+  var numBatches = Math.ceil(totalDuration / 15);
+  var batchSec = 15;
 
-  // Immediately show generating state on the button
-  var btn = document.querySelector('.sb-actions-bar .primary');
-  if (btn) { btn.textContent = '⏳ 生成中…'; btn.disabled = true; }
-
-  isGenerating = true;
-  updateStopButton();
-
-  var board = document.getElementById('sbBoard');
-  try {
-    await generateOneBatch(batchIndex);
-    currentDirectorAnalysis.shots = mergeBatchShots();
-    currentStoryboard = { storyboard: currentDirectorAnalysis };
-    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
-    currentBatchTab = batchIndex;
-    renderShotsPage();
-  } catch(e) {
-    console.error('[generateNextBatch] error:', e.message || e);
-    alert('第' + (batchIndex + 1) + '批生成失败：' + (e.message || '未知错误'));
-    renderShotsPage();
+  shotBatches = [];
+  for (var b = 0; b < numBatches; b++) {
+    var startT = b * batchSec;
+    var endT = Math.min((b + 1) * batchSec, totalDuration);
+    shotBatches.push({ shots: [], startTime: startT, endTime: endT, generated: true });
   }
 
-  isGenerating = false;
-  updateStopButton();
-}
-
-function buildBatchSummary(batch) {
-  var shots = batch.shots || [];
-  if (!shots.length) return '';
-  var last = shots[shots.length - 1];
-
-  var subjects = (last.subjects || []).map(function(s) { return s.characterName || ''; }).filter(Boolean);
-  var lastEmotion = last.emotionBeat || '';
-  var sceneName = (last.scene || {}).sceneName || (last.scene || {}).environment || '';
-
-  var summary = '';
-  if (subjects.length) summary += '- 当前画面中的人物：' + subjects.join('、') + '\n';
-  if (sceneName) summary += '- 当前场景：' + sceneName + '\n';
-  if (lastEmotion) summary += '- 当前情绪位置：' + lastEmotion + '\n';
-  summary += '- 上一批时间范围：' + batch.startTime + 's - ' + batch.endTime + 's（已完成，不要重复）\n';
-  summary += '- 请从 ' + batch.endTime + 's 开始生成全新的下一段内容\n';
-  summary += '- 重要：以上是已完成的镜头，禁止复读上述台词、动作或画面。请延续故事发展，推进到下一个情节点\n';
-  return summary;
+  // Distribute shots evenly across batches
+  var perBatch = Math.ceil(allShots.length / numBatches);
+  allShots.forEach(function(shot, i) {
+    var bi = Math.min(Math.floor(i / perBatch), numBatches - 1);
+    shotBatches[bi].shots.push(shot);
+  });
 }
 
 function mergeBatchShots() {
@@ -1880,6 +1912,15 @@ function renderPreShotSettings() {
   html += '<span class="sb-pre-val">' + escapeHtml(currentDialect || '普通话') + '</span>';
   html += '<span class="sb-pre-edit">选方言 →</span></div>';
 
+  // Speech speed row
+  var speedLabels = { slow: '慢速 (0.8x)', normal: '正常 (1.0x)', fast: '快速 (1.3x)' };
+  html += '<div class="sb-pre-row"><span class="sb-pre-label">⚡ 语速</span>';
+  html += '<span class="sb-pre-val">';
+  ['slow','normal','fast'].forEach(function(s) {
+    html += '<span class="sb-dur-chip' + (currentSpeechSpeed === s ? ' active' : '') + '" onclick="setSpeechSpeed(\'' + s + '\')">' + speedLabels[s] + '</span>';
+  });
+  html += '</span></div>';
+
   // Subtitle toggle row
   html += '<div class="sb-pre-row" onclick="toggleSubtitle()"><span class="sb-pre-label">💬 字幕</span>';
   html += '<span class="sb-pre-val">' + (subtitleEnabled ? '开启' : '关闭') + '</span>';
@@ -1962,11 +2003,6 @@ function renderGallerySlide() {
     dots.innerHTML = dotsHtml;
   }
 
-  for (var i = 0; i < shots.length; i++) {
-    var item = document.getElementById('emotionItem' + i);
-    if (item) item.classList.toggle('active', i === galleryIndex);
-  }
-
   if (counter) counter.textContent = '第 ' + (galleryIndex + 1) + '/' + shots.length + ' 镜';
   if (prevBtn) prevBtn.disabled = galleryIndex === 0;
   if (nextBtn) nextBtn.disabled = galleryIndex >= shots.length - 1;
@@ -1982,46 +2018,12 @@ function renderShotsPage() {
 
   var html = '<div class="sb-board-scroll">';
 
-  // Batch tabs (only if multi-batch)
-  if (shotBatches.length > 1) {
-    html += '<div class="batch-tabs">';
-    shotBatches.forEach(function(b, i) {
-      var label = b.startTime + '-' + b.endTime + 's';
-      var cls = 'batch-tab';
-      if (i === currentBatchTab) cls += ' active';
-      if (b.generated) cls += ' done';
-      else cls += ' pending';
-      html += '<span class="' + cls + '" onclick="switchBatchTab(' + i + ')">';
-      html += b.generated ? '✓ ' : '';
-      html += label + ' (' + (b.shots.length || '待生成') + ')';
-      html += '</span>';
-    });
-    html += '</div>';
-  }
-
   // Header
   var totalShots = (da.shots || []).length;
   html += '<div class="sb-shots-header">';
   html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 导演分析</button>';
   html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center">🎥 ' + escapeHtml(da.title || '分镜') + '</span>';
   html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</span>';
-  html += '</div>';
-
-  // Current batch label for multi-batch
-  if (shotBatches.length > 1 && batchShots.length > 0) {
-    var cb = shotBatches[currentBatchTab];
-    html += '<div style="text-align:center;font-size:.68rem;color:#5b9a8b;padding:2px 0 4px">第' + (currentBatchTab + 1) + '段 ' + cb.startTime + '-' + cb.endTime + 's</div>';
-  }
-
-  // Emotion flow strip (current batch only)
-  html += '<div class="emotion-flow">';
-  batchShots.forEach(function(shot, i) {
-    html += '<span class="emotion-flow-item' + (i === 0 ? ' active' : '') + '" onclick="goGallery(' + i + ')" id="emotionItem' + i + '">' + escapeHtml(shot.emotionBeat || '第'+(i+1)+'镜') + '</span>';
-    if (i < batchShots.length - 1) {
-      var trans = (shot.continuity && shot.continuity.transition) ? shot.continuity.transition : '→';
-      html += '<span class="emotion-flow-arrow">' + escapeHtml(trans) + '</span>';
-    }
-  });
   html += '</div>';
 
   // Gallery navigation (current batch only)
@@ -2053,25 +2055,30 @@ function renderShotsPage() {
   html += '<div class="sb-actions-bar">';
   html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()">📋 即梦提示词</button>';
 
-  // Regenerate current batch
-  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()" style="font-size:.68rem">🔄 重生成当前段</button>';
-
   if (batchShots.length > 0) {
-    html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)" style="font-size:.68rem">✏️ 镜头修改</button>';
+    html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)">✏️ 镜头修改</button>';
   }
 
-  // Generate next batch button
-  var nextUngenerated = -1;
-  for (var b = 0; b < shotBatches.length; b++) {
-    if (!shotBatches[b].generated) { nextUngenerated = b; break; }
-  }
-  if (nextUngenerated >= 0) {
-    html += '<button class="sb-action-btn primary" onclick="generateNextBatch(' + nextUngenerated + ')" style="font-size:.78rem">▶ 生成下一段 (' + shotBatches[nextUngenerated].startTime + '-' + shotBatches[nextUngenerated].endTime + 's)</button>';
-  } else if (shotBatches.length > 1) {
-    html += '<span style="font-size:.72rem;color:#4a7c59;padding:6px 0">✅ 全部 ' + shotBatches.length + ' 段已生成</span>';
-  }
-
+  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()">🔄 重新生成全部</button>';
   html += '</div>';  // close sb-actions-bar
+
+  // Segment navigation for multi-batch
+  if (shotBatches.length > 1) {
+    html += '<div class="batch-tabs" style="justify-content:center;padding:4px 0 0">';
+    shotBatches.forEach(function(b, i) {
+      var cls = 'batch-tab';
+      if (i === currentBatchTab) cls += ' active';
+      if (b.generated) cls += ' done';
+      html += '<span class="' + cls + '" onclick="switchBatchTab(' + i + ')">' + b.startTime + '-' + b.endTime + 's · ' + b.shots.length + '镜</span>';
+    });
+    html += '</div>';
+    html += '<div class="sb-seg-nav">';
+    html += '<button class="sb-seg-nav-btn" onclick="switchBatchTab(' + (currentBatchTab - 1) + ')"' + (currentBatchTab <= 0 ? ' disabled' : '') + '>◀ 上一段</button>';
+    html += '<span class="sb-seg-nav-label">第 ' + (currentBatchTab + 1) + ' / ' + shotBatches.length + ' 段</span>';
+    html += '<button class="sb-seg-nav-btn" onclick="switchBatchTab(' + (currentBatchTab + 1) + ')"' + (currentBatchTab >= shotBatches.length - 1 ? ' disabled' : '') + '>下一段 ▶</button>';
+    html += '</div>';
+  }
+
   html += '</div>';  // close sb-board-actions
 
   board.innerHTML = html;
@@ -2087,31 +2094,8 @@ function switchBatchTab(idx) {
 
 async function regenerateCurrentBatch() {
   if (!settings.apiKey) { alert('请先配置 API Key'); return; }
-  // Fallback for old records without batches: regenerate everything
-  if (shotBatches.length === 0) {
-    generateShots();
-    return;
-  }
-  var bi = currentBatchTab;
-  shotBatches[bi].generated = false;
-  shotBatches[bi].shots = [];
-
-  var board = document.getElementById('sbBoard');
-  board.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#8a8278"><div style="font-size:2rem;margin-bottom:12px">🔄</div><div style="font-weight:600">正在重新生成第' + (bi + 1) + '段…</div></div>';
-
-  isGenerating = true;
-  updateStopButton();
-  try {
-    await generateOneBatch(bi);
-    currentDirectorAnalysis.shots = mergeBatchShots();
-    currentStoryboard = { storyboard: currentDirectorAnalysis };
-    updateRecord(activeRecordId, { status: 'completed', storyboard: JSON.parse(JSON.stringify(currentStoryboard)) });
-  } catch(e) {
-    alert('重新生成失败：' + (e.message || '未知错误'));
-  }
-  isGenerating = false;
-  updateStopButton();
-  renderShotsPage();
+  if (!confirm('将重新生成全部分镜，当前内容会被覆盖。确定？')) return;
+  generateShots();
 }
 
 function buildStoryboardPrompt() {
@@ -2291,6 +2275,8 @@ function collectStreamJson(text) {
   fixed3 = fixed3.replace(/"\s*(\[)/g, '": $1');
   // Fix missing opening quote in key names: ,position" → ,"position"
   fixed3 = fixed3.replace(/([,\{\[])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*"/g, '$1"$2"');
+  // Fix "keyNameValue" → "keyName":"Value" (LLM dropped key's closing quote + colon + value's opening quote)
+  fixed3 = fixed3.replace(/"([a-zA-Z_]\w*)([^":\{\[\}\],\s\\\w][^"]*)"/g, '"$1":"$2"');
   try { JSON.parse(fixed3); return fixed3; } catch(e) {}
 
   // Strategy 5: try removing the last malformed shot (common AI error at end)
@@ -2360,34 +2346,57 @@ function collectStreamJson(text) {
   return null;
 }
 
+var ANTHROPIC_ENDPOINT = 'https://api.deepseek.com/anthropic/v1/messages';
+
 async function doStoryboardApiCall(systemPrompt, userPrompt, opts) {
   abortController = new AbortController();
   var model = settings.model === 'custom' ? settings.customModel : settings.model;
   opts = opts || {};
-  console.log('[doStoryboardApiCall] endpoint:', settings.endpoint, 'model:', model);
+  console.log('[doStoryboardApiCall] model:', model, 'enableSearch:', !!opts.enableSearch);
 
   // timeout
   var timeoutMs = opts.timeout || 30000;
   var timeoutId = setTimeout(function() { abortController.abort(); }, timeoutMs);
 
+  // Build Anthropic-format messages — user content as text block
   var messages = [
-    { role: 'system', content: '[System Prompt]\n' + systemPrompt },
     { role: 'user', content: userPrompt }
   ];
 
   var body = {
     model: model,
+    system: systemPrompt,
     messages: messages,
     stream: !opts.noStream,
     temperature: 0.7,
     max_tokens: opts.maxTokens || 4096
   };
-  if (!opts.noJsonFormat) { body.response_format = { type: 'json_object' }; }
+
+  // Enable web search tool when requested
+  if (opts.enableSearch) {
+    body.tools = [{
+      type: 'web_search_20260209',
+      name: 'web_search',
+      input_schema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: '搜索查询关键词' },
+          explanation: { type: 'string', description: '一句话解释为什么这个搜索有助于完成任务' }
+        },
+        required: ['query']
+      }
+    }];
+    body.tool_choice = { type: 'auto' };
+  }
 
   try {
-  var resp = await fetch(settings.endpoint + '/chat/completions', {
+  var resp = await fetch(ANTHROPIC_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': settings.apiKey,
+      'anthropic-version': '2023-06-01'
+    },
     body: JSON.stringify(body),
     signal: abortController.signal
   });
@@ -2396,47 +2405,97 @@ async function doStoryboardApiCall(systemPrompt, userPrompt, opts) {
 
   if (!resp.ok) {
     var errText = await resp.text();
+    console.log('[doStoryboardApiCall] error body:', errText.slice(0, 500));
     var errMsg = 'API错误 ' + resp.status;
     if (resp.status === 401) errMsg = 'API Key 无效，请在设置中检查';
     else if (resp.status === 404) errMsg = 'Endpoint 不存在，请检查地址';
     throw new Error(errMsg);
   }
 
-  // Non-streaming: parse single response
+  // Non-streaming
   if (opts.noStream) {
-    clearTimeout(timeoutId);
     var json = await resp.json();
-    var content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
-    console.log('[doStoryboardApiCall] non-stream response, length:', content ? content.length : 0);
-    return content || '';
+    var content = '';
+    var blocks = json.content || [];
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].type === 'text') content += blocks[i].text;
+    }
+    console.log('[doStoryboardApiCall] non-stream response, length:', content.length);
+    return content;
   }
 
+  // Streaming — Anthropic SSE format (events delimited by \n\n)
   var fullText = '';
   var reader = resp.body.getReader();
   var decoder = new TextDecoder();
   var chunkCount = 0;
+  var buffer = '';
 
   while (true) {
     var result = await reader.read();
     if (result.done) { console.log('[stream] done after', chunkCount, 'chunks'); break; }
     chunkCount++;
-    var chunk = decoder.decode(result.value, { stream: true });
-    var lines = chunk.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i].trim();
-      if (!line || !line.startsWith('data:')) continue;
-      var data = line.slice(5).trim();
-      if (data === '[DONE]') continue;
+    buffer += decoder.decode(result.value, { stream: true });
+
+    // Split on \n\n — each complete SSE event ends with a blank line
+    var events = buffer.split('\n\n');
+    // Keep incomplete trailing event in buffer
+    buffer = events.pop() || '';
+
+    for (var i = 0; i < events.length; i++) {
+      // Find the data: line within this event
+      var evtLines = events[i].split('\n');
+      var dataStr = '';
+      for (var j = 0; j < evtLines.length; j++) {
+        var line = evtLines[j].trim();
+        if (line.startsWith('data:')) {
+          dataStr = line.slice(5).trim();
+          break;
+        }
+      }
+      if (!dataStr) continue;
       try {
-        var json = JSON.parse(data);
-        var token = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
-        if (token) fullText += token;
+        var evt = JSON.parse(dataStr);
+        if (evt.type === 'content_block_delta') {
+          var d = evt.delta;
+          if (d && d.type === 'text_delta' && d.text) fullText += d.text;
+        }
+        if (evt.type === 'content_block_start' && evt.content_block) {
+          var cb = evt.content_block;
+          if (cb.type === 'server_tool_use') {
+            console.log('[stream] LLM searching web:', cb.name);
+          }
+          if (cb.type === 'web_search_tool_result') {
+            console.log('[stream] web search results received');
+          }
+        }
       } catch(e) {}
     }
     if (chunkCount % 10 === 0) console.log('[stream] chunk', chunkCount, ', text length:', fullText.length);
-    // Safety: break after 1000 chunks to prevent infinite loop
     if (chunkCount > 1000) { console.log('[stream] SAFETY BREAK'); break; }
   }
+
+  // Process any remaining event in buffer
+  if (buffer.trim()) {
+    var remEvtLines = buffer.split('\n');
+    var remData = '';
+    for (var k = 0; k < remEvtLines.length; k++) {
+      if (remEvtLines[k].trim().startsWith('data:')) {
+        remData = remEvtLines[k].trim().slice(5).trim();
+        break;
+      }
+    }
+    if (remData) {
+      try {
+        var remEvt = JSON.parse(remData);
+        if (remEvt.type === 'content_block_delta') {
+          var rd = remEvt.delta;
+          if (rd && rd.type === 'text_delta' && rd.text) fullText += rd.text;
+        }
+      } catch(e) {}
+    }
+  }
+
   console.log('[stream] finished, total text:', fullText.length);
   return fullText;
   } finally {
@@ -2911,6 +2970,7 @@ function replaceAllCharacters() {
 var DEFAULT_DIALECTS = ['普通话', '重庆话', '武汉话', '河南话', '粤语', '东北话', '英语'];
 var dialects = [];
 var currentDialect = '普通话';
+var currentSpeechSpeed = 'normal';  // speech speed: slow/normal/fast
 
 function loadDialects() {
   try { var d = JSON.parse(localStorage.getItem('zimeiti-v3-dialects')); if (Array.isArray(d)) dialects = d; } catch(e) {}
@@ -3040,6 +3100,11 @@ function setPreRatio(val) {
 
 function setPreFps(val) {
   currentPreFps = val;
+  renderPreShotSettings();
+}
+
+function setSpeechSpeed(val) {
+  currentSpeechSpeed = val;
   renderPreShotSettings();
 }
 
@@ -3598,19 +3663,82 @@ saveSceneProfiles = function() {
 // TOPIC / CREATE PAGE
 // ============================================================
 
+function setTopicDuration(val, el) {
+  topicDuration = val;
+  document.querySelectorAll('#topicDurationSegs .topic-seg').forEach(function(s) { s.classList.remove('active'); });
+  if (el) el.classList.add('active');
+}
+
+function buildSettingsSummary() {
+  var parts = [];
+  parts.push(topicContentAngle === 'product' ? '带货向' : '人设向');
+  parts.push(topicFormat === 'single' ? '单人口播' : '双人演绎');
+  parts.push(topicDuration + 's');
+  var styleLabels = { normal: '常规', comedy: '搞笑反转', emotional: '情感共鸣' };
+  parts.push(styleLabels[topicContentStyle] || '常规');
+  return parts.join(' · ');
+}
+
+function syncTopicSettingsToUI() {
+  // Radio buttons
+  var radios = document.querySelectorAll('#topicBizEdit input[type=radio]');
+  radios.forEach(function(r) {
+    if (r.name === 'topicContentAngle') r.checked = r.value === topicContentAngle;
+    if (r.name === 'topicFormat') r.checked = r.value === topicFormat;
+    if (r.name === 'topicContentStyle') r.checked = r.value === topicContentStyle;
+  });
+  // Duration segs
+  document.querySelectorAll('#topicDurationSegs .topic-seg').forEach(function(s) {
+    s.classList.toggle('active', s.dataset.val === topicDuration);
+  });
+  // Update hints
+  updateTopicSettingHints();
+  // Update summary bar
+  var summary = document.getElementById('topicSettingsSummary');
+  if (summary) summary.textContent = buildSettingsSummary();
+}
+
+function updateTopicSettingHints() {
+  var hintAngle = document.getElementById('hintContentAngle');
+  var hintFormat = document.getElementById('hintFormat');
+  var hintStyle = document.getElementById('hintContentStyle');
+  if (hintAngle) hintAngle.textContent = topicContentAngle === 'product'
+    ? '选题围绕业务/产品，以转化和成交为目的'
+    : '选题侧重人格魅力、情感共鸣、社会议题（可在内容中自然融入业务，但不刻意推销）';
+  if (hintFormat) hintFormat.textContent = topicFormat === 'single'
+    ? '口播文案，直接对镜头说话'
+    : '对话体脚本，LLM 自动判断人物关系（夫妻/邻里/同事/母子等）';
+  if (hintStyle) hintStyle.textContent = topicContentStyle === 'normal'
+    ? '标准脚本结构（类型+开头+人物+场景+脚本+CTA）'
+    : topicContentStyle === 'comedy'
+      ? '五步喜剧创作法（设定卡→爆点池→结构编排→脚本→笑点审查）'
+      : '三段式情感结构（压抑铺垫→矛盾爆发→反转治愈）';
+}
+
 function toggleBizEdit() {
   var bar = document.getElementById('topicBizBar');
   var edit = document.getElementById('topicBizEdit');
   var calendar = document.getElementById('topicCalendarSection');
+  var settingsBar = document.getElementById('topicSettingsBar');
   if (edit.style.display === 'none' || !edit.style.display) {
     edit.style.display = 'block';
     calendar.style.display = 'none';
     bar.style.display = 'none';
+    if (settingsBar) settingsBar.style.display = 'none';
+    syncTopicSettingsToUI();
+    // Restore biz text
+    if (topicBizData && topicBizData.biz) {
+      document.getElementById('topicBizInput').value = topicBizData.biz;
+    }
   } else {
     edit.style.display = 'none';
     if (topicBizData && topicBizData.analysis) {
       bar.style.display = 'flex';
+      if (settingsBar) settingsBar.style.display = 'flex';
       calendar.style.display = 'block';
+      if (settingsBar) {
+        document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+      }
     }
   }
 }
@@ -3618,17 +3746,30 @@ function toggleBizEdit() {
 function loadTopicBiz() {
   try {
     var raw = localStorage.getItem('zimeiti-topic-biz');
-    if (raw) { topicBizData = JSON.parse(raw); return topicBizData; }
+    if (raw) {
+      topicBizData = JSON.parse(raw);
+      // Restore settings from saved data
+      if (topicBizData.contentAngle) topicContentAngle = topicBizData.contentAngle;
+      if (topicBizData.format) topicFormat = topicBizData.format;
+      if (topicBizData.duration) topicDuration = topicBizData.duration;
+      if (topicBizData.contentStyle) topicContentStyle = topicBizData.contentStyle;
+      return topicBizData;
+    }
   } catch(e) {}
   return null;
 }
 
 function saveTopicBiz() {
+  topicBizData.contentAngle = topicContentAngle;
+  topicBizData.format = topicFormat;
+  topicBizData.duration = topicDuration;
+  topicBizData.contentStyle = topicContentStyle;
   try { localStorage.setItem('zimeiti-topic-biz', JSON.stringify(topicBizData)); } catch(e) {}
 }
 
 function initCreatePage() {
   loadTopicBiz();
+  var settingsBar = document.getElementById('topicSettingsBar');
   if (topicBizData && topicBizData.analysis) {
     // Business already saved — show calendar
     document.getElementById('topicBizEdit').style.display = 'none';
@@ -3636,74 +3777,160 @@ function initCreatePage() {
     document.getElementById('topicBizLabel').textContent = '业务：' + (topicBizData.biz || '').slice(0, 40);
     var phase = topicBizData.analysis.currentPhase || '';
     var seasonLabel = topicBizData.analysis.peakSeason || '';
-    document.getElementById('topicBizSeason').textContent = (phase ? phase + ' | ' : '') + seasonLabel;
+    document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
+    if (settingsBar) {
+      settingsBar.style.display = 'flex';
+      document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+    }
     document.getElementById('topicCalendarSection').style.display = 'block';
-    renderTopicCalendar();
-    renderTopicList(currentTopicFilter);
+    renderTopicList();
     var hasTopics = topicBizData && topicBizData.topics && topicBizData.topics.length > 0;
     document.getElementById('btnRefreshTopics').textContent = hasTopics ? '🔄 换一批' : '✨ 生成选题';
   } else {
-    // First time — show business input
+    // First time — show business input with default settings
     document.getElementById('topicBizEdit').style.display = 'block';
     document.getElementById('topicBizBar').style.display = 'none';
+    if (settingsBar) settingsBar.style.display = 'none';
     document.getElementById('topicCalendarSection').style.display = 'none';
     document.getElementById('topicContentSection').style.display = 'none';
+    syncTopicSettingsToUI();
   }
 }
 
-function buildTopicAnalysisPrompt(biz) {
-  return '你是一个短视频内容策划专家。用户描述了自己的业务，请分析并输出 JSON。\n\n' +
+function buildAnalysisPromptA(biz, contentAngle) {
+  // String fields only — simplest JSON structure, least error-prone
+  if (contentAngle === 'personal') {
+    return '你是一个短视频人设策划专家。基于用户身份背景，分析个人表达类内容方向。\n\n' +
+      '用户业务（作为身份背景参考）：' + biz + '\n' +
+      '当前日期：' + new Date().toISOString().slice(0, 10) + '\n\n' +
+      '## 要求\n' +
+      '1. 根据用户职业/业务背景，推断人格特质，给出身份标签\n' +
+      '2. 推荐最合适的叙事人设（陪伴者/教导者/崇拜者/陪衬者/搞笑者，选一个）\n' +
+      '3. 写一句个人表达类内容的策略建议\n\n' +
+      '## 输出 JSON（仅字符串，无数组）\n' +
+      '{"industry":"身份标签","contentTheme":"个人表达","currentPhase":"无季节区分","phaseTip":"策略建议（一句话）","defaultNarrativePersona":"人设"}\n\n' +
+      '纯 JSON，不要 ```json```。';
+  }
+  return '你是一个短视频内容策划专家。分析业务的行业、季节和策略。\n\n' +
     '用户业务：' + biz + '\n' +
     '当前日期：' + new Date().toISOString().slice(0, 10) + '\n\n' +
-    '## 分析要求\n' +
+    '## 要求\n' +
     '1. 判断行业，识别淡旺季月份\n' +
     '2. 根据当前日期判断处于什么阶段（旺季/淡季/平季）\n' +
-    '3. 给出 2-4 种选题目的分类（不限于人设打造/流量类/成交型，可根据行业特点补充）\n' +
-    '4. 淡季偏人设打造和流量类，旺季偏成交型\n' +
-    '5. 标注近期（一周内）可能的热点方向（节日/行业节点/季节性话题）\n' +
-    '6. 推荐当前最适合的选题目的\n\n' +
-    '## 输出 JSON 格式\n' +
-    '{\n' +
-    '  "industry": "行业名称",\n' +
-    '  "peakSeason": "旺季月份",\n' +
-    '  "lowSeason": "淡季月份",\n' +
-    '  "currentPhase": "当前阶段（旺季/淡季/平季）",\n' +
-    '  "phaseTip": "当前阶段的内容策略建议（一句话）",\n' +
-    '  "purposeLabels": ["人设打造", "流量类", "成交型"],\n' +
-    '  "recommendedPurposes": ["最推荐的目的1", "次推荐的目的2"],\n' +
-    '  "recentHotspots": ["近期热点1", "近期热点2"],\n' +
-    '  "defaultNarrativePersona": "最合适的叙事人设（陪伴者/教导者/崇拜者/陪衬者/搞笑者，选一个）"\n' +
-    '}\n\n' +
-    '纯 JSON 输出，不要 ```json``` 包裹。';
+    '3. 写一句当前阶段的内容策略建议\n' +
+    '4. 推荐最合适的叙事人设\n\n' +
+    '## 输出 JSON（仅字符串，无数组）\n' +
+    '{"industry":"行业","peakSeason":"旺季月份","lowSeason":"淡季月份","currentPhase":"阶段","phaseTip":"策略建议（一句话）","defaultNarrativePersona":"人设"}\n\n' +
+    '纯 JSON，不要 ```json```。';
 }
 
-function buildTopicListPrompt(biz, analysis, purposeFilter) {
-  return '你是一个短视频内容策划专家。根据以下信息，推荐 6-10 个选题。\n\n' +
+function buildAnalysisPromptB(biz, contentAngle) {
+  // Array fields only — one JSON structure depth
+  if (contentAngle === 'personal') {
+    return '你是一个短视频人设策划专家。基于用户身份背景，推荐选题目的分类和热点方向。\n\n' +
+      '用户业务：' + biz + '\n' +
+      '当前日期：' + new Date().toISOString().slice(0, 10) + '\n\n' +
+      '## 要求\n' +
+      '1. 给出 3-5 种选题目的分类（从：情感共鸣、社会议题、个人价值观、家庭关系、职场洞察 中选择）\n' +
+      '2. 推荐 2-3 个当前最适合的选题目的\n' +
+      '3. 标注近期热点方向（社会话题/节日/季节性情感话题）\n\n' +
+      '## 输出 JSON（仅字符串数组）\n' +
+      '{"purposeLabels":["标签1"],"recommendedPurposes":["推荐1"],"recentHotspots":["热点1"]}\n\n' +
+      '纯 JSON，不要 ```json```。';
+  }
+  return '你是一个短视频内容策划专家。推荐选题目的分类和热点方向。\n\n' +
+    '用户业务：' + biz + '\n' +
+    '当前日期：' + new Date().toISOString().slice(0, 10) + '\n\n' +
+    '## 要求\n' +
+    '1. 给出 3-5 种选题目的分类（不限于人设打造/流量类/成交型，可根据行业特点补充）\n' +
+    '2. 推荐 2-3 个当前最适合的选题目的（淡季偏人设打造和流量类，旺季偏成交型）\n' +
+    '3. 标注近期热点方向（节日/行业节点/季节性话题）\n\n' +
+    '## 输出 JSON（仅字符串数组）\n' +
+    '{"purposeLabels":["标签1"],"recommendedPurposes":["推荐1"],"recentHotspots":["热点1"]}\n\n' +
+    '纯 JSON，不要 ```json```。';
+}
+
+function buildTopicListPrompt(biz, analysis) {
+  var styleLabel = topicContentStyle === 'comedy' ? '搞笑反转' : (topicContentStyle === 'emotional' ? '情感共鸣' : '常规');
+  return '你是一个短视频内容策划专家。用问题驱动的方式挖掘蓝海选题，推荐 5 个。\n\n' +
     '业务：' + biz + '\n' +
     '行业：' + (analysis.industry || '') + '\n' +
     '当前阶段：' + (analysis.currentPhase || '') + '\n' +
     '推荐的选题目的：' + (analysis.recommendedPurposes || []).join('、') + '\n' +
-    '近期热点方向：' + (analysis.recentHotspots || []).join('、') + '\n' +
+    '热点参考：' + (analysis.recentHotspots || []).join('、') + '\n' +
     '叙事人设：' + (analysis.defaultNarrativePersona || '陪伴者') + '\n' +
-    (purposeFilter && purposeFilter !== 'all' ? '筛选目的：' + purposeFilter + '\n' : '') +
-    '\n## 要求\n' +
-    '1. 给 6-10 个选题，每个选题含 title（标题）、angle（角度说明）、purpose（选题目的）、estimatedEffect（预估效果）\n' +
-    '2. 标注每个选题主要触发哪种观众心理（从以下选：想纠正你/想看结果/想证明自己/想看你翻车/想给你出招/想看看真假/想代入自己）\n' +
-    '3. 根据选题内容匹配最合适的叙事人设 persona（陪伴者/教导者/崇拜者/陪衬者/搞笑者，选一个）\n' +
-    '4. 淡季偏人设类，旺季偏成交型\n' +
-    '5. 结合近期热点方向给出热点选题\n\n' +
-    '## 输出 JSON 格式\n' +
-    '{"topics":[{"title":"...","angle":"...","purpose":"人设打造","estimatedEffect":"高互动","psychology":"想代入自己","persona":"陪伴者","hotTip":""}]}\n\n' +
-    '纯 JSON 输出，不要 ```json``` 包裹。';
+    '\n## 创作约束（NOT 输出字段）\n' +
+    '内容倾向：' + (topicContentAngle === 'product' ? '带货向（选题围绕产品/业务）' : '人设向（选题侧重人格魅力/情感共鸣）') + '\n' +
+    '表演形式：' + (topicFormat === 'single' ? '单人口播' : '双人演绎') + '\n' +
+    '视频时长：' + topicDuration + 's\n' +
+    '内容风格：' + styleLabel + '\n' +
+    (topicContentStyle === 'comedy' ? '选题要有反转空间\n' : '') +
+    (topicContentStyle === 'emotional' ? '选题要有情感张力\n' : '') +
+    (topicFormat === 'dual' ? '选题要适合两个角色互动\n' : '') +
+    '\n## 选题策略：问题驱动 × 长尾人群\n\n' +
+    '### 第一步：拆解痛点（不要用品类大词）\n' +
+    '围绕业务，列出 5 个具体的用户问题/痛点。用症状词、场景词、困惑词，不用品类词。\n' +
+    '例：不要「奶粉推荐」，要「转奶拉肚子」「喝奶粉起疹子」「不喝奶瓶怎么办」\n' +
+    '例：不要「香肠做法」，要「灌的香肠发酸」「香肠煮完就散」「肥瘦比怎么调」\n\n' +
+    '### 第二步：锁定长尾人群\n' +
+    '每个痛点背后的人群要具体。不是「宝妈」而是「宝宝拉肚子换了 3 种奶粉还没好的焦虑妈妈」。\n' +
+    '越细分，内容越精准，转化越高。\n\n' +
+    '### 第三步：搜索验证\n' +
+    '搜每个痛点的长尾关键词，验证真实搜索热度。优先选搜索量上升但竞争小的蓝海词。\n\n' +
+    '### 第四步：生成选题\n' +
+    '每个选题 = 一个具体问题 + 一个精准人群 + 一个内容角度。\n\n' +
+    '## 要求\n' +
+    '1. 给 5 个选题，每个必须对应一个具体痛点问题\n' +
+    '2. 避免泛品类词（怎么做/怎么选/推荐/测评），用症状词和场景词切入\n' +
+    '3. 标注心理钩子（想纠正你/想看结果/想证明自己/想看你翻车/想给你出招/想看看真假/想代入自己）\n' +
+    '4. 匹配叙事人设（陪伴者/教导者/搞笑者/陪衬者/崇拜者）\n\n' +
+    '## 输出格式（每行严格 7 个字段，|| 分隔）\n' +
+    '标题 || 角度说明 || 选题目的 || 预估效果 || 心理钩子 || 叙事人设 || 热点提示\n\n' +
+    '示例：\n' +
+    '灌的香肠煮完就散？肥瘦比错了，3肥7瘦才不散 || 针对灌香肠最常翻车的结构问题，给出精确配方 || 带货转化 || 高转化 || 想纠正你 || 教导者 || 手工制作\n' +
+    '宝宝转奶拉肚子，换了3种奶粉还不好？问题可能是乳糖不耐 || 从拉肚子这个高频痛点切入，教妈妈排查乳糖问题 || 带货转化 || 高互动 || 想看结果 || 陪伴者 || 育儿\n\n' +
+    '直接输出选题列表。不要 JSON、不要序号、不要 \`\`\`。每行一条完整的选题。';
+}
+
+function parseTopicListText(text) {
+  // Parse line-based format: 标题 || 角度 || 目的 || 效果 || 心理 || 人设 || 热点
+  var lines = text.split('\n').filter(function(l) { return l.trim() && l.indexOf('||') >= 0; });
+  return lines.map(function(line) {
+    var parts = line.split('||').map(function(s) { return s.trim(); });
+    return {
+      title: parts[0] || '',
+      angle: parts[1] || '',
+      purpose: parts[2] || '人设打造',
+      estimatedEffect: parts[3] || '高互动',
+      psychology: parts[4] || '想代入自己',
+      persona: parts[5] || '陪伴者',
+      hotTip: parts[6] || ''
+    };
+  });
 }
 
 function buildTopicContentPrompt(biz, analysis, topic) {
+  if (topicContentStyle === 'comedy') return buildComedyContentPrompt(biz, analysis, topic);
+  if (topicContentStyle === 'emotional') return buildEmotionalContentPrompt(biz, analysis, topic);
+  return buildNormalContentPrompt(biz, analysis, topic);
+}
+
+function buildNormalContentPrompt(biz, analysis, topic) {
+  var formatInst = topicFormat === 'dual'
+    ? '\n### 双人演绎要求\n' +
+      '- 标注角色 A 和角色 B 的台词，对话体脚本\n' +
+      '- 两个角色性格要有鲜明反差\n' +
+      '- LLM 根据内容倾向自动判断人物关系（带货向：同事/上下级/买卖双方/师徒；人设向：夫妻/邻里/母子/朋友/路人）\n'
+    : '\n### 单人口播要求\n- 口播文案，直接对镜头说话\n';
+  var durInst = getDurationInstructions();
   return '你是' + (topic.persona || '陪伴者') + '风格的短视频脚本写手。\n\n' +
     '业务背景：' + biz + '\n' +
     '行业：' + (analysis.industry || '') + '\n' +
+    '内容倾向：' + (topicContentAngle === 'product' ? '带货向' : '人设向') + '\n' +
     '选题：' + topic.title + '\n' +
     '角度：' + (topic.angle || '') + '\n' +
     '心理钩子：' + (topic.psychology || '想代入自己') + '\n\n' +
+    '## 时长控制\n' + durInst + '\n' +
     '## 写作规则（必须遵守）\n\n' +
     '### 口语化脚本规则\n' +
     '- 每镜不超过 50 字\n' +
@@ -3716,8 +3943,9 @@ function buildTopicContentPrompt(biz, analysis, topic) {
     '- 有趣 + 有用 + 共鸣，至少满足两个\n\n' +
     '### 七种观众心理钩子\n' +
     '- 1想纠正你 2想看结果 3想证明自己 4想看你翻车 5想给你出招 6想看看真假 7想代入自己\n' +
-    '- 每篇内容至少触发一种，否则观众不会互动\n\n' +
-    '## 输出格式\n' +
+    '- 每篇内容至少触发一种，否则观众不会互动\n' +
+    formatInst +
+    '\n## 输出格式\n' +
     '输出完整短视频脚本，包含：\n' +
     '1. 标题（吸引人的）\n' +
     '2. 视频类型（带货/知识/搞笑/剧情/励志/生活技巧）\n' +
@@ -3729,6 +3957,104 @@ function buildTopicContentPrompt(biz, analysis, topic) {
     '用自然语言输出，不要 JSON。让读的人能直接念出来。';
 }
 
+function getDurationInstructions() {
+  var d = parseInt(topicDuration) || 30;
+  if (d <= 15) return '视频时长 15 秒。1-2 镜，核心观点 + CTA，约 50-80 字。节奏紧凑，一个呼吸讲完。';
+  if (d <= 30) return '视频时长 30 秒。3-4 镜，观点+展开+CTA，约 120-180 字。';
+  if (d <= 45) return '视频时长 45 秒。4-6 镜，起承转合，约 200-280 字。';
+  return '视频时长 60 秒。6-8 镜，完整叙事弧线，约 280-400 字。给足铺垫和展开的空间。';
+}
+
+function buildComedyContentPrompt(biz, analysis, topic) {
+  var dur = parseInt(topicDuration) || 30;
+  var durInst;
+  if (dur <= 15) {
+    durInst = '时长 15s，简化五步为三步（设定→爆点→反转），2-3 个笑点。节奏极快。';
+  } else if (dur <= 30) {
+    durInst = '时长 30s，完整五步，4-5 个笑点。';
+  } else if (dur <= 45) {
+    durInst = '时长 45s，完整五步+深化，5-7 个笑点。';
+  } else {
+    durInst = '时长 60s，完整五步+深化+彩蛋，7-8 个笑点。最后 10 秒埋伏笔引导下一期。';
+  }
+
+  var dualInst = topicFormat === 'dual'
+    ? '\n### 双人演绎额外要求\n' +
+      '- 两个角色性格要有鲜明反差（一个正经一个荒诞，一个强势一个怂）\n' +
+      '- 利用角色间的误解/信息差制造笑点\n' +
+      '- 人物关系由 LLM 根据内容倾向自动判断（带货向：同事/上下级/买卖双方/师徒；人设向：夫妻/邻里/母子/朋友/路人）\n'
+    : '\n### 单人演绎\n- 通过自言自语、内心独白、与道具/环境的互动制造笑点\n';
+
+  return '你是一个专业喜剧短剧编剧。请严格按照以下五步法创作搞笑反转类短视频脚本。\n\n' +
+    '业务背景：' + biz + '\n' +
+    '内容倾向：' + (topicContentAngle === 'product' ? '带货向（可在反转中自然带出产品）' : '人设向（以人格魅力为主，不刻意带货）') + '\n' +
+    '选题：' + topic.title + '\n' +
+    '角度：' + (topic.angle || '') + '\n' +
+    '心理钩子：' + (topic.psychology || '想看你翻车') + '\n' +
+    durInst + '\n' +
+    dualInst +
+    '\n## 第一步：设定卡\n' +
+    '分析选题，确定：\n' +
+    '- 钩子（前 2 秒）：用什么画面/台词瞬间抓住观众\n' +
+    '- 角色设定：性格标签要极端/鲜明\n' +
+    '- 核心道具：至少一个贯穿道具，要反复出现参与笑点\n' +
+    '- 喜剧类型选择：身份反差 / 认知失调（一本正经胡说八道）/ 夸张误会 / 神反转打脸\n\n' +
+    '## 第二步：爆点池\n' +
+    '生成 6-8 个可拍摄的笑点/梗，每个一句话，标注类型（语言梗/动作梗/道具梗/反转梗）。\n\n' +
+    '## 第三步：结构编排\n' +
+    '按四段映射笑点：\n' +
+    '| 时间段 | 内容 | 分配笑点 |\n' +
+    '| 0-10s | 建立场景+埋伏笔 | 笑点1 |\n' +
+    '| 10-35s | 升级冲突/重复游戏 | 笑点2,3 |\n' +
+    '| 35-50s | 推向高潮 | 笑点4,5 |\n' +
+    '| 50-结束 | 反转+悬念钩子 | 笑点6 |\n\n' +
+    '重要规则：\n' +
+    '- 每 3-5 句台词触发一个小笑点\n' +
+    '- 道具必须反复出现并参与笑点\n' +
+    '- 最后 10 秒必须完成反转，留悬念钩子引导下一期\n' +
+    '- 不解释笑点，不让角色自己笑\n\n' +
+    '## 第四步：完整拍摄脚本\n' +
+    '按镜头输出，每镜标注：时长、画面描述（含镜头运动）、角色台词（每句 ≤20 字）、音效提示。\n\n' +
+    '## 第五步：笑点审查\n' +
+    '给每个笑点打分（0-10），低于 6 分的标注改写建议。\n\n' +
+    '用自然语言输出，不要 JSON。让读的人能直接感受到节奏和笑点。';
+}
+
+function buildEmotionalContentPrompt(biz, analysis, topic) {
+  var dur = parseInt(topicDuration) || 30;
+  var pct1 = Math.round(dur * 0.3);
+  var pct2 = Math.round(dur * 0.35);
+  var pct3 = dur - pct1 - pct2;
+
+  var dualInst = topicFormat === 'dual'
+    ? '\n### 双人演绎\n' +
+      '- 两个角色分别为情感关系中的双方\n' +
+      '- LLM 根据内容倾向自动判断具体关系（带货向：师徒/合作伙伴；人设向：夫妻/母子/邻里/朋友）\n' +
+      '- 通过两人的互动、误解、和解来推进情感弧线\n'
+    : '\n### 单人演绎\n- 通过独白、回忆、与环境/道具的互动来传递情感\n';
+
+  return '你是一个情感类短视频编剧。请按照"压抑铺垫 → 矛盾爆发 → 反转治愈"三段式结构创作。\n\n' +
+    '业务背景：' + biz + '\n' +
+    '内容倾向：' + (topicContentAngle === 'product' ? '带货向（情感故事中自然带出产品价值）' : '人设向（纯情感表达，不刻意带货）') + '\n' +
+    '选题：' + topic.title + '\n' +
+    '角度：' + (topic.angle || '') + '\n' +
+    '心理钩子：' + (topic.psychology || '想代入自己') + '\n' +
+    '总时长：' + topicDuration + 's\n' +
+    dualInst +
+    '\n## 三段式结构\n' +
+    '1. 压抑铺垫（前 ' + pct1 + 's）：设置初始冲突，展现关系背景，让观众代入\n' +
+    '2. 矛盾爆发（中间 ' + pct2 + 's）：情绪化表达，关系降至冰点，制造共情高点\n' +
+    '3. 反转治愈（最后 ' + pct3 + 's）：真相揭示，关系修复与升华\n\n' +
+    '## 关键技巧\n' +
+    '- 以幽默或温暖开场，降低观众防备\n' +
+    '- 在情绪高点后设计反转（不是和解，是更深的理解）\n' +
+    '- 结尾留一句话金句，让观众想截图分享\n' +
+    '- 避免说教，用细节和动作传递情感而非台词说理\n\n' +
+    '## 输出格式\n' +
+    '完整拍摄脚本，按镜头分，每镜含时长、画面描述、台词/旁白、情绪提示。\n\n' +
+    '用自然语言输出，不要 JSON。让读的人能被触动。';
+}
+
 async function saveBizAndAnalyze() {
   var bizInput = document.getElementById('topicBizInput');
   var biz = bizInput.value.trim();
@@ -3738,6 +4064,7 @@ async function saveBizAndAnalyze() {
   var loading = document.getElementById('topicBizLoading');
   var editPanel = document.getElementById('topicBizEdit');
   var btn = document.getElementById('btnSaveBiz');
+  var settingsBar = document.getElementById('topicSettingsBar');
 
   loading.style.display = 'flex';
   btn.disabled = true;
@@ -3746,20 +4073,24 @@ async function saveBizAndAnalyze() {
   var topics = null;
 
   try {
-    // Step 1: business analysis
-    var sysPrompt1 = '你是一个商业分析和短视频策划专家。严格按 JSON 格式回复。';
-    var result1 = await doStoryboardApiCall(sysPrompt1, buildTopicAnalysisPrompt(biz));
-    var json1 = collectStreamJson(result1);
-    if (!json1) throw new Error('无法解析行业分析结果');
-    analysis = JSON.parse(json1);
+    // Step 1: parallel analysis (string fields + array fields, simpler JSON = fewer errors)
+    var sysPrompt1 = '你是一个短视频策划专家。严格按 JSON 格式回复。';
+    var [result1a, result1b] = await Promise.all([
+      doStoryboardApiCall(sysPrompt1, buildAnalysisPromptA(biz, topicContentAngle)),
+      doStoryboardApiCall(sysPrompt1, buildAnalysisPromptB(biz, topicContentAngle))
+    ]);
+    var json1a = collectStreamJson(result1a);
+    if (!json1a) { console.error('[saveBizAndAnalyze] Step1a raw:', result1a); throw new Error('无法解析分析结果（字符串字段）'); }
+    var json1b = collectStreamJson(result1b);
+    if (!json1b) { console.error('[saveBizAndAnalyze] Step1b raw:', result1b); throw new Error('无法解析分析结果（数组字段）'); }
+    analysis = Object.assign({}, JSON.parse(json1a), JSON.parse(json1b));
 
-    // Step 2: generate topics
-    var sysPrompt2 = '你是一个短视频内容策划专家。严格按 JSON 格式回复。';
-    var result2 = await doStoryboardApiCall(sysPrompt2, buildTopicListPrompt(biz, analysis, 'all'));
-    var json2 = collectStreamJson(result2);
-    if (!json2) throw new Error('无法解析选题列表');
-    var topicsData = JSON.parse(json2);
-    topics = Array.isArray(topicsData) ? topicsData : (topicsData.topics || []);
+    // Step 2: generate topics (line-based text format, no JSON = no format errors)
+    var sysPrompt2 = '你是一个短视频内容策划专家。先搜索业务相关的2-3个具体痛点长尾关键词（症状词/场景词，不搜品类大词），验证蓝海热度，然后按问题驱动策略生成选题。';
+    var result2 = await doStoryboardApiCall(sysPrompt2, buildTopicListPrompt(biz, analysis), { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
+    console.log('[saveBizAndAnalyze] Step2 result length:', (result2 || '').length);
+    topics = parseTopicListText(result2 || '');
+    if (!topics.length) throw new Error('未能解析选题列表，请重试');
 
     // Both succeed — save
     topicBizData = { biz: biz, analysis: analysis, topics: topics, savedAt: new Date().toISOString() };
@@ -3770,12 +4101,14 @@ async function saveBizAndAnalyze() {
     document.getElementById('topicBizLabel').textContent = '业务：' + biz.slice(0, 40);
     var phase = analysis.currentPhase || '';
     var seasonLabel = analysis.peakSeason || '';
-    document.getElementById('topicBizSeason').textContent = (phase ? phase + ' | ' : '') + seasonLabel;
+    document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
+    if (settingsBar) {
+      settingsBar.style.display = 'flex';
+      document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+    }
 
     document.getElementById('topicCalendarSection').style.display = 'block';
-    currentTopicFilter = 'all';
-    renderTopicCalendar();
-    renderTopicList('all');
+    renderTopicList();
     document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
 
   } catch(e) {
@@ -3793,52 +4126,10 @@ async function saveBizAndAnalyze() {
   btn.disabled = false;
 }
 
-function renderTopicCalendar() {
-  if (!topicBizData || !topicBizData.analysis) return;
-
-  var analysis = topicBizData.analysis;
-
-  // Season card
-  var seasonCard = document.getElementById('topicSeasonCard');
-  var phaseClass = '';
-  if (analysis.currentPhase === '旺季') phaseClass = 'peak';
-  else if (analysis.currentPhase === '淡季') phaseClass = 'low';
-  else phaseClass = 'flat';
-
-  seasonCard.innerHTML =
-    '<div><strong>' + (analysis.industry || '') + '</strong> · ' +
-    '<span class="season-phase ' + phaseClass + '">' + (analysis.currentPhase || '') + '</span>' +
-    ' 旺季：' + (analysis.peakSeason || '') + ' | 淡季：' + (analysis.lowSeason || '') + '</div>' +
-    '<div class="season-tip">💡 ' + (analysis.phaseTip || '') + '</div>' +
-    '<div class="season-tip" style="margin-top:2px">🔥 热点：' + (analysis.recentHotspots || []).slice(0, 3).join('、') + '</div>';
-
-  // Render purpose filter chips
-  var chips = document.getElementById('topicFilterChips');
-  var labels = analysis.purposeLabels || ['人设打造', '流量类', '成交型'];
-  var chipHtml = '<span class="topic-filter-chip' + (currentTopicFilter === 'all' ? ' active' : '') + '" data-filter="all" onclick="filterTopics(\'all\')">全部</span>';
-  for (var i = 0; i < labels.length; i++) {
-    var lbl = labels[i];
-    chipHtml += '<span class="topic-filter-chip' + (currentTopicFilter === lbl ? ' active' : '') + '" data-filter="' + escapeHtml(lbl) + '" onclick="filterTopics(\'' + escapeHtml(lbl) + '\')">' + escapeHtml(lbl) + '</span>';
-  }
-  chips.innerHTML = chipHtml;
-}
-
-function filterTopics(purpose) {
-  currentTopicFilter = purpose;
-  // Update chip active states
-  document.querySelectorAll('.topic-filter-chip').forEach(function(c) {
-    c.classList.remove('active');
-    if (c.dataset.filter === purpose) c.classList.add('active');
-  });
-  renderTopicList(purpose);
-}
-
-function renderTopicList(purpose) {
+function renderTopicList() {
   if (!topicBizData || !topicBizData.topics) return;
 
-  var allTopics = (topicBizData.topics || []).filter(function(t) {
-    return purpose === 'all' || t.purpose === purpose;
-  });
+  var allTopics = topicBizData.topics || [];
 
   var list = document.getElementById('topicList');
   var btn = document.getElementById('btnRefreshTopics');
@@ -3869,9 +4160,7 @@ function renderTopicList(purpose) {
 }
 
 function selectTopicCard(idx) {
-  var allTopics = (topicBizData.topics || []).filter(function(t) {
-    return currentTopicFilter === 'all' || t.purpose === currentTopicFilter;
-  });
+  var allTopics = topicBizData.topics || [];
   var topic = allTopics[idx];
   if (!topic) return;
   selectedTopic = topic;
@@ -3904,7 +4193,12 @@ async function generateTopicContent(topic) {
   document.getElementById('topicContentActions').style.display = 'none';
 
   try {
-    var systemPrompt = '你是一个短视频脚本专家。按用户要求输出完整脚本，自然语言格式，不要 JSON。';
+    var sysPrompts = {
+      normal: '你是一个短视频脚本专家。按用户要求输出完整脚本，自然语言格式，不要 JSON。',
+      comedy: '你是一个专业喜剧短剧编剧。严格按照五步法输出搞笑反转脚本，自然语言格式，不要 JSON。',
+      emotional: '你是一个情感类短视频编剧。严格按三段式结构输出情感脚本，自然语言格式，不要 JSON。'
+    };
+    var systemPrompt = sysPrompts[topicContentStyle] || sysPrompts.normal;
     var resultText = await doStoryboardApiCall(systemPrompt, buildTopicContentPrompt(topicBizData.biz, topicBizData.analysis, topic), { noJsonFormat: true });
     topicContentText = resultText || '';
     if (topicContentText) {
@@ -3926,7 +4220,7 @@ function regenerateTopicContent() {
   if (selectedTopic) generateTopicContent(selectedTopic);
 }
 
-function backToCalendar() {
+function backToTopicList() {
   document.getElementById('topicContentSection').style.display = 'none';
   document.getElementById('topicCalendarSection').style.display = 'block';
   selectedTopic = null;
@@ -3940,6 +4234,32 @@ function parseTopicContent(text) {
     scene: '居家', mood: '温馨', scriptContent: text
   };
 
+  // Comedy/emotional styles: use the entire output as script, with style-specific defaults
+  if (topicContentStyle === 'comedy') {
+    // Try to extract the script portion (第四步)
+    var comedyScriptMatch = text.match(/## 第[四4]步[：:].*?\n([\s\S]*?)(?=## 第[五5]步|$)/);
+    result.scriptContent = comedyScriptMatch ? comedyScriptMatch[1].trim() : text;
+    result.videoType = '搞笑';
+    result.opening = '对话直入';
+    result.characters = topicFormat === 'dual' ? '两个人' : '一个人';
+    result.charSuppl = '日常服装，突出角色反差';
+    result.scene = '居家';
+    result.mood = '轻松';
+    return result;
+  }
+
+  if (topicContentStyle === 'emotional') {
+    result.scriptContent = text;
+    result.videoType = '剧情';
+    result.opening = '抛问题';
+    result.characters = topicFormat === 'dual' ? '两个人' : '一个人';
+    result.charSuppl = '日常服装，朴素自然';
+    result.scene = '居家';
+    result.mood = '温馨';
+    return result;
+  }
+
+  // Normal style — parse numbered sections
   var lines = text.split('\n');
   var scriptStart = -1;
 
@@ -3959,7 +4279,6 @@ function parseTopicContent(text) {
     m = line.match(/^4[\.\s、]+人物设置[：:]\s*(.+)/);
     if (m) {
       var charText = m[1].trim();
-      // Try "几个人，什么穿着" pattern
       var parts = charText.split(/[,，]/);
       result.characters = parts[0].trim();
       result.charSuppl = parts.slice(1).join('，').trim();
@@ -3988,7 +4307,6 @@ function parseTopicContent(text) {
     var scriptLines = [];
     for (var j = scriptStart; j < lines.length; j++) {
       var l = lines[j].trim();
-      // Stop at section 7 (结尾CTA) or next numbered section
       if (/^7[\.\s、]|^#/.test(l)) break;
       scriptLines.push(lines[j]);
     }
@@ -4005,7 +4323,7 @@ function confirmToStoryboard() {
   var parsed = parseTopicContent(topicContentText);
   var videoType = parsed.videoType || guessVideoType(topicContentText, '');
   var opening = parsed.opening || '抛问题';
-  var characters = parsed.characters || '一个人';
+  var characters = parsed.characters || (topicFormat === 'dual' ? '两个人' : '一个人');
   var charSuppl = parsed.charSuppl || '日常休闲装';
   var scene = parsed.scene || '居家';
   var mood = parsed.mood || '温馨';
@@ -4016,6 +4334,7 @@ function confirmToStoryboard() {
   interviewAnswers.push({ question: INTERVIEW_QUESTIONS[2].question, answer: characters, supplement: charSuppl });
   interviewAnswers.push({ question: INTERVIEW_QUESTIONS[3].question, answer: { a: scene, b: mood } });
   interviewAnswers.push({ question: INTERVIEW_QUESTIONS[4].question, answer: parsed.scriptContent });
+  originalScriptText = parsed.scriptContent || '';
 
   // Reset storyboard state so create flow starts clean (independent from link flow)
   currentStoryboard = null;
@@ -4023,7 +4342,7 @@ function confirmToStoryboard() {
   keyProps = '';
   currentPreScene = '';
   currentPreCharIds = [];
-  currentPreDuration = '30';
+  currentPreDuration = topicDuration || '30';
   currentPreRatio = '9:16';
   currentPreFps = '24';
   preShotHintsApplied = false;
@@ -4044,16 +4363,12 @@ async function refreshTopics() {
   btn.textContent = '⏳ 生成中…';
 
   try {
-    var systemPrompt = '你是一个商业分析和短视频策划专家。严格按 JSON 格式回复。';
-    var calPrompt = buildTopicListPrompt(topicBizData.biz, topicBizData.analysis, currentTopicFilter);
-    var calResult = await doStoryboardApiCall(systemPrompt, calPrompt);
-    var calJson = collectStreamJson(calResult);
-    if (!calJson) throw new Error('无法解析选题列表');
-    var parsedTopics = JSON.parse(calJson);
-    topicBizData.topics = Array.isArray(parsedTopics) ? parsedTopics : (parsedTopics.topics || []);
+    var systemPrompt = '你是一个短视频内容策划专家。先搜索业务相关的2-3个具体痛点长尾关键词（症状词/场景词，不搜品类大词），验证蓝海热度，然后按问题驱动策略生成选题。';
+    var resultText = await doStoryboardApiCall(systemPrompt, buildTopicListPrompt(topicBizData.biz, topicBizData.analysis), { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
+    topicBizData.topics = parseTopicListText(resultText || '');
+    if (!topicBizData.topics.length) throw new Error('未能解析选题列表，请重试');
     saveTopicBiz();
-    renderTopicCalendar();
-    renderTopicList(currentTopicFilter);
+    renderTopicList();
   } catch(e) {
     console.error('[refreshTopics] error:', e);
     alert('刷新失败：' + (e.message || '未知错误'));

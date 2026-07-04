@@ -1,18 +1,4 @@
 /* ============================================================
-   FONTS
-   ============================================================ */
-@font-face {
-  font-family: 'Noto Sans SC';
-  font-style: normal; font-weight: 400; font-display: swap;
-  src: url(https://fonts.gstatic.com/s/notosanssc/v39/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_EnYxNbPzS5HE.woff2) format('woff2');
-}
-@font-face {
-  font-family: 'Noto Sans SC';
-  font-style: normal; font-weight: 600; font-display: swap;
-  src: url(https://fonts.gstatic.com/s/notosanssc/v39/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnIxNbPzS5HE.woff2) format('woff2');
-}
-
-/* ============================================================
    RESET & BASE
    ============================================================ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -350,8 +336,8 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .emotion-flow-arrow{font-size:.55rem;color:#d0cbc3;flex-shrink:0}
 
 /* Action buttons */
-.sb-action-btn{font-size:.72rem;padding:8px 12px;border-radius:10px;border:1.5px solid #e0dcd3;
-  background:#fff;cursor:pointer;font-weight:600;color:#5d5850;transition:all .15s;flex:1;text-align:center}
+.sb-action-btn{font-size:.72rem;padding:8px 14px;border-radius:10px;border:1.5px solid #e0dcd3;
+  background:#fff;cursor:pointer;font-weight:600;color:#5d5850;transition:all .15s;text-align:center;white-space:nowrap}
 .sb-action-btn:hover{background:#f5f1eb;border-color:#5b9a8b}
 .sb-action-btn.primary{background:#5b9a8b;color:#fff;border-color:#5b9a8b}
 .sb-action-btn.primary:hover{background:#4a8a7b}
@@ -374,8 +360,14 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .sb-add-shot-btn:hover{border-color:#5b9a8b;color:#5b9a8b}
 
 /* Actions bar */
-.sb-actions-bar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 16px}
-.sb-actions-bar button{flex:1;min-width:80px;font-size:.72rem;padding:10px 8px}
+.sb-actions-bar{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 0;justify-content:center;align-items:center}
+
+/* Segment navigation */
+.sb-seg-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 0 16px}
+.sb-seg-nav-btn{font-size:.78rem;padding:8px 20px;border-radius:10px;border:1.5px solid #d0ccc4;background:#fff;cursor:pointer;font-weight:600;color:#5d5850;transition:all .15s;min-width:96px;text-align:center}
+.sb-seg-nav-btn:hover{background:#f0ede4;border-color:#5b9a8b;color:#5b9a8b}
+.sb-seg-nav-btn:disabled{opacity:.35;cursor:default;pointer-events:none}
+.sb-seg-nav-label{font-size:.78rem;font-weight:700;color:#4a7c59;min-width:80px;text-align:center}
 
 /* ============================================================
    SHOT EDITOR SHEET
@@ -449,39 +441,9 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
   padding: 30px 0; color: #8a8278; font-size: .82rem;
 }
 
-/* Season card */
-.topic-season-card {
-  margin: 0 12px 14px; padding: 14px 16px;
-  background: linear-gradient(135deg, #faf7f2 0%, #f0ebe0 100%);
-  border-radius: 12px; font-size: .78rem; line-height: 1.6;
-}
-.topic-season-card .season-phase {
-  display: inline-block; padding: 2px 10px; border-radius: 20px;
-  font-weight: 700; font-size: .72rem; margin-right: 6px;
-}
-.topic-season-card .season-phase.peak { background: #ffe0cc; color: #c25a00; }
-.topic-season-card .season-phase.low { background: #cce5ff; color: #0057b3; }
-.topic-season-card .season-phase.flat { background: #e0e0d8; color: #5a5a4a; }
-.topic-season-card .season-tip { color: #8a8278; font-size: .72rem; margin-top: 4px; }
-
-/* Calendar section */
-.topic-calendar-section { padding: 0 4px; }
-
-/* Filter bar */
-.topic-filter-bar {
-  display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 0 8px;
-  flex-wrap: wrap;
-}
-.topic-filter-label { font-size: .72rem; color: #8a8278; font-weight: 600; }
-.topic-filter-chips { display: flex; gap: 6px; }
-.topic-filter-chip {
-  font-size: .7rem; padding: 4px 12px; border-radius: 20px;
-  background: #f5f1ea; border: 1px solid #e8e3d8; color: #6b6560; cursor: pointer; font-weight: 500;
-}
-.topic-filter-chip.active { background: #5b9a8b; color: #fff; border-color: #5b9a8b; }
 .topic-refresh-btn {
   font-size: .72rem; padding: 5px 12px; border-radius: 20px;
-  background: #fff; border: 1px dashed #c4b89e; color: #8a8278; cursor: pointer; margin-left: auto;
+  background: #fff; border: 1px dashed #c4b89e; color: #8a8278; cursor: pointer;
 }
 .topic-refresh-btn:hover { border-color: #5b9a8b; color: #5b9a8b; }
 
@@ -541,6 +503,43 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
   position: sticky; bottom: 0; background: #faf8f5;
   border-top: 1px solid #f0ece4;
 }
+
+/* Topic settings bar (summary row) */
+.topic-settings-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; margin: 0 4px 8px;
+  background: #fff; border-radius: 12px; border: 1px solid #e8e3d8;
+}
+.topic-settings-summary {
+  font-size: .72rem; color: #6b6560; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.topic-settings-summary .setting-dot { color: #c4b89e; }
+
+/* Settings in edit panel */
+.topic-setting-group { margin-bottom: 14px; }
+.topic-setting-label { font-size: .78rem; font-weight: 600; color: #2d2a26; margin-bottom: 6px; }
+.topic-setting-hint { font-size: .65rem; color: #8a8278; margin-top: 4px; }
+.topic-radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+.topic-radio {
+  display: flex; align-items: center; gap: 4px; font-size: .78rem; color: #4a4540;
+  cursor: pointer; padding: 6px 12px; border-radius: 20px;
+  border: 1px solid #e0dcd4; background: #fdfcf9;
+  transition: all .15s;
+}
+.topic-radio:hover { border-color: #c4b89e; background: #f5f1ea; }
+.topic-radio:has(input:checked) { border-color: #5b9a8b; background: #eef6f3; color: #2d2a26; font-weight: 600; }
+.topic-radio input { display: none; }
+
+/* Segmented button group */
+.topic-seg-group { display: flex; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid #e0dcd4; }
+.topic-seg {
+  flex: 1; padding: 7px 0; font-size: .76rem; font-weight: 500; text-align: center;
+  background: #fdfcf9; color: #4a4540; border: none; cursor: pointer;
+  border-right: 1px solid #e0dcd4; transition: all .15s;
+}
+.topic-seg:last-child { border-right: none; }
+.topic-seg:hover { background: #f5f1ea; }
+.topic-seg.active { background: #5b9a8b; color: #fff; font-weight: 600; }
 
 /* Loading spinner */
 .loading-spinner {
