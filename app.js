@@ -204,6 +204,26 @@ function switchTab(tabId) {
   if (tabId === 'tabCreate') initCreatePage();
 }
 
+var _longPressTimer = null;
+function addLongPress(el, callback, needsConfirm) {
+  el.addEventListener('pointerdown', function(e) {
+    _longPressTimer = setTimeout(function() {
+      _longPressTimer = null;
+      el.style.transform = 'scale(0.88)';
+      el.style.transition = 'transform .12s';
+      setTimeout(function() { el.style.transform = ''; }, 150);
+      if (needsConfirm) {
+        if (confirm(needsConfirm)) callback();
+      } else {
+        callback();
+      }
+    }, 600);
+  });
+  el.addEventListener('pointerup', function() { if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; } });
+  el.addEventListener('pointerleave', function() { if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; } });
+  el.addEventListener('pointercancel', function() { if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; } });
+}
+
 // ============================================================
 // SETTINGS SYNC
 // ============================================================
@@ -1787,7 +1807,7 @@ function renderDirectorReview() {
   var html = '<div class="sb-board-scroll">';
 
   // Title + duration
-  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700"><span class="material-symbols-outlined">movie</span> ' + escapeHtml(da.title || '未命名') + '</span><span style="font-size:.72rem;color:#8a8278;margin-left:8px">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700"><span class="material-symbols-outlined">movie</span> ' + escapeHtml(da.title || '未命名') + '</span><br><span style="font-size:.72rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
   // Director brief card
   html += '<div class="sb-section">';
@@ -1864,6 +1884,11 @@ function renderPreShotSettings() {
 
   var html = '<div class="sb-board-scroll">';
 
+  // Top bar: back button
+  html += '<div style="display:flex;align-items:center;padding:4px 0 8px">';
+  html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 返回导演分析</button>';
+  html += '</div>';
+
   html += '<div style="text-align:center;padding:8px 0 6px"><span style="font-size:1rem;font-weight:700"><span class="material-symbols-outlined">tune</span> 分镜前设定</span><span style="font-size:.68rem;color:#8a8278;margin-left:6px">全部必选</span></div>';
 
   html += '<div class="sb-pre-shots">';
@@ -1927,17 +1952,16 @@ function renderPreShotSettings() {
   html += '<span class="sb-pre-toggle"><span class="toggle-switch' + (subtitleEnabled ? ' on' : '') + '"><span class="toggle-knob"></span></span></span></div>';
 
   // BGM toggle row
-  html += '<div class="sb-pre-row" onclick="toggleBgm()"><span class="sb-pre-label">🎵 BGM</span>';
+  html += '<div class="sb-pre-row" onclick="toggleBgm()"><span class="sb-pre-label"><span class="material-symbols-outlined">music_note</span> BGM</span>';
   html += '<span class="sb-pre-val">' + (bgmEnabled ? '开启' : '关闭') + '</span>';
   html += '<span class="sb-pre-toggle"><span class="toggle-switch' + (bgmEnabled ? ' on' : '') + '"><span class="toggle-knob"></span></span></span></div>';
 
   html += '</div>';  // close sb-pre-shots
   html += '</div>';  // close sb-board-scroll
 
-  // Confirm buttons (fixed at bottom)
-  html += '<div class="sb-board-actions">';
-  html += '<button class="dialog-btn secondary" onclick="renderDirectorReview()" style="margin-right:8px;font-size:.82rem;padding:10px 24px">← 返回导演分析</button>';
-  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.92rem;padding:12px 36px"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 <span class="material-symbols-outlined">auto_awesome</span></button>';
+  // Confirm button (fixed at bottom, full width)
+  html += '<div class="sb-board-actions" style="text-align:center">';
+  html += '<button class="dialog-btn primary" id="btnConfirmDirector" onclick="generateShots()" style="font-size:.92rem;padding:12px 36px;width:100%"' + (allSet ? '' : ' disabled') + '>确认，生成分镜 <span class="material-symbols-outlined">auto_awesome</span></button>';
   if (!allSet) html += '<div style="font-size:.65rem;color:#e57373;margin-top:4px">请先选择角色、场景和道具（上方带虚线的项）</div>';
   html += '</div>';  // close sb-board-actions
 
@@ -2022,9 +2046,10 @@ function renderShotsPage() {
   var totalShots = (da.shots || []).length;
   html += '<div class="sb-shots-header">';
   html += '<button class="sb-nav-btn secondary" onclick="renderDirectorReview()" style="font-size:.72rem;padding:6px 14px">← 导演分析</button>';
-  html += '<span style="font-weight:700;font-size:.85rem;flex:1;text-align:center"><span class="material-symbols-outlined">videocam</span> ' + escapeHtml(da.title || '分镜') + '</span>';
-  html += '<span style="font-size:.68rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</span>';
+  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()" style="font-size:.68rem;padding:5px 12px"><span class="material-symbols-outlined">refresh</span> 重新生成</button>';
   html += '</div>';
+  html += '<div style="text-align:center;padding:0 0 2px;font-weight:700;font-size:.85rem"><span class="material-symbols-outlined">videocam</span> ' + escapeHtml(da.title || '分镜') + '</div>';
+  html += '<div style="text-align:center;padding:0 0 10px;font-size:.72rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</div>';
 
   // Gallery navigation (current batch only)
   html += '<div class="gallery-nav">';
@@ -2053,13 +2078,12 @@ function renderShotsPage() {
   }
 
   html += '<div class="sb-actions-bar">';
-  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()"><span class="material-symbols-outlined">content_paste</span> 即梦提示词</button>';
 
   if (batchShots.length > 0) {
     html += '<button class="sb-action-btn" onclick="openShotEditor(galleryIndex)"><span class="material-symbols-outlined">edit</span> 镜头修改</button>';
   }
+  html += '<button class="sb-action-btn" onclick="exportStoryboardPrompts()"><span class="material-symbols-outlined">content_paste</span> 即梦提示词</button>';
 
-  html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()"><span class="material-symbols-outlined">refresh</span> 重新生成全部</button>';
   html += '</div>';  // close sb-actions-bar
 
   // Segment navigation for multi-batch
@@ -2523,11 +2547,13 @@ function renderOneShotCard(shot, index) {
 
   var html = '<div class="sb-shot-card">';
 
-  // Header: shot number + duration + shot type
+  // Shot type badge — top-right corner
+  html += '<span class="shot-type-badge">' + escapeHtml(shot.shotType || '中景') + '</span>';
+
+  // Header: shot number + duration
   html += '<div class="sb-shot-card-header">';
   html += '<span class="shot-num">' + (index + 1) + '</span>';
   html += '<span style="font-size:.72rem">' + escapeHtml(shot.duration || '') + '</span>';
-  html += '<span class="shot-type-tag">' + escapeHtml(shot.shotType || '中景') + '</span>';
   html += '</div>';
 
   // Body
@@ -3156,8 +3182,7 @@ function pickPreChar() {
   var availableChars = characterProfiles.filter(function(c) { return currentPreCharIds.indexOf(c.id) < 0; });
 
   // Top: selected characters (click to remove)
-  pcurrent.innerHTML = '<div style="font-size:.72rem;color:#8a8278;margin-bottom:6px">已选（点击移除）：</div>' +
-    (selectedChars.length > 0
+  pcurrent.innerHTML = (selectedChars.length > 0
       ? selectedChars.map(function(c) {
           return '<div class="picker-item" data-char-id="' + c.id + '" style="border-color:#5b9a8b;background:#eef7f4;cursor:pointer">' +
             '<span class="picker-avatar">' + (c.gender === '男' ? '👨' : '👩') + '</span>' +
@@ -3169,13 +3194,9 @@ function pickPreChar() {
 
   // Bottom: available characters (click to add)
   var h = '';
-  if (selectedChars.length > 0) {
-    h += '<div class="picker-item pre-char-clear-btn" style="color:#e57373;cursor:pointer">✕ 清空全部（已选' + selectedChars.length + '个）</div>';
-  }
   if (selectedChars.length >= 2) {
     h += '<div style="color:#e57373;font-size:.72rem;padding:10px;text-align:center">已达上限（最多2人），请先移除已选角色</div>';
   } else {
-    h += '<div style="font-size:.72rem;color:#8a8278;margin:8px 0 4px">可选角色：</div>';
     h += availableChars.length > 0
       ? availableChars.map(function(c) {
           return '<div class="picker-item" data-char-id="' + c.id + '" style="cursor:pointer">' +
@@ -3187,8 +3208,11 @@ function pickPreChar() {
       : '<div style="color:#a09880;font-size:.78rem;padding:10px">所有角色已选中</div>';
   }
 
-  h += '<div style="border-top:1px solid #e0dcd3;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">';
+  h += '<div style="border-top:1px solid #e0dcd3;margin-top:10px;padding-top:10px;display:flex;gap:8px;align-items:center">';
   h += '<button class="dialog-btn secondary" onclick="closePicker();openCharacterEditor()" style="font-size:.78rem;padding:8px 16px">➕ 新增形象</button>';
+  if (selectedChars.length > 0) {
+    h += '<button class="dialog-btn secondary pre-char-clear-btn" style="font-size:.78rem;padding:8px 16px;margin-left:auto">清除</button>';
+  }
   h += '<button class="dialog-btn primary pre-char-confirm-btn" style="font-size:.78rem;padding:8px 20px">确定</button>';
   h += '</div>';
 
@@ -3304,11 +3328,28 @@ function replaceAllScenes() {
 
 function resetToInterview() {
   if (!confirm('确定重新开始？当前故事板内容将丢失。')) return;
+  resetStoryboardState();
+}
+
+function resetStoryboardState() {
+  currentDirectorAnalysis = null;
+  shotBatches = [];
+  galleryIndex = 0;
+  currentBatchTab = 0;
+  currentPreScene = '';
+  currentPreCharIds = [];
+  currentPreDuration = '30';
+  currentPreRatio = '9:16';
+  currentPreFps = '24';
   currentStoryboard = null;
   interviewStep = 0;
   interviewAnswers = [];
   document.getElementById('sbInterview').style.display = 'flex';
+  document.getElementById('sbAnalyzing').style.display = 'none';
+  document.getElementById('sbPreview').style.display = 'none';
   document.getElementById('sbBoard').style.display = 'none';
+  document.getElementById('sbLinkInput').value = '';
+  document.getElementById('sbLinkStatus').style.display = 'none';
   renderInterview();
 }
 
@@ -3516,6 +3557,15 @@ function bindEvents() {
   document.querySelectorAll('.tab-item').forEach(function(item) {
     item.addEventListener('click', function() { switchTab(this.dataset.tab); });
   });
+
+  // Long-press tab to reset flow
+  addLongPress(document.querySelector('.tab-item[data-tab="tabStoryboard"]'), function() {
+    resetStoryboardState();
+  }, '重新开始？当前故事板流程将回到初始状态。');
+
+  addLongPress(document.querySelector('.tab-item[data-tab="tabCreate"]'), function() {
+    resetCreatePage();
+  }, '返回创作初始状态？选题和内容将清除。');
 
   // Model dialog
   var btnSettings = document.getElementById('btnMeSettings');
@@ -4225,6 +4275,20 @@ function backToTopicList() {
   document.getElementById('topicCalendarSection').style.display = 'block';
   selectedTopic = null;
   topicContentText = '';
+}
+
+function resetCreatePage() {
+  topicBizData = null;
+  selectedTopic = null;
+  topicContentText = '';
+  try { localStorage.removeItem('zimeiti-topic-biz'); } catch(e) {}
+  document.getElementById('topicBizEdit').style.display = 'block';
+  document.getElementById('topicCalendarSection').style.display = 'none';
+  document.getElementById('topicContentSection').style.display = 'none';
+  document.getElementById('topicBizBar').style.display = 'none';
+  document.getElementById('topicSettingsBar').style.display = 'none';
+  document.getElementById('topicBizInput').value = '';
+  document.getElementById('topicList').innerHTML = '';
 }
 
 function parseTopicContent(text) {

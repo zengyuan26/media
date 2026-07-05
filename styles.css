@@ -295,7 +295,7 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .batch-tab.pending:not(.active){background:#faf8f5;color:#c0bdb6;border-style:dashed}
 .batch-tab:hover:not(.active){border-color:#5b9a8b;color:#5b9a8b}
 
-.sb-shots-header{display:flex;align-items:center;gap:10px;padding:6px 0 10px;flex-shrink:0}
+.sb-shots-header{display:flex;align-items:center;justify-content:space-between;padding:6px 0 10px;flex-shrink:0}
 
 /* Shot gallery */
 .gallery-nav{display:flex;align-items:center;gap:8px;flex:1;min-height:0}
@@ -312,15 +312,17 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 /* Shot cards */
 .sb-shot-list{display:flex;flex-direction:column;gap:4px}
 .sb-shot-card{border:1.5px solid #ede8e1;border-radius:14px;overflow:hidden;background:#fff;
-  box-shadow:0 2px 12px rgba(0,0,0,.04)}
+  box-shadow:0 2px 12px rgba(0,0,0,.04);position:relative}
+.shot-type-badge{position:absolute;top:10px;right:14px;font-size:.68rem;color:#8a8278;
+  background:#f0ece4;padding:2px 10px;border-radius:6px;z-index:1}
 .sb-shot-card-header{
-  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  display:flex;align-items:center;gap:8px;padding:14px 18px;
   background:#faf8f5;border-bottom:1px solid #f0ece4;font-size:.76rem;font-weight:600
 }
 .sb-shot-card-header .shot-num{background:#5b9a8b;color:#fff;width:26px;height:26px;
   border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0}
-.shot-type-tag{font-size:.68rem;color:#8a8278;background:#f0ece4;padding:2px 8px;border-radius:6px}
-.sb-shot-card-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+
+.sb-shot-card-body{padding:18px;display:flex;flex-direction:column;gap:14px}
 .shot-info-row{display:flex;align-items:flex-start;gap:8px}
 .shot-info-icon{font-size:1rem;flex-shrink:0;width:22px;text-align:center;line-height:1.4}
 .shot-info-text{font-size:.8rem;color:#5d5850;line-height:1.4}
