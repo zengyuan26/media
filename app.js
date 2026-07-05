@@ -110,7 +110,7 @@ var currentStoryboard = null;  // the full storyboard JSON
 var originalScriptText = '';   // original script skeleton — preserved across rebuilds
 
 // Topic / Create page state
-var topicBizData = null;       // { biz, analysis, calendar, savedAt }
+var topicBizData = null;       // { biz, analysis, audiences, selectedAudienceIndex, topics, ... }
 var selectedTopic = null;      // currently selected topic for content generation
 var topicContentText = '';     // generated content text
 var pendingRecordSource = 'link'; // 'link' | 'topic' — set before generateStoryboard()
@@ -118,6 +118,9 @@ var topicContentAngle = 'product';  // 'product' | 'personal'
 var topicFormat = 'single';        // 'single' | 'dual'
 var topicDuration = '30';          // '15' | '30' | '45' | '60'
 var topicContentStyle = 'normal';  // 'normal' | 'comedy' | 'emotional'
+
+var topicAudiences = [];           // [{ painPoint, audienceDescription, searchKeyword, opportunity }]
+var selectedAudienceIndex = -1;    // index into topicAudiences
 
 // ============================================================
 // PERSISTENCE
@@ -3730,10 +3733,11 @@ function buildSettingsSummary() {
 }
 
 function syncTopicSettingsToUI() {
-  // Radio buttons
-  var radios = document.querySelectorAll('#topicBizEdit input[type=radio]');
-  radios.forEach(function(r) {
-    if (r.name === 'topicContentAngle') r.checked = r.value === topicContentAngle;
+  // Radio buttons — content angle in audience panel, others in settings edit
+  document.querySelectorAll('#topicAudiencePanel input[type=radio]').forEach(function(r) {
+    if (r.name === 'topicContentAngle2') r.checked = r.value === topicContentAngle;
+  });
+  document.querySelectorAll('#topicSettingsEdit input[type=radio]').forEach(function(r) {
     if (r.name === 'topicFormat') r.checked = r.value === topicFormat;
     if (r.name === 'topicContentStyle') r.checked = r.value === topicContentStyle;
   });
@@ -3749,7 +3753,7 @@ function syncTopicSettingsToUI() {
 }
 
 function updateTopicSettingHints() {
-  var hintAngle = document.getElementById('hintContentAngle');
+  var hintAngle = document.getElementById('audienceAngleHint');
   var hintFormat = document.getElementById('hintFormat');
   var hintStyle = document.getElementById('hintContentStyle');
   if (hintAngle) hintAngle.textContent = topicContentAngle === 'product'
@@ -3768,15 +3772,18 @@ function updateTopicSettingHints() {
 function toggleBizEdit() {
   var bar = document.getElementById('topicBizBar');
   var edit = document.getElementById('topicBizEdit');
+  var audPanel = document.getElementById('topicAudiencePanel');
   var calendar = document.getElementById('topicCalendarSection');
   var settingsBar = document.getElementById('topicSettingsBar');
+  var settingsEdit = document.getElementById('topicSettingsEdit');
   if (edit.style.display === 'none' || !edit.style.display) {
+    // Show biz edit
     edit.style.display = 'block';
+    if (audPanel) audPanel.style.display = 'none';
     calendar.style.display = 'none';
     bar.style.display = 'none';
     if (settingsBar) settingsBar.style.display = 'none';
-    syncTopicSettingsToUI();
-    // Restore biz text
+    if (settingsEdit) settingsEdit.style.display = 'none';
     if (topicBizData && topicBizData.biz) {
       document.getElementById('topicBizInput').value = topicBizData.biz;
     }
@@ -3784,10 +3791,17 @@ function toggleBizEdit() {
     edit.style.display = 'none';
     if (topicBizData && topicBizData.analysis) {
       bar.style.display = 'flex';
-      if (settingsBar) settingsBar.style.display = 'flex';
-      calendar.style.display = 'block';
-      if (settingsBar) {
-        document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+      if (selectedAudienceIndex >= 0 && topicBizData.audiences && topicBizData.audiences[selectedAudienceIndex]) {
+        if (settingsBar) settingsBar.style.display = 'flex';
+        calendar.style.display = 'block';
+        if (settingsBar) {
+          document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+        }
+      } else {
+        if (audPanel) audPanel.style.display = 'block';
+        renderAudiencePanel();
+        if (settingsBar) settingsBar.style.display = 'none';
+        calendar.style.display = 'none';
       }
     }
   }
@@ -3803,6 +3817,8 @@ function loadTopicBiz() {
       if (topicBizData.format) topicFormat = topicBizData.format;
       if (topicBizData.duration) topicDuration = topicBizData.duration;
       if (topicBizData.contentStyle) topicContentStyle = topicBizData.contentStyle;
+      if (topicBizData.audiences) topicAudiences = topicBizData.audiences;
+      if (typeof topicBizData.selectedAudienceIndex === 'number') selectedAudienceIndex = topicBizData.selectedAudienceIndex;
       return topicBizData;
     }
   } catch(e) {}
@@ -3814,33 +3830,55 @@ function saveTopicBiz() {
   topicBizData.format = topicFormat;
   topicBizData.duration = topicDuration;
   topicBizData.contentStyle = topicContentStyle;
+  topicBizData.audiences = topicAudiences;
+  topicBizData.selectedAudienceIndex = selectedAudienceIndex;
   try { localStorage.setItem('zimeiti-topic-biz', JSON.stringify(topicBizData)); } catch(e) {}
 }
 
 function initCreatePage() {
   loadTopicBiz();
   var settingsBar = document.getElementById('topicSettingsBar');
+  var audPanel = document.getElementById('topicAudiencePanel');
+  var settingsEdit = document.getElementById('topicSettingsEdit');
+
   if (topicBizData && topicBizData.analysis) {
-    // Business already saved — show calendar
+    // Business already saved
     document.getElementById('topicBizEdit').style.display = 'none';
+    if (settingsEdit) settingsEdit.style.display = 'none';
     document.getElementById('topicBizBar').style.display = 'flex';
     document.getElementById('topicBizLabel').textContent = '业务：' + (topicBizData.biz || '').slice(0, 40);
     var phase = topicBizData.analysis.currentPhase || '';
     var seasonLabel = topicBizData.analysis.peakSeason || '';
     document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
-    if (settingsBar) {
-      settingsBar.style.display = 'flex';
-      document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+
+    if (selectedAudienceIndex >= 0 && topicAudiences.length > 0) {
+      // Audience already selected — show settings + calendar
+      if (audPanel) audPanel.style.display = 'none';
+      if (settingsBar) {
+        settingsBar.style.display = 'flex';
+        document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+      }
+      document.getElementById('topicCalendarSection').style.display = 'block';
+      renderTopicList();
+      var hasTopics = topicBizData && topicBizData.topics && topicBizData.topics.length > 0;
+      document.getElementById('btnRefreshTopics').textContent = hasTopics ? '🔄 换一批' : '✨ 生成选题';
+      syncTopicSettingsToUI();
+    } else {
+      // No audience selected — show audience picker
+      if (audPanel) audPanel.style.display = 'block';
+      if (settingsBar) settingsBar.style.display = 'none';
+      document.getElementById('topicCalendarSection').style.display = 'none';
+      syncTopicSettingsToUI();
+      renderAudiencePanel();
     }
-    document.getElementById('topicCalendarSection').style.display = 'block';
-    renderTopicList();
-    var hasTopics = topicBizData && topicBizData.topics && topicBizData.topics.length > 0;
-    document.getElementById('btnRefreshTopics').textContent = hasTopics ? '🔄 换一批' : '✨ 生成选题';
+    document.getElementById('topicContentSection').style.display = 'none';
   } else {
-    // First time — show business input with default settings
+    // First time — show business input only
     document.getElementById('topicBizEdit').style.display = 'block';
     document.getElementById('topicBizBar').style.display = 'none';
     if (settingsBar) settingsBar.style.display = 'none';
+    if (audPanel) audPanel.style.display = 'none';
+    if (settingsEdit) settingsEdit.style.display = 'none';
     document.getElementById('topicCalendarSection').style.display = 'none';
     document.getElementById('topicContentSection').style.display = 'none';
     syncTopicSettingsToUI();
@@ -3900,7 +3938,240 @@ function buildAnalysisPromptB(biz, contentAngle) {
     '纯 JSON，不要 ```json```。';
 }
 
-function buildTopicListPrompt(biz, analysis) {
+function buildAudienceDiscoveryPrompt(biz, analysis, contentAngle) {
+  if (contentAngle === 'personal') {
+    return '你是一个短视频内容策划专家。基于用户身份背景，挖掘情感共鸣类目标人群。\n\n' +
+      '用户业务/身份：' + biz + '\n' +
+      '行业标签：' + (analysis.industry || '') + '\n' +
+      '叙事人设：' + (analysis.defaultNarrativePersona || '陪伴者') + '\n\n' +
+      '## 任务：发现 5 个目标人群\n' +
+      '人设向内容的目标人群不是「细分市场」，而是「能被特定情感处境引起共鸣的人群」。\n\n' +
+      '### 格式（每行严格 5 个字段，|| 分隔）\n' +
+      '共鸣点/情感处境 || 处于XXX状态中的人 || 搜索关键词 || 蓝海/中等/红海 || 一句话理由\n\n' +
+      '### 规则\n' +
+      '1. 共鸣点：用情绪词/处境词描述，不用品类词。例：不是「职场内容」，是「每天下班在地库坐半小时才敢回家的职场女性」\n' +
+      '2. 目标人群：写「处于XXX状态中的人」，越具体越好\n' +
+      '3. 搜索关键词：用于后续选题搜索验证\n' +
+      '4. 只标注蓝海或中等（可通过情感角度切入、内容供给不足的方向），红海不要\n' +
+      '5. 搜索验证每个关键词的真实热度后标注机会等级\n\n' +
+      '## 示例\n' +
+      '职场vs家庭撕裂 || 处于30岁想搞事业又被催生状态中的职场女性 || 30岁不生孩子会后悔吗 || 蓝海 || 话题敏感但真实，敢讲的人少\n' +
+      '大城市孤独感 || 处于名校毕业北漂3年理想未实现状态中的年轻人 || 北漂坚持不下去了 || 蓝海 || 搜索量大，内容同质化严重，差异化机会\n\n' +
+      '直接输出 5 行。不要序号、不要 JSON、不要 \`\`\`。';
+  }
+  return '你是一个短视频内容策划专家。基于用户业务，挖掘长尾蓝海目标人群。\n\n' +
+    '业务：' + biz + '\n' +
+    '行业：' + (analysis.industry || '') + '\n' +
+    '当前阶段：' + (analysis.currentPhase || '') + '\n' +
+    '推荐的选题目的：' + (analysis.recommendedPurposes || []).join('、') + '\n\n' +
+    '## 任务：发现 5 个目标人群\n' +
+    '每个目标人群 = 一个具体痛点问题 + 一群处于特定处境中的人。\n' +
+    '用品类下的症状词/场景词/困惑词，不用品类大词。\n\n' +
+    '### 格式（每行严格 5 个字段，|| 分隔）\n' +
+    '痛点问题 || 处于XXX状态中的人 || 搜索关键词 || 蓝海/中等/红海 || 一句话理由\n\n' +
+    '### 规则\n' +
+    '1. 痛点问题：用症状词、场景词、困惑词。不用品类词。\n' +
+    '   例：不要「奶粉推荐」，要「转奶拉肚子」「喝奶粉起疹子」「不喝奶瓶怎么办」\n' +
+    '   例：不要「香肠做法」，要「灌的香肠发酸」「香肠煮完就散」「肥瘦比怎么调」\n' +
+    '2. 目标人群：写「处于XXX状态中的人」，不是简单的身份标签\n' +
+    '   例：不是「宝妈」，是「宝宝拉肚子换了3种奶粉还没好的焦虑妈妈」\n' +
+    '3. 搜索关键词：用于验证搜索热度的长尾词\n' +
+    '4. 只标注蓝海或中等（搜索有需求但内容供给不足），红海不要\n' +
+    '5. 搜索验证每个关键词的真实热度后标注机会等级\n\n' +
+    '## 示例\n' +
+    '灌香肠发酸 || 处于初次在家自制手工香肠总是失败状态中的家庭妇女 || 灌的香肠发酸怎么补救 || 蓝海 || 搜索上升但高质量内容少\n' +
+    '转奶拉肚子 || 处于换了3种奶粉宝宝还在拉肚子状态中的焦虑妈妈 || 转奶拉肚子怎么办 || 蓝海 || 长尾精准，竞争小\n\n' +
+    '直接输出 5 行。不要序号、不要 JSON、不要 \`\`\`。';
+}
+
+function parseAudienceText(text) {
+  var lines = text.split('\n').filter(function(l) { return l.trim() && l.indexOf('||') >= 0; });
+  return lines.map(function(line) {
+    var parts = line.split('||').map(function(s) { return s.trim(); });
+    return {
+      painPoint: parts[0] || '',
+      audienceDescription: parts[1] || '',
+      searchKeyword: parts[2] || '',
+      opportunity: parts[3] || '中等',
+      reason: parts[4] || ''
+    };
+  });
+}
+
+async function discoverAudiences() {
+  if (!topicBizData || !topicBizData.analysis) return;
+  var biz = topicBizData.biz;
+  var analysis = topicBizData.analysis;
+  try {
+    var sysPrompt = '你是一个短视频内容策划专家。搜索验证关键词热度，输出目标人群分析。严格按格式输出，不要 JSON。';
+    var resultText = await doStoryboardApiCall(sysPrompt,
+      buildAudienceDiscoveryPrompt(biz, analysis, topicContentAngle),
+      { noJsonFormat: true, maxTokens: 16384, enableSearch: true });
+    topicAudiences = parseAudienceText(resultText || '');
+    if (!topicAudiences.length) throw new Error('未能解析目标人群');
+    saveTopicBiz();
+  } catch(e) {
+    console.error('[discoverAudiences] error:', e);
+    // Fallback: generate some default audiences from analysis
+    topicAudiences = [];
+  }
+  return topicAudiences;
+}
+
+function renderAudiencePanel() {
+  var list = document.getElementById('audienceList');
+  var btn = document.getElementById('btnConfirmAudience');
+  if (!list) return;
+
+  // Sync angle radios
+  var angleRadios = document.querySelectorAll('#topicAudiencePanel input[type=radio]');
+  angleRadios.forEach(function(r) {
+    if (r.name === 'topicContentAngle2') r.checked = r.value === topicContentAngle;
+  });
+  updateTopicSettingHints();
+
+  if (!topicAudiences.length) {
+    list.innerHTML = '<div style="text-align:center;color:#a09888;padding:16px;font-size:.76rem">暂无目标人群数据，请点击「换一批人群」生成</div>';
+    if (btn) btn.disabled = true;
+    return;
+  }
+
+  var html = '';
+  topicAudiences.forEach(function(a, idx) {
+    var isSelected = idx === selectedAudienceIndex;
+    var opClass = a.opportunity === '蓝海' ? 'aud-blue' : 'aud-mid';
+    html += '<div class="audience-card' + (isSelected ? ' selected' : '') + '" onclick="selectAudience(' + idx + ')" data-idx="' + idx + '">';
+    html += '<span class="aud-opp-badge ' + opClass + '">' + escapeHtml(a.opportunity || '') + '</span>';
+    html += '<div class="aud-card-body">';
+    html += '<span class="aud-pain">' + escapeHtml(a.painPoint || '') + '</span>';
+    html += '<span class="aud-sep">——</span>';
+    html += '<span class="aud-desc">' + escapeHtml(a.audienceDescription || '') + '</span>';
+    html += '</div>';
+    html += '</div>';
+  });
+  list.innerHTML = html;
+  if (btn) btn.disabled = selectedAudienceIndex < 0;
+}
+
+function onAudienceAngleChange(val) {
+  topicContentAngle = val;
+  updateTopicSettingHints();
+  selectedAudienceIndex = -1;
+  // Re-discover audiences with new angle
+  var btn = document.getElementById('btnConfirmAudience');
+  if (btn) btn.disabled = true;
+  discoverAudiences().then(function() {
+    renderAudiencePanel();
+  });
+}
+
+function selectAudience(idx) {
+  selectedAudienceIndex = idx;
+  document.querySelectorAll('.audience-card').forEach(function(c) { c.classList.remove('selected'); });
+  var cardEl = document.querySelector('.audience-card[data-idx="' + idx + '"]');
+  if (cardEl) cardEl.classList.add('selected');
+  var btn = document.getElementById('btnConfirmAudience');
+  if (btn) btn.disabled = false;
+}
+
+async function confirmAudience() {
+  if (selectedAudienceIndex < 0 || !topicAudiences[selectedAudienceIndex]) return;
+  var audPanel = document.getElementById('topicAudiencePanel');
+  var settingsBar = document.getElementById('topicSettingsBar');
+  var settingsEdit = document.getElementById('topicSettingsEdit');
+
+  saveTopicBiz();
+
+  // Hide audience panel, show settings bar
+  if (audPanel) audPanel.style.display = 'none';
+  if (settingsEdit) settingsEdit.style.display = 'none';
+  if (settingsBar) {
+    settingsBar.style.display = 'flex';
+    document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+  }
+
+  // Generate topics with selected audience
+  document.getElementById('topicCalendarSection').style.display = 'block';
+  document.getElementById('btnRefreshTopics').textContent = '⏳ 生成中…';
+  document.getElementById('btnRefreshTopics').disabled = true;
+
+  try {
+    var biz = topicBizData.biz;
+    var analysis = topicBizData.analysis;
+    var aud = topicAudiences[selectedAudienceIndex];
+    var systemPrompt = '你是一个短视频内容策划专家。按问题驱动策略，针对指定目标人群生成选题。';
+    var resultText = await doStoryboardApiCall(systemPrompt,
+      buildTopicListPrompt(biz, analysis, aud),
+      { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
+    topicBizData.topics = parseTopicListText(resultText || '');
+    if (!topicBizData.topics.length) throw new Error('未能解析选题列表，请重试');
+    saveTopicBiz();
+    renderTopicList();
+    document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
+  } catch(e) {
+    console.error('[confirmAudience] error:', e);
+    alert('选题生成失败：' + (e.message || '未知错误') + '\n\n请点击「换一批」重试');
+    document.getElementById('btnRefreshTopics').textContent = '✨ 生成选题';
+  }
+  document.getElementById('btnRefreshTopics').disabled = false;
+}
+
+async function refreshAudiences() {
+  selectedAudienceIndex = -1;
+  var btn = document.getElementById('btnConfirmAudience');
+  if (btn) btn.disabled = true;
+  var refreshBtn = document.querySelector('#topicAudiencePanel .dialog-btn.secondary');
+  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '⏳ 分析中…'; }
+
+  await discoverAudiences();
+  renderAudiencePanel();
+
+  if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span> 换一批人群'; }
+}
+
+function toggleSettingsEdit() {
+  var panel = document.getElementById('topicSettingsEdit');
+  if (!panel) return;
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.style.display = 'block';
+    syncTopicSettingsToUI();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function applySettingsAndRefresh() {
+  var panel = document.getElementById('topicSettingsEdit');
+  if (panel) panel.style.display = 'none';
+  saveTopicBiz();
+  var summary = document.getElementById('topicSettingsSummary');
+  if (summary) summary.textContent = buildSettingsSummary();
+
+  // Regenerate topics with new settings
+  if (!topicBizData || !topicBizData.analysis) return;
+  document.getElementById('btnRefreshTopics').textContent = '⏳ 生成中…';
+  document.getElementById('btnRefreshTopics').disabled = true;
+  try {
+    var biz = topicBizData.biz;
+    var analysis = topicBizData.analysis;
+    var aud = selectedAudienceIndex >= 0 ? topicAudiences[selectedAudienceIndex] : null;
+    var systemPrompt = '你是一个短视频内容策划专家。按问题驱动策略生成选题。';
+    var resultText = await doStoryboardApiCall(systemPrompt,
+      buildTopicListPrompt(biz, analysis, aud),
+      { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
+    topicBizData.topics = parseTopicListText(resultText || '');
+    if (!topicBizData.topics.length) throw new Error('未能解析选题列表');
+    saveTopicBiz();
+    renderTopicList();
+    document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
+  } catch(e) {
+    console.error('[applySettingsAndRefresh] error:', e);
+    document.getElementById('btnRefreshTopics').textContent = '✨ 生成选题';
+  }
+  document.getElementById('btnRefreshTopics').disabled = false;
+}
+
+function buildTopicListPrompt(biz, analysis, audience) {
   var styleLabel = topicContentStyle === 'comedy' ? '搞笑反转' : (topicContentStyle === 'emotional' ? '情感共鸣' : '常规');
   return '你是一个短视频内容策划专家。用问题驱动的方式挖掘蓝海选题，推荐 5 个。\n\n' +
     '业务：' + biz + '\n' +
@@ -3909,6 +4180,7 @@ function buildTopicListPrompt(biz, analysis) {
     '推荐的选题目的：' + (analysis.recommendedPurposes || []).join('、') + '\n' +
     '热点参考：' + (analysis.recentHotspots || []).join('、') + '\n' +
     '叙事人设：' + (analysis.defaultNarrativePersona || '陪伴者') + '\n' +
+    (audience ? '目标人群：' + audience.painPoint + ' —— ' + audience.audienceDescription + '\n搜索关键词：' + (audience.searchKeyword || '') + '\n' : '') +
     '\n## 创作约束（NOT 输出字段）\n' +
     '内容倾向：' + (topicContentAngle === 'product' ? '带货向（选题围绕产品/业务）' : '人设向（选题侧重人格魅力/情感共鸣）') + '\n' +
     '表演形式：' + (topicFormat === 'single' ? '单人口播' : '双人演绎') + '\n' +
@@ -3919,7 +4191,7 @@ function buildTopicListPrompt(biz, analysis) {
     (topicFormat === 'dual' ? '选题要适合两个角色互动\n' : '') +
     '\n## 选题策略：问题驱动 × 长尾人群\n\n' +
     '### 第一步：拆解痛点（不要用品类大词）\n' +
-    '围绕业务，列出 5 个具体的用户问题/痛点。用症状词、场景词、困惑词，不用品类词。\n' +
+    '围绕业务' + (audience ? '和指定目标人群（' + audience.painPoint + ' —— ' + audience.audienceDescription + '）' : '') + '，列出 5 个具体的用户问题/痛点。用症状词、场景词、困惑词，不用品类词。\n' +
     '例：不要「奶粉推荐」，要「转奶拉肚子」「喝奶粉起疹子」「不喝奶瓶怎么办」\n' +
     '例：不要「香肠做法」，要「灌的香肠发酸」「香肠煮完就散」「肥瘦比怎么调」\n\n' +
     '### 第二步：锁定长尾人群\n' +
@@ -4114,16 +4386,13 @@ async function saveBizAndAnalyze() {
   var loading = document.getElementById('topicBizLoading');
   var editPanel = document.getElementById('topicBizEdit');
   var btn = document.getElementById('btnSaveBiz');
-  var settingsBar = document.getElementById('topicSettingsBar');
+  var audPanel = document.getElementById('topicAudiencePanel');
 
   loading.style.display = 'flex';
   btn.disabled = true;
 
-  var analysis = null;
-  var topics = null;
-
   try {
-    // Step 1: parallel analysis (string fields + array fields, simpler JSON = fewer errors)
+    // Phase 1: Business analysis
     var sysPrompt1 = '你是一个短视频策划专家。严格按 JSON 格式回复。';
     var [result1a, result1b] = await Promise.all([
       doStoryboardApiCall(sysPrompt1, buildAnalysisPromptA(biz, topicContentAngle)),
@@ -4133,41 +4402,36 @@ async function saveBizAndAnalyze() {
     if (!json1a) { console.error('[saveBizAndAnalyze] Step1a raw:', result1a); throw new Error('无法解析分析结果（字符串字段）'); }
     var json1b = collectStreamJson(result1b);
     if (!json1b) { console.error('[saveBizAndAnalyze] Step1b raw:', result1b); throw new Error('无法解析分析结果（数组字段）'); }
-    analysis = Object.assign({}, JSON.parse(json1a), JSON.parse(json1b));
+    var analysis = Object.assign({}, JSON.parse(json1a), JSON.parse(json1b));
 
-    // Step 2: generate topics (line-based text format, no JSON = no format errors)
-    var sysPrompt2 = '你是一个短视频内容策划专家。先搜索业务相关的2-3个具体痛点长尾关键词（症状词/场景词，不搜品类大词），验证蓝海热度，然后按问题驱动策略生成选题。';
-    var result2 = await doStoryboardApiCall(sysPrompt2, buildTopicListPrompt(biz, analysis), { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
-    console.log('[saveBizAndAnalyze] Step2 result length:', (result2 || '').length);
-    topics = parseTopicListText(result2 || '');
-    if (!topics.length) throw new Error('未能解析选题列表，请重试');
-
-    // Both succeed — save
-    topicBizData = { biz: biz, analysis: analysis, topics: topics, savedAt: new Date().toISOString() };
+    // Save phase 1 result immediately
+    topicBizData = { biz: biz, analysis: analysis, audiences: [], selectedAudienceIndex: -1, topics: [], savedAt: new Date().toISOString() };
+    selectedAudienceIndex = -1;
+    topicAudiences = [];
     saveTopicBiz();
 
+    // Show biz bar
     editPanel.style.display = 'none';
     document.getElementById('topicBizBar').style.display = 'flex';
     document.getElementById('topicBizLabel').textContent = '业务：' + biz.slice(0, 40);
     var phase = analysis.currentPhase || '';
     var seasonLabel = analysis.peakSeason || '';
     document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
-    if (settingsBar) {
-      settingsBar.style.display = 'flex';
-      document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
-    }
 
-    document.getElementById('topicCalendarSection').style.display = 'block';
-    renderTopicList();
-    document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
+    // Phase 2: Audience discovery
+    await discoverAudiences();
+    if (audPanel) audPanel.style.display = 'block';
+    renderAudiencePanel();
 
   } catch(e) {
     console.error('[saveBizAndAnalyze] error:', e);
     alert('分析失败：' + (e.message || '未知错误') + '\n\n请检查 API Key 和网络后重试');
-    // Full reset — nothing persisted on failure
     topicBizData = null;
+    topicAudiences = [];
+    selectedAudienceIndex = -1;
     editPanel.style.display = 'block';
     document.getElementById('topicBizBar').style.display = 'none';
+    if (audPanel) audPanel.style.display = 'none';
     document.getElementById('topicCalendarSection').style.display = 'none';
     document.getElementById('topicContentSection').style.display = 'none';
   }
@@ -4281,12 +4545,18 @@ function resetCreatePage() {
   topicBizData = null;
   selectedTopic = null;
   topicContentText = '';
+  topicAudiences = [];
+  selectedAudienceIndex = -1;
   try { localStorage.removeItem('zimeiti-topic-biz'); } catch(e) {}
   document.getElementById('topicBizEdit').style.display = 'block';
   document.getElementById('topicCalendarSection').style.display = 'none';
   document.getElementById('topicContentSection').style.display = 'none';
   document.getElementById('topicBizBar').style.display = 'none';
   document.getElementById('topicSettingsBar').style.display = 'none';
+  var audPanel = document.getElementById('topicAudiencePanel');
+  if (audPanel) audPanel.style.display = 'none';
+  var settingsEdit = document.getElementById('topicSettingsEdit');
+  if (settingsEdit) settingsEdit.style.display = 'none';
   document.getElementById('topicBizInput').value = '';
   document.getElementById('topicList').innerHTML = '';
 }
@@ -4427,8 +4697,9 @@ async function refreshTopics() {
   btn.textContent = '⏳ 生成中…';
 
   try {
+    var aud = selectedAudienceIndex >= 0 ? topicAudiences[selectedAudienceIndex] : null;
     var systemPrompt = '你是一个短视频内容策划专家。先搜索业务相关的2-3个具体痛点长尾关键词（症状词/场景词，不搜品类大词），验证蓝海热度，然后按问题驱动策略生成选题。';
-    var resultText = await doStoryboardApiCall(systemPrompt, buildTopicListPrompt(topicBizData.biz, topicBizData.analysis), { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
+    var resultText = await doStoryboardApiCall(systemPrompt, buildTopicListPrompt(topicBizData.biz, topicBizData.analysis, aud), { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
     topicBizData.topics = parseTopicListText(resultText || '');
     if (!topicBizData.topics.length) throw new Error('未能解析选题列表，请重试');
     saveTopicBiz();

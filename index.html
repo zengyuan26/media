@@ -124,21 +124,43 @@
       <span class="topic-settings-summary" id="topicSettingsSummary"></span>
     </div>
 
-    <!-- 业务编辑面板 -->
+    <!-- 业务编辑面板（首页简化：仅业务描述） -->
     <div class="topic-biz-edit" id="topicBizEdit">
       <div class="topic-biz-edit-title"><span class="material-symbols-outlined">auto_awesome</span> 一句话描述你的业务</div>
       <textarea class="topic-biz-input" id="topicBizInput" placeholder="例如：我是做手工灌香肠的，主要做川味和广味，想通过短视频吸引本地客户…"></textarea>
-
-      <!-- 内容倾向 -->
-      <div class="topic-setting-group">
-        <div class="topic-setting-label"><span class="material-symbols-outlined">ads_click</span> 内容倾向</div>
-        <div class="topic-radio-group">
-          <label class="topic-radio"><input type="radio" name="topicContentAngle" value="product" checked onchange="topicContentAngle=this.value;updateTopicSettingHints()"> 带货向</label>
-          <label class="topic-radio"><input type="radio" name="topicContentAngle" value="personal" onchange="topicContentAngle=this.value;updateTopicSettingHints()"> 人设向</label>
-        </div>
-        <div class="topic-setting-hint" id="hintContentAngle">选题围绕业务/产品，以转化和成交为目的</div>
+      <button class="topic-biz-save-btn" id="btnSaveBiz" onclick="saveBizAndAnalyze()"><span class="material-symbols-outlined">lightbulb</span> 提交分析</button>
+      <div class="topic-biz-loading" id="topicBizLoading" style="display:none">
+        <div class="loading-spinner"></div>
+        <span>AI 正在分析你的行业和选题方向…</span>
       </div>
+    </div>
 
+    <!-- 目标人群选择面板 -->
+    <div class="topic-audience-panel" id="topicAudiencePanel" style="display:none">
+      <div class="topic-setting-group" style="margin-bottom:12px">
+        <div class="topic-setting-label"><span class="material-symbols-outlined">ads_click</span> 内容方向</div>
+        <div class="topic-radio-group">
+          <label class="topic-radio"><input type="radio" name="topicContentAngle2" value="product" checked onchange="onAudienceAngleChange('product')"> 带货向</label>
+          <label class="topic-radio"><input type="radio" name="topicContentAngle2" value="personal" onchange="onAudienceAngleChange('personal')"> 人设向</label>
+        </div>
+        <div class="topic-setting-hint" id="audienceAngleHint">选题围绕业务/产品，以转化和成交为目的</div>
+      </div>
+      <div style="font-size:.72rem;color:#8a8278;margin-bottom:8px;text-align:center">—— AI 分析出的目标人群，请选择一个 ——</div>
+      <div class="audience-list" id="audienceList"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="dialog-btn secondary" onclick="refreshAudiences()" style="flex:1;font-size:.78rem;padding:10px"><span class="material-symbols-outlined">refresh</span> 换一批人群</button>
+        <button class="dialog-btn primary" id="btnConfirmAudience" onclick="confirmAudience()" style="flex:1;font-size:.78rem;padding:10px" disabled>确认目标，继续设置 <span class="material-symbols-outlined">arrow_forward</span></button>
+      </div>
+    </div>
+
+    <!-- 设置摘要行 -->
+    <div class="topic-settings-bar" id="topicSettingsBar" style="display:none">
+      <span class="topic-settings-summary" id="topicSettingsSummary"></span>
+      <button class="topic-biz-edit-btn" onclick="toggleSettingsEdit()">调整</button>
+    </div>
+
+    <!-- 设置编辑面板（点击调整展开） -->
+    <div class="topic-biz-edit" id="topicSettingsEdit" style="display:none">
       <!-- 表演形式 -->
       <div class="topic-setting-group">
         <div class="topic-setting-label"><span class="material-symbols-outlined">theater_comedy</span> 表演形式</div>
@@ -171,10 +193,9 @@
         <div class="topic-setting-hint" id="hintContentStyle">标准脚本结构（类型+开头+人物+场景+脚本+CTA）</div>
       </div>
 
-      <button class="topic-biz-save-btn" id="btnSaveBiz" onclick="saveBizAndAnalyze()"><span class="material-symbols-outlined">lightbulb</span> 保存并生成选题</button>
-      <div class="topic-biz-loading" id="topicBizLoading" style="display:none">
-        <div class="loading-spinner"></div>
-        <span>AI 正在分析你的行业和选题方向…</span>
+      <div style="display:flex;gap:8px">
+        <button class="dialog-btn secondary" onclick="toggleSettingsEdit()" style="flex:1;font-size:.78rem;padding:10px">取消</button>
+        <button class="dialog-btn primary" onclick="applySettingsAndRefresh()" style="flex:1;font-size:.78rem;padding:10px"><span class="material-symbols-outlined">check</span> 保存设置</button>
       </div>
     </div>
 

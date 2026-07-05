@@ -549,6 +549,30 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .topic-seg:hover { background: #f5f1ea; }
 .topic-seg.active { background: #5b9a8b; color: #fff; font-weight: 600; }
 
+/* Audience panel */
+.topic-audience-panel {
+  margin: 8px 12px; padding: 16px;
+  background: #fff; border-radius: 14px; border: 1px solid #e8e3d8;
+}
+.audience-list { display: flex; flex-direction: column; gap: 6px; }
+.audience-card {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 12px 14px; border: 1.5px solid #eae5da; border-radius: 10px;
+  cursor: pointer; transition: all .15s; background: #fdfcf9;
+}
+.audience-card:hover { border-color: #c4b89e; background: #f8f6f1; }
+.audience-card.selected { border-color: #5b9a8b; background: #f4faf7; }
+.aud-opp-badge {
+  flex-shrink: 0; font-size: .62rem; padding: 1px 8px;
+  border-radius: 10px; font-weight: 600; margin-top: 1px;
+}
+.aud-opp-badge.aud-blue { background: #d4f0e8; color: #1a7050; }
+.aud-opp-badge.aud-mid { background: #fff0d4; color: #b87a00; }
+.aud-card-body { flex: 1; min-width: 0; line-height: 1.5; }
+.aud-pain { font-size: .82rem; font-weight: 600; color: #2d2a26; }
+.aud-sep { font-size: .7rem; color: #c4b89e; margin: 0 4px; }
+.aud-desc { font-size: .76rem; color: #6b6560; }
+
 /* Loading spinner */
 .loading-spinner {
   width: 32px; height: 32px; border: 3px solid #e8e3d8; border-top-color: #5b9a8b;
