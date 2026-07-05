@@ -1810,44 +1810,27 @@ function renderDirectorReview() {
   var html = '<div class="sb-board-scroll">';
 
   // Title + duration
-  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700"><span class="material-symbols-outlined">movie</span> ' + escapeHtml(da.title || '未命名') + '</span><br><span style="font-size:.72rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + '</span></div>';
+  html += '<div style="text-align:center;padding:12px 0 8px"><span style="font-size:1.15rem;font-weight:700"><span class="material-symbols-outlined">movie</span> ' + escapeHtml(da.title || '未命名') + '</span><br><span style="font-size:.8rem;font-weight:700;color:#5b9a8b">' + escapeHtml(da.totalDuration || '') + '</span></div>';
 
-  // Director brief card
-  html += '<div class="sb-section">';
-  html += '<div class="sb-section-header"><span><span class="material-symbols-outlined">description</span> 导演分析</span></div>';
-  html += '<div class="sb-section-body">';
-  html += '<div class="sb-director-brief">';
-
-  html += '<div class="da-field"><span class="da-label"><span class="material-symbols-outlined">lightbulb</span> 核心创意</span>';
-  html += '<p>' + escapeHtml(db.coreIdea || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">🪝 钩子设计</span>';
-  html += '<p>' + escapeHtml(db.hookDesign || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label"><span class="material-symbols-outlined">palette</span> 情绪基调</span>';
-  html += '<p>' + escapeHtml(db.emotionalTone || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">📸 视觉参考</span>';
-  html += '<p>' + escapeHtml(db.visualReference || '') + '</p></div>';
-
-  html += '<div class="da-field"><span class="da-label">🖼 关键画面</span>';
-  html += '<ol style="margin:4px 0 0 16px;font-size:.82rem;line-height:1.7">';
-  kf.forEach(function(f) {
-    html += '<li>' + escapeHtml(f) + '</li>';
-  });
-  html += '</ol></div>';
-
-  html += '</div></div></div>';
-
-  // Pre-shot hints
+  // Combined analysis + hints — scrollable card row
   var hints = da.preShotHints || {};
-  html += '<div class="sb-section" style="margin-top:10px">';
-  html += '<div class="sb-section-header"><span><span class="material-symbols-outlined">lightbulb</span> 分镜设置建议</span></div>';
-  html += '<div class="sb-section-body" style="font-size:.78rem;line-height:1.8;color:#6b6560">';
-  html += '<div><span class="material-symbols-outlined">person</span> 角色：' + escapeHtml(hints.suggestedCharacters || '1名主角') + '</div>';
-  html += '<div><span class="material-symbols-outlined">home</span> 场景：' + escapeHtml(hints.suggestedScene || '居家') + '</div>';
-  html += '<div><span class="material-symbols-outlined">inventory_2</span> 道具：' + escapeHtml(hints.suggestedProps || '无特殊道具') + '</div>';
-  html += '<div><span class="material-symbols-outlined">timer</span> 时长建议：' + escapeHtml(hints.suggestedDuration || '30s') + ' &nbsp;|&nbsp; <span class="material-symbols-outlined">aspect_ratio</span> 比例建议：' + escapeHtml(hints.suggestedRatio || '9:16') + '</div>';
+  html += '<div class="sb-section">';
+  html += '<div class="sb-section-header"><span><span class="material-symbols-outlined">description</span> 导演分析与分镜建议</span></div>';
+  html += '<div class="sb-da-cards">';
+
+  // Director analysis cards
+  html += '<div class="da-card"><div class="da-card-icon"><span class="material-symbols-outlined">lightbulb</span></div><div class="da-card-label">核心创意</div><div class="da-card-text">' + escapeHtml(db.coreIdea || '') + '</div></div>';
+  html += '<div class="da-card"><div class="da-card-icon"><span class="material-symbols-outlined">target</span></div><div class="da-card-label">钩子设计</div><div class="da-card-text">' + escapeHtml(db.hookDesign || '') + '</div></div>';
+  html += '<div class="da-card"><div class="da-card-icon"><span class="material-symbols-outlined">palette</span></div><div class="da-card-label">情绪基调</div><div class="da-card-text">' + escapeHtml(db.emotionalTone || '') + '</div></div>';
+  html += '<div class="da-card"><div class="da-card-icon"><span class="material-symbols-outlined">camera</span></div><div class="da-card-label">视觉参考</div><div class="da-card-text">' + escapeHtml(db.visualReference || '') + '</div></div>';
+  html += '<div class="da-card"><div class="da-card-icon"><span class="material-symbols-outlined">filter_frames</span></div><div class="da-card-label">关键画面</div><div class="da-card-text">' + kf.map(function(f) { return escapeHtml(f); }).join('<br>') + '</div></div>';
+
+  // Hints cards
+  html += '<div class="da-card da-card-hint"><div class="da-card-icon"><span class="material-symbols-outlined">person</span></div><div class="da-card-label">角色</div><div class="da-card-text">' + escapeHtml(hints.suggestedCharacters || '1名主角') + '</div></div>';
+  html += '<div class="da-card da-card-hint"><div class="da-card-icon"><span class="material-symbols-outlined">home</span></div><div class="da-card-label">场景</div><div class="da-card-text">' + escapeHtml(hints.suggestedScene || '居家') + '</div></div>';
+  html += '<div class="da-card da-card-hint"><div class="da-card-icon"><span class="material-symbols-outlined">inventory_2</span></div><div class="da-card-label">道具</div><div class="da-card-text">' + escapeHtml(hints.suggestedProps || '无特殊道具') + '</div></div>';
+  html += '<div class="da-card da-card-hint"><div class="da-card-icon"><span class="material-symbols-outlined">timer</span></div><div class="da-card-label">时长·比例</div><div class="da-card-text">' + escapeHtml(hints.suggestedDuration || '30s') + ' · ' + escapeHtml(hints.suggestedRatio || '9:16') + '</div></div>';
+
   html += '</div></div>';
 
   html += '</div>';  // close sb-board-scroll
@@ -2052,7 +2035,7 @@ function renderShotsPage() {
   html += '<button class="sb-action-btn" onclick="regenerateCurrentBatch()" style="font-size:.68rem;padding:5px 12px"><span class="material-symbols-outlined">refresh</span> 重新生成</button>';
   html += '</div>';
   html += '<div style="text-align:center;padding:0 0 2px;font-weight:700;font-size:.85rem"><span class="material-symbols-outlined">videocam</span> ' + escapeHtml(da.title || '分镜') + '</div>';
-  html += '<div style="text-align:center;padding:0 0 10px;font-size:.72rem;color:#8a8278">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</div>';
+  html += '<div style="text-align:center;padding:0 0 10px;font-size:.8rem;font-weight:700;color:#5b9a8b">' + escapeHtml(da.totalDuration || '') + ' · ' + totalShots + '镜</div>';
 
   // Gallery navigation (current batch only)
   html += '<div class="gallery-nav">';
@@ -2556,7 +2539,7 @@ function renderOneShotCard(shot, index) {
   // Header: shot number + duration
   html += '<div class="sb-shot-card-header">';
   html += '<span class="shot-num">' + (index + 1) + '</span>';
-  html += '<span style="font-size:.72rem">' + escapeHtml(shot.duration || '') + '</span>';
+  html += '<span style="font-size:.76rem;font-weight:700;color:#5b9a8b">' + escapeHtml(shot.duration || '') + '</span>';
   html += '</div>';
 
   // Body
@@ -3723,13 +3706,17 @@ function setTopicDuration(val, el) {
 }
 
 function buildSettingsSummary() {
-  var parts = [];
-  parts.push(topicContentAngle === 'product' ? '带货向' : '人设向');
-  parts.push(topicFormat === 'single' ? '单人口播' : '双人演绎');
-  parts.push(topicDuration + 's');
+  var angleIcon = topicContentAngle === 'product' ? 'ads_click' : 'psychology';
+  var angleLabel = topicContentAngle === 'product' ? '带货向' : '人设向';
+  var formatIcon = topicFormat === 'single' ? 'person' : 'groups';
+  var formatLabel = topicFormat === 'single' ? '单人口播' : '双人演绎';
   var styleLabels = { normal: '常规', comedy: '搞笑反转', emotional: '情感共鸣' };
-  parts.push(styleLabels[topicContentStyle] || '常规');
-  return parts.join(' · ');
+  var styleLabel = styleLabels[topicContentStyle] || '常规';
+  var styleIcon = topicContentStyle === 'comedy' ? 'theater_comedy' : (topicContentStyle === 'emotional' ? 'favorite' : 'description');
+  return '<span class="setting-pill"><span class="material-symbols-outlined">' + angleIcon + '</span>' + angleLabel + '</span>' +
+    '<span class="setting-pill"><span class="material-symbols-outlined">' + formatIcon + '</span>' + formatLabel + '</span>' +
+    '<span class="setting-pill"><span class="material-symbols-outlined">timer</span>' + topicDuration + 's</span>' +
+    '<span class="setting-pill"><span class="material-symbols-outlined">' + styleIcon + '</span>' + styleLabel + '</span>';
 }
 
 function syncTopicSettingsToUI() {
@@ -3749,7 +3736,23 @@ function syncTopicSettingsToUI() {
   updateTopicSettingHints();
   // Update summary bar
   var summary = document.getElementById('topicSettingsSummary');
-  if (summary) summary.textContent = buildSettingsSummary();
+  if (summary) summary.innerHTML = buildSettingsSummary();
+  // Render selected audience card in settings panel
+  renderSettingsAudCard();
+}
+
+function renderSettingsAudCard() {
+  var card = document.getElementById('settingsAudCard');
+  if (!card) return;
+  var aud = selectedAudienceIndex >= 0 ? topicAudiences[selectedAudienceIndex] : null;
+  if (!aud) { card.style.display = 'none'; return; }
+  card.style.display = 'flex';
+  card.innerHTML =
+    '<span class="material-symbols-outlined">groups</span>' +
+    '<div>' +
+      '<div class="settings-aud-label">目标人群</div>' +
+      '<div class="settings-aud-text">' + escapeHtml(aud.painPoint) + ' <span style="color:#c4b89e">——</span> ' + escapeHtml(aud.audienceDescription) + '</div>' +
+    '</div>';
 }
 
 function updateTopicSettingHints() {
@@ -3773,14 +3776,15 @@ function toggleBizEdit() {
   var bar = document.getElementById('topicBizBar');
   var edit = document.getElementById('topicBizEdit');
   var audPanel = document.getElementById('topicAudiencePanel');
-  var calendar = document.getElementById('topicCalendarSection');
+  var toolbar = document.getElementById('topicCalendarToolbar');
   var settingsBar = document.getElementById('topicSettingsBar');
   var settingsEdit = document.getElementById('topicSettingsEdit');
   if (edit.style.display === 'none' || !edit.style.display) {
     // Show biz edit
     edit.style.display = 'block';
     if (audPanel) audPanel.style.display = 'none';
-    calendar.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    showCalendarSection(false);
     bar.style.display = 'none';
     if (settingsBar) settingsBar.style.display = 'none';
     if (settingsEdit) settingsEdit.style.display = 'none';
@@ -3793,15 +3797,15 @@ function toggleBizEdit() {
       bar.style.display = 'flex';
       if (selectedAudienceIndex >= 0 && topicBizData.audiences && topicBizData.audiences[selectedAudienceIndex]) {
         if (settingsBar) settingsBar.style.display = 'flex';
-        calendar.style.display = 'block';
+        showCalendarSection(true);
         if (settingsBar) {
-          document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+          document.getElementById('topicSettingsSummary').innerHTML = buildSettingsSummary();
         }
       } else {
         if (audPanel) audPanel.style.display = 'block';
         renderAudiencePanel();
         if (settingsBar) settingsBar.style.display = 'none';
-        calendar.style.display = 'none';
+        showCalendarSection(false);
       }
     }
   }
@@ -3852,22 +3856,24 @@ function initCreatePage() {
     document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
 
     if (selectedAudienceIndex >= 0 && topicAudiences.length > 0) {
-      // Audience already selected — show settings + calendar
+      // Audience already selected — show settings + calendar, no biz bar
+      document.getElementById('topicBizBar').style.display = 'none';
       if (audPanel) audPanel.style.display = 'none';
       if (settingsBar) {
         settingsBar.style.display = 'flex';
-        document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+        document.getElementById('topicSettingsSummary').innerHTML = buildSettingsSummary();
       }
-      document.getElementById('topicCalendarSection').style.display = 'block';
+      showCalendarSection(true);
       renderTopicList();
       var hasTopics = topicBizData && topicBizData.topics && topicBizData.topics.length > 0;
-      document.getElementById('btnRefreshTopics').textContent = hasTopics ? '🔄 换一批' : '✨ 生成选题';
+      document.getElementById('btnRefreshTopics').textContent = hasTopics ? '🔄 换一批' : '✨ 换一批';
       syncTopicSettingsToUI();
     } else {
-      // No audience selected — show audience picker
+      // No audience selected — show audience picker with biz bar
+      document.getElementById('topicBizBar').style.display = 'flex';
       if (audPanel) audPanel.style.display = 'block';
       if (settingsBar) settingsBar.style.display = 'none';
-      document.getElementById('topicCalendarSection').style.display = 'none';
+      showCalendarSection(false);
       syncTopicSettingsToUI();
       renderAudiencePanel();
     }
@@ -3879,7 +3885,7 @@ function initCreatePage() {
     if (settingsBar) settingsBar.style.display = 'none';
     if (audPanel) audPanel.style.display = 'none';
     if (settingsEdit) settingsEdit.style.display = 'none';
-    document.getElementById('topicCalendarSection').style.display = 'none';
+    showCalendarSection(false);
     document.getElementById('topicContentSection').style.display = 'none';
     syncTopicSettingsToUI();
   }
@@ -3957,7 +3963,7 @@ function buildAudienceDiscoveryPrompt(biz, analysis, contentAngle) {
       '## 示例\n' +
       '职场vs家庭撕裂 || 处于30岁想搞事业又被催生状态中的职场女性 || 30岁不生孩子会后悔吗 || 蓝海 || 话题敏感但真实，敢讲的人少\n' +
       '大城市孤独感 || 处于名校毕业北漂3年理想未实现状态中的年轻人 || 北漂坚持不下去了 || 蓝海 || 搜索量大，内容同质化严重，差异化机会\n\n' +
-      '直接输出 5 行。不要序号、不要 JSON、不要 \`\`\`。';
+      '直接输出 5 行。不要序号、不要 JSON、不要 \`\`\`。不要输出任何前置说明或搜索过程，直接输出数据行。';
   }
   return '你是一个短视频内容策划专家。基于用户业务，挖掘长尾蓝海目标人群。\n\n' +
     '业务：' + biz + '\n' +
@@ -3988,8 +3994,11 @@ function parseAudienceText(text) {
   var lines = text.split('\n').filter(function(l) { return l.trim() && l.indexOf('||') >= 0; });
   return lines.map(function(line) {
     var parts = line.split('||').map(function(s) { return s.trim(); });
+    // Strip AI meta-commentary prefix (e.g. "我来搜索验证...的热度+")
+    var painPoint = parts[0] || '';
+    painPoint = painPoint.replace(/^.+(?:的热度[+＋]|关键词[+＋]|长尾词[+＋])/, '');
     return {
-      painPoint: parts[0] || '',
+      painPoint: painPoint,
       audienceDescription: parts[1] || '',
       searchKeyword: parts[2] || '',
       opportunity: parts[3] || '中等',
@@ -4003,7 +4012,7 @@ async function discoverAudiences() {
   var biz = topicBizData.biz;
   var analysis = topicBizData.analysis;
   try {
-    var sysPrompt = '你是一个短视频内容策划专家。搜索验证关键词热度，输出目标人群分析。严格按格式输出，不要 JSON。';
+    var sysPrompt = '你是一个短视频内容策划专家。只输出目标人群数据行，不要任何开场白、搜索过程或分析说明。';
     var resultText = await doStoryboardApiCall(sysPrompt,
       buildAudienceDiscoveryPrompt(biz, analysis, topicContentAngle),
       { noJsonFormat: true, maxTokens: 16384, enableSearch: true });
@@ -4082,38 +4091,14 @@ async function confirmAudience() {
 
   saveTopicBiz();
 
-  // Hide audience panel, show settings bar
+  // Hide audience panel and biz bar, show settings editor expanded
   if (audPanel) audPanel.style.display = 'none';
-  if (settingsEdit) settingsEdit.style.display = 'none';
-  if (settingsBar) {
-    settingsBar.style.display = 'flex';
-    document.getElementById('topicSettingsSummary').textContent = buildSettingsSummary();
+  document.getElementById('topicBizBar').style.display = 'none';
+  if (settingsBar) settingsBar.style.display = 'none';
+  if (settingsEdit) {
+    settingsEdit.style.display = 'block';
+    syncTopicSettingsToUI();
   }
-
-  // Generate topics with selected audience
-  document.getElementById('topicCalendarSection').style.display = 'block';
-  document.getElementById('btnRefreshTopics').textContent = '⏳ 生成中…';
-  document.getElementById('btnRefreshTopics').disabled = true;
-
-  try {
-    var biz = topicBizData.biz;
-    var analysis = topicBizData.analysis;
-    var aud = topicAudiences[selectedAudienceIndex];
-    var systemPrompt = '你是一个短视频内容策划专家。按问题驱动策略，针对指定目标人群生成选题。';
-    var resultText = await doStoryboardApiCall(systemPrompt,
-      buildTopicListPrompt(biz, analysis, aud),
-      { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
-    topicBizData.topics = parseTopicListText(resultText || '');
-    if (!topicBizData.topics.length) throw new Error('未能解析选题列表，请重试');
-    saveTopicBiz();
-    renderTopicList();
-    document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
-  } catch(e) {
-    console.error('[confirmAudience] error:', e);
-    alert('选题生成失败：' + (e.message || '未知错误') + '\n\n请点击「换一批」重试');
-    document.getElementById('btnRefreshTopics').textContent = '✨ 生成选题';
-  }
-  document.getElementById('btnRefreshTopics').disabled = false;
 }
 
 async function refreshAudiences() {
@@ -4129,46 +4114,49 @@ async function refreshAudiences() {
   if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span> 换一批人群'; }
 }
 
+function backFromSettings() {
+  var panel = document.getElementById('topicSettingsEdit');
+  var audPanel = document.getElementById('topicAudiencePanel');
+  if (panel) panel.style.display = 'none';
+  document.getElementById('topicBizBar').style.display = 'flex';
+  if (audPanel) { audPanel.style.display = 'block'; renderAudiencePanel(); }
+}
+
 function toggleSettingsEdit() {
   var panel = document.getElementById('topicSettingsEdit');
+  var settingsBar = document.getElementById('topicSettingsBar');
   if (!panel) return;
   if (panel.style.display === 'none' || !panel.style.display) {
     panel.style.display = 'block';
+    if (settingsBar) settingsBar.style.display = 'none';
     syncTopicSettingsToUI();
   } else {
     panel.style.display = 'none';
+    if (settingsBar) {
+      settingsBar.style.display = 'flex';
+      document.getElementById('topicSettingsSummary').innerHTML = buildSettingsSummary();
+    }
   }
 }
 
-async function applySettingsAndRefresh() {
+function applySettingsAndClose() {
   var panel = document.getElementById('topicSettingsEdit');
+  var settingsBar = document.getElementById('topicSettingsBar');
   if (panel) panel.style.display = 'none';
-  saveTopicBiz();
-  var summary = document.getElementById('topicSettingsSummary');
-  if (summary) summary.textContent = buildSettingsSummary();
-
-  // Regenerate topics with new settings
-  if (!topicBizData || !topicBizData.analysis) return;
-  document.getElementById('btnRefreshTopics').textContent = '⏳ 生成中…';
-  document.getElementById('btnRefreshTopics').disabled = true;
-  try {
-    var biz = topicBizData.biz;
-    var analysis = topicBizData.analysis;
-    var aud = selectedAudienceIndex >= 0 ? topicAudiences[selectedAudienceIndex] : null;
-    var systemPrompt = '你是一个短视频内容策划专家。按问题驱动策略生成选题。';
-    var resultText = await doStoryboardApiCall(systemPrompt,
-      buildTopicListPrompt(biz, analysis, aud),
-      { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
-    topicBizData.topics = parseTopicListText(resultText || '');
-    if (!topicBizData.topics.length) throw new Error('未能解析选题列表');
-    saveTopicBiz();
-    renderTopicList();
-    document.getElementById('btnRefreshTopics').textContent = '🔄 换一批';
-  } catch(e) {
-    console.error('[applySettingsAndRefresh] error:', e);
-    document.getElementById('btnRefreshTopics').textContent = '✨ 生成选题';
+  document.getElementById('topicBizBar').style.display = 'none';
+  if (settingsBar) {
+    settingsBar.style.display = 'flex';
+    document.getElementById('topicSettingsSummary').innerHTML = buildSettingsSummary();
   }
-  document.getElementById('btnRefreshTopics').disabled = false;
+  saveTopicBiz();
+  showCalendarSection(true);
+  // Show loading transition
+  var list = document.getElementById('topicList');
+  if (list) list.innerHTML = '<div style="text-align:center;padding:60px 20px"><div class="loading-spinner"></div><div style="font-size:.82rem;color:#8a8278;margin-top:12px">AI 正在为你生成选题…</div></div>';
+  var btn = document.getElementById('btnRefreshTopics');
+  if (btn) btn.style.display = 'none';
+  // Auto-generate topics
+  refreshTopics();
 }
 
 function buildTopicListPrompt(biz, analysis, audience) {
@@ -4404,22 +4392,22 @@ async function saveBizAndAnalyze() {
     if (!json1b) { console.error('[saveBizAndAnalyze] Step1b raw:', result1b); throw new Error('无法解析分析结果（数组字段）'); }
     var analysis = Object.assign({}, JSON.parse(json1a), JSON.parse(json1b));
 
-    // Save phase 1 result immediately
+    // Save phase 1 result
     topicBizData = { biz: biz, analysis: analysis, audiences: [], selectedAudienceIndex: -1, topics: [], savedAt: new Date().toISOString() };
     selectedAudienceIndex = -1;
     topicAudiences = [];
     saveTopicBiz();
 
-    // Show biz bar
+    // Phase 2: Audience discovery (keep loading visible throughout)
+    await discoverAudiences();
+
+    // All results ready — show everything at once
     editPanel.style.display = 'none';
     document.getElementById('topicBizBar').style.display = 'flex';
     document.getElementById('topicBizLabel').textContent = '业务：' + biz.slice(0, 40);
     var phase = analysis.currentPhase || '';
     var seasonLabel = analysis.peakSeason || '';
     document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
-
-    // Phase 2: Audience discovery
-    await discoverAudiences();
     if (audPanel) audPanel.style.display = 'block';
     renderAudiencePanel();
 
@@ -4432,7 +4420,7 @@ async function saveBizAndAnalyze() {
     editPanel.style.display = 'block';
     document.getElementById('topicBizBar').style.display = 'none';
     if (audPanel) audPanel.style.display = 'none';
-    document.getElementById('topicCalendarSection').style.display = 'none';
+    showCalendarSection(false);
     document.getElementById('topicContentSection').style.display = 'none';
   }
 
@@ -4448,8 +4436,8 @@ function renderTopicList() {
   var list = document.getElementById('topicList');
   var btn = document.getElementById('btnRefreshTopics');
   if (!allTopics.length) {
-    list.innerHTML = '<div style="text-align:center;color:#a09888;padding:20px;font-size:.76rem">暂无选题，点击「生成选题」重新生成</div>';
-    if (btn) btn.textContent = '✨ 生成选题';
+    list.innerHTML = '<div style="text-align:center;color:#a09888;padding:20px;font-size:.76rem">暂无选题，点击「换一批」重新生成</div>';
+    if (btn) btn.textContent = '✨ 换一批';
     return;
   }
   if (btn) btn.textContent = '🔄 换一批';
@@ -4484,8 +4472,9 @@ function selectTopicCard(idx) {
   var cardEl = document.querySelector('.topic-card[data-idx="' + idx + '"]');
   if (cardEl) cardEl.classList.add('selected');
 
-  // Show content generation
-  document.getElementById('topicCalendarSection').style.display = 'none';
+  // Show content generation, hide settings
+  showCalendarSection(false);
+  document.getElementById('topicSettingsBar').style.display = 'none';
   document.getElementById('topicContentSection').style.display = 'flex';
   document.getElementById('topicContentResult').innerHTML = '';
   document.getElementById('topicContentActions').style.display = 'none';
@@ -4536,9 +4525,28 @@ function regenerateTopicContent() {
 
 function backToTopicList() {
   document.getElementById('topicContentSection').style.display = 'none';
-  document.getElementById('topicCalendarSection').style.display = 'block';
+  document.getElementById('topicSettingsBar').style.display = 'flex';
+  showCalendarSection(true);
   selectedTopic = null;
   topicContentText = '';
+}
+
+function showCalendarSection(visible) {
+  var d = visible ? 'block' : 'none';
+  document.getElementById('topicCalendarToolbar').style.display = d;
+  document.getElementById('topicCalendarSection').style.display = d;
+}
+
+function backFromCalendar() {
+  var settingsBar = document.getElementById('topicSettingsBar');
+  var settingsEdit = document.getElementById('topicSettingsEdit');
+  showCalendarSection(false);
+  document.getElementById('topicBizBar').style.display = 'none';
+  if (settingsBar) settingsBar.style.display = 'none';
+  if (settingsEdit) {
+    settingsEdit.style.display = 'block';
+    syncTopicSettingsToUI();
+  }
 }
 
 function resetCreatePage() {
@@ -4549,7 +4557,7 @@ function resetCreatePage() {
   selectedAudienceIndex = -1;
   try { localStorage.removeItem('zimeiti-topic-biz'); } catch(e) {}
   document.getElementById('topicBizEdit').style.display = 'block';
-  document.getElementById('topicCalendarSection').style.display = 'none';
+  showCalendarSection(false);
   document.getElementById('topicContentSection').style.display = 'none';
   document.getElementById('topicBizBar').style.display = 'none';
   document.getElementById('topicSettingsBar').style.display = 'none';
@@ -4693,8 +4701,12 @@ async function refreshTopics() {
   if (!topicBizData || !topicBizData.analysis || !settings.apiKey) return;
 
   var btn = document.getElementById('btnRefreshTopics');
-  btn.disabled = true;
-  btn.textContent = '⏳ 生成中…';
+  if (btn) { btn.style.display = 'none'; }
+  // Show loading in topic list if not already showing
+  var list = document.getElementById('topicList');
+  if (list && list.innerHTML.indexOf('loading-spinner') === -1) {
+    list.innerHTML = '<div style="text-align:center;padding:60px 20px"><div class="loading-spinner"></div><div style="font-size:.82rem;color:#8a8278;margin-top:12px">AI 正在为你生成选题…</div></div>';
+  }
 
   try {
     var aud = selectedAudienceIndex >= 0 ? topicAudiences[selectedAudienceIndex] : null;
@@ -4707,9 +4719,9 @@ async function refreshTopics() {
   } catch(e) {
     console.error('[refreshTopics] error:', e);
     alert('刷新失败：' + (e.message || '未知错误'));
+    if (list) list.innerHTML = '<div style="text-align:center;color:#a09888;padding:20px;font-size:.76rem">生成失败，请点击右上角「换一批」重试</div>';
   }
-  btn.disabled = false;
-  btn.textContent = '🔄 换一批';
+  if (btn) { btn.style.display = ''; btn.textContent = '🔄 换一批'; }
 }
 
 // ============================================================

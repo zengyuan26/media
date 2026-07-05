@@ -119,11 +119,6 @@
       <button class="topic-biz-edit-btn" id="btnEditBiz" onclick="toggleBizEdit()">修改</button>
     </div>
 
-    <!-- 设置摘要行 -->
-    <div class="topic-settings-bar" id="topicSettingsBar" style="display:none">
-      <span class="topic-settings-summary" id="topicSettingsSummary"></span>
-    </div>
-
     <!-- 业务编辑面板（首页简化：仅业务描述） -->
     <div class="topic-biz-edit" id="topicBizEdit">
       <div class="topic-biz-edit-title"><span class="material-symbols-outlined">auto_awesome</span> 一句话描述你的业务</div>
@@ -131,7 +126,7 @@
       <button class="topic-biz-save-btn" id="btnSaveBiz" onclick="saveBizAndAnalyze()"><span class="material-symbols-outlined">lightbulb</span> 提交分析</button>
       <div class="topic-biz-loading" id="topicBizLoading" style="display:none">
         <div class="loading-spinner"></div>
-        <span>AI 正在分析你的行业和选题方向…</span>
+        <span>AI 正在分析你的业务并发现目标人群…</span>
       </div>
     </div>
 
@@ -153,14 +148,30 @@
       </div>
     </div>
 
-    <!-- 设置摘要行 -->
-    <div class="topic-settings-bar" id="topicSettingsBar" style="display:none">
-      <span class="topic-settings-summary" id="topicSettingsSummary"></span>
-      <button class="topic-biz-edit-btn" onclick="toggleSettingsEdit()">调整</button>
+    <!-- 选题操作栏 -->
+    <div class="topic-calendar-toolbar" id="topicCalendarToolbar" style="display:none">
+      <button class="topic-back-btn" onclick="backFromCalendar()"><span class="material-symbols-outlined">arrow_back</span> 返回</button>
+      <button class="topic-refresh-btn" id="btnRefreshTopics" onclick="refreshTopics()"><span class="material-symbols-outlined">auto_awesome</span> 换一批</button>
     </div>
 
-    <!-- 设置编辑面板（点击调整展开） -->
+    <!-- 设置摘要行 -->
+    <div class="topic-settings-bar" id="topicSettingsBar" style="display:none">
+      <div class="topic-settings-pills" id="topicSettingsSummary"></div>
+      <button class="topic-settings-tune-btn" onclick="toggleSettingsEdit()"><span class="material-symbols-outlined">tune</span></button>
+    </div>
+
+    <!-- 设置编辑面板（确认人群后 / 点击调整展开） -->
     <div class="topic-biz-edit" id="topicSettingsEdit" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <button class="topic-back-btn" onclick="backFromSettings()"><span class="material-symbols-outlined">arrow_back</span> 返回</button>
+        <button class="dialog-btn primary" onclick="applySettingsAndClose()" style="font-size:.78rem;padding:6px 16px"><span class="material-symbols-outlined">check</span> 保存</button>
+      </div>
+
+      <div class="settings-page-title"><span class="material-symbols-outlined">tune</span> 配置你的内容</div>
+
+      <!-- 选中人群摘要 -->
+      <div class="settings-aud-card" id="settingsAudCard"></div>
+
       <!-- 表演形式 -->
       <div class="topic-setting-group">
         <div class="topic-setting-label"><span class="material-symbols-outlined">theater_comedy</span> 表演形式</div>
@@ -193,23 +204,19 @@
         <div class="topic-setting-hint" id="hintContentStyle">标准脚本结构（类型+开头+人物+场景+脚本+CTA）</div>
       </div>
 
-      <div style="display:flex;gap:8px">
-        <button class="dialog-btn secondary" onclick="toggleSettingsEdit()" style="flex:1;font-size:.78rem;padding:10px">取消</button>
-        <button class="dialog-btn primary" onclick="applySettingsAndRefresh()" style="flex:1;font-size:.78rem;padding:10px"><span class="material-symbols-outlined">check</span> 保存设置</button>
-      </div>
     </div>
 
     <!-- 选题列表 -->
     <div class="topic-calendar-section" id="topicCalendarSection" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-        <button class="topic-refresh-btn" id="btnRefreshTopics" onclick="refreshTopics()"><span class="material-symbols-outlined">auto_awesome</span> 生成选题</button>
-      </div>
       <div class="topic-list" id="topicList"></div>
     </div>
 
     <!-- 内容生成区 -->
     <div class="topic-content-section" id="topicContentSection" style="display:none">
-      <div class="topic-content-back" onclick="backToTopicList()">← 返回选题列表</div>
+      <div class="topic-content-toolbar">
+        <button class="topic-back-btn" onclick="backToTopicList()"><span class="material-symbols-outlined">arrow_back</span> 返回</button>
+        <button class="dialog-btn secondary" onclick="regenerateTopicContent()" style="font-size:.78rem;padding:6px 14px"><span class="material-symbols-outlined">refresh</span> 重新生成</button>
+      </div>
       <div class="topic-content-meta" id="topicContentMeta"></div>
       <div class="topic-content-preview" id="topicContentPreview">
         <div class="topic-content-loading" id="topicContentLoading" style="display:none">
@@ -219,8 +226,7 @@
         <div class="topic-content-result" id="topicContentResult"></div>
       </div>
       <div class="topic-content-actions" id="topicContentActions" style="display:none">
-        <button class="dialog-btn secondary" onclick="regenerateTopicContent()"><span class="material-symbols-outlined">refresh</span> 重新生成</button>
-        <button class="dialog-btn primary" id="btnConfirmToStoryboard" onclick="confirmToStoryboard()"><span class="material-symbols-outlined">movie</span> 确认，进入故事板</button>
+        <button class="dialog-btn primary" id="btnConfirmToStoryboard" onclick="confirmToStoryboard()" style="width:100%;font-size:.92rem;padding:12px"><span class="material-symbols-outlined">movie</span> 确认，进入故事板</button>
       </div>
     </div>
 
