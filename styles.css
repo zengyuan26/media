@@ -430,7 +430,7 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .topic-biz-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .topic-biz-icon { font-size: 1.1rem; }
 .topic-biz-text { font-size: .82rem; font-weight: 600; color: #2d2a26; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topic-biz-season { font-size: .7rem; color: #8a8278; background: #f5f1ea; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+
 .topic-biz-edit-btn {
   flex-shrink: 0; font-size: .72rem; color: #5b9a8b; background: none; border: 1px solid #b8d8cf;
   border-radius: 8px; padding: 4px 12px; cursor: pointer;

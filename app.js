@@ -2888,11 +2888,7 @@ function getStoryboardChars() {
 function swapStoryboardChars() {
   var names = getStoryboardChars();
   if (names.length < 2) { alert('至少需要两个不同角色才能互换'); return; }
-  var a = prompt('要互换的第一个角色：\n当前角色：' + names.join('、'), names[0]);
-  if (!a) return;
-  var b = prompt('要互换的第二个角色：\n当前角色：' + names.join('、'), names[1]);
-  if (!b) return;
-  if (a === b) return;
+  var a = names[0], b = names[1];
   var sb = (currentStoryboard && (currentStoryboard.storyboard || currentStoryboard)) || {};
   (sb.shots || []).forEach(function(shot) {
     (shot.subjects || []).forEach(function(s) {
@@ -3851,10 +3847,6 @@ function initCreatePage() {
     if (settingsEdit) settingsEdit.style.display = 'none';
     document.getElementById('topicBizBar').style.display = 'flex';
     document.getElementById('topicBizLabel').textContent = '业务：' + (topicBizData.biz || '').slice(0, 40);
-    var phase = topicBizData.analysis.currentPhase || '';
-    var seasonLabel = topicBizData.analysis.peakSeason || '';
-    document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
-
     if (selectedAudienceIndex >= 0 && topicAudiences.length > 0) {
       // Audience already selected — show settings + calendar, no biz bar
       document.getElementById('topicBizBar').style.display = 'none';
@@ -4405,9 +4397,6 @@ async function saveBizAndAnalyze() {
     editPanel.style.display = 'none';
     document.getElementById('topicBizBar').style.display = 'flex';
     document.getElementById('topicBizLabel').textContent = '业务：' + biz.slice(0, 40);
-    var phase = analysis.currentPhase || '';
-    var seasonLabel = analysis.peakSeason || '';
-    document.getElementById('topicBizSeason').textContent = phase === '无季节区分' ? '个人表达' : ((phase ? phase + ' | ' : '') + seasonLabel);
     if (audPanel) audPanel.style.display = 'block';
     renderAudiencePanel();
 
@@ -4532,9 +4521,8 @@ function backToTopicList() {
 }
 
 function showCalendarSection(visible) {
-  var d = visible ? 'block' : 'none';
-  document.getElementById('topicCalendarToolbar').style.display = d;
-  document.getElementById('topicCalendarSection').style.display = d;
+  document.getElementById('topicCalendarToolbar').style.display = visible ? 'flex' : 'none';
+  document.getElementById('topicCalendarSection').style.display = visible ? 'block' : 'none';
 }
 
 function backFromCalendar() {
