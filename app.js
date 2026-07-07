@@ -47,14 +47,13 @@ var INTERVIEW_QUESTIONS = [
     id: 'opening', type: 'single',
     question: '开头前3秒怎么抓住人？',
     options: [
-      { value: '视觉冲击', icon: '😱', label: '视觉冲击' },
-      { value: '抛问题', icon: '❓', label: '抛问题' },
+      { value: '反常识断言', icon: '🤯', label: '反常识断言 — "你以为X。但Y。"' },
+      { value: '身份标签', icon: '🎯', label: '身份标签 — "如果你也在..."' },
+      { value: '静默中断', icon: '⏸️', label: '静默中断 — 停顿+一句话推翻' },
       { value: '数据对比', icon: '📊', label: '数据对比' },
-      { value: '制造冲突', icon: '😡', label: '制造冲突' },
-      { value: '音乐卡点', icon: '🎵', label: '音乐卡点' },
       { value: '对话直入', icon: '🗣', label: '对话直入' }
     ],
-    supplement: '补充：开头大致什么画面？（选填）'
+    supplement: '补充：开头大致什么画面？（选填）\n反常识断言 → 硬核拆解/观点输出。身份标签 → 故事分享/个人经历。静默中断 → 有信任基础后进阶。'
   },
   {
     id: 'characters', type: 'single',
@@ -1492,7 +1491,11 @@ function buildDirectorSystemPrompt() {
     '    "totalDuration": "内容预估总时长，如实反映内容密度和语速。通常每100字约15秒（必填，如：40s）",\n' +
     '    "directorBrief": {\n' +
     '      "coreIdea": "核心创意一句话：这个视频讲什么、为什么能火（必填）",\n' +
-    '      "hookDesign": "前3秒钩子设计：基于用户提供的信息，不要自己发明新的钩子（必填）",\n' +
+    '      "hookDesign": "前3秒钩子设计，从以下三个公式中选用：\\n' +
+    '反常识断言式：\\"你以为X。但Y。\\"粉碎默认认知 → 硬核拆解/观点输出\\n' +
+    '身份标签式：\\"如果你也在[做某件事]——\\"精准画像 → 故事分享/个人经历\\n' +
+    '静默中断式：(停顿) + 一句话推翻常识 → 进阶/有信任基础后\\n' +
+    '任选其一，3秒内必须制造认知缺口。不要自己发明新钩子（必填）",\n' +
     '      "emotionalTone": "情绪基调：整体色彩倾向/节奏感/语气风格，如 暖黄色调·快节奏·压迫感旁白（必填）",\n' +
     '      "visualReference": "视觉参考：像哪个账号/电影/摄影师的风格，如 日系生活美学·滨田英明风·低饱和暖调（必填）"\n' +
     '    },\n' +
@@ -1650,7 +1653,7 @@ function normalizeDirectorAnalysis(data) {
   da.totalDuration = da.totalDuration || '30s';
   var db = da.directorBrief = da.directorBrief || {};
   db.coreIdea = db.coreIdea || da.title || '精彩短视频';
-  db.hookDesign = db.hookDesign || '前3秒用强视觉冲击或反常识画面抓住注意力';
+  db.hookDesign = db.hookDesign || '反常识断言式：给出颠覆默认认知的判断（如"200万吨扩产。不是看好信号。"），前3秒制造认知缺口';
   db.emotionalTone = db.emotionalTone || '中性色调·中速节奏·自然语气';
   db.visualReference = db.visualReference || '现代短视频风格·干净利落的画面';
   if (!Array.isArray(da.keyFrames) || da.keyFrames.length === 0) {
@@ -2162,7 +2165,7 @@ function buildStoryboardPrompt() {
   lines += '\n\n## 重要约束\n';
   lines += '- 以上信息来自对原视频的拆解。你是改编者，不是创作者。请忠实还原原始骨架——包括情绪曲线形状、节奏快慢分布、钩子时机、信息释放顺序\n';
   lines += '- 人物、场景、道具可以替换为用户指定的版本，但每个镜头的情感功能和节奏定位必须保留\n';
-  lines += '- 开场hook方式严格使用：' + (opening || '根据内容推断') + '，不要改成其他方式\n';
+  lines += '- 开场hook方式严格使用：' + (opening || '反常识断言式') + '。反常识断言式→3秒内粉碎默认认知。身份标签式→精准画像。静默中断式→停顿+推翻。不要改成其他方式\n';
   if (content) lines += '- 从用户描述中提取具体情节、画面、台词，不要凭空编造，也不要遗漏任何要点\n';
 
   return '## 用户对原视频的拆解描述\n\n' + lines + '\n\n请根据以上信息，忠实改编为导演分镜表JSON。不要自行增减情节。';
