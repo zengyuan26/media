@@ -1586,6 +1586,11 @@ function buildShotsSystemPrompt() {
     '台词语言：' + currentDialect + '。所有 dialogue 字段必须用' + currentDialect + '书写，严禁使用其他语言\n' +
     '语速：' + ({slow:'慢速',normal:'正常',fast:'快速'})[currentSpeechSpeed] + '。对白节奏和镜头时长按此语速调整\n' +
     buildCharAssignHint() + '\n' +
+    '## 口语化脚本规则（dialogue 字段硬性约束）\n' +
+    '- 每镜 dialogue ≤ 50 字（硬上限，超过必须拆成两个镜头）\n' +
+    '- 每句话 ≤ 12 字，用句号断开。一个呼吸单位 = 一句话，念完换气\n' +
+    '- 情绪写在文字里：短句强调重点、单字制造反转、换行留白呼吸。不靠 emotionBeat 字段\n' +
+    '- 写完默念一遍，念不顺就删掉重写\n\n' +
     '## 运镜手法参考（必须从中选用具体运镜名称）\n' +
     '推镜：缓推 dolly in（逐渐靠近）/ 快推 crash zoom（猛然推进）\n' +
     '拉镜：缓拉 dolly out（逐渐远离）/ 急拉 whip out（快速后退）\n' +
@@ -1629,7 +1634,7 @@ function buildShotsSystemPrompt() {
     '- 每个镜头的 action 必须具体到身体动作和物体变化，不要写"进行展示"这种空话\n' +
     '- 运镜必须从运镜手法参考中选择，写出完整名称如"缓推 dolly in"\n' +
     '- 焦段根据景别选择：特写85mm+，近景50mm，中景35mm，全景24mm\n' +
-    '- 第2镜起必填 continuity：{"transition":"硬切/叠化/甩镜头/匹配剪辑","carryOver":["延续元素"],"newElements":["新元素"],"eyeLine":"视线方向变化","actionLink":"动作因果关系","emotionLink":"情绪变化","cameraLink":"运镜对比"}\n' +
+    '- 第2镜起必填 continuity（9维衔接台账）：{"transition":"硬切/叠化/甩镜头/匹配剪辑","carryOver":["延续元素"],"newElements":["新元素"],"eyeLine":"视线方向变化","actionLink":"动作因果关系","emotionLink":"情绪变化","cameraLink":"运镜对比","lightingLink":"光影衔接（如：主光方向不变/柔光渐变硬/暖调转冷调）","spatialAnchor":"空间锚点（上一镜结束时画面状态→本镜开始时的状态，如：手举在半空→手已放下/门开到一半→门关上）"}\n' +
     '- 纯 JSON 输出，不要 ```json``` 包裹\n\n' +
     '## 可用资源\n' +
     '角色库：\n' + (charList || '（空）') + '\n' +
@@ -1773,7 +1778,7 @@ function normalizeShotsArray(shots, isContinuation) {
     shot.emotionBeat = shot.emotionBeat || '';
     if (i > 0 || isContinuation) {
       if (!shot.continuity) {
-        shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
+        shot.continuity = { transition: '硬切', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '', lightingLink: '', spatialAnchor: '' };
       }
     }
   });
@@ -2586,11 +2591,16 @@ function renderContinuityBar(continuity) {
   var detail = [
     continuity.eyeLine || '',
     continuity.actionLink || '',
-    continuity.emotionLink || ''
+    continuity.emotionLink || '',
+    continuity.spatialAnchor || ''
   ].filter(Boolean).join(' | ');
-  return '<div class="sb-continuity-bar" title="' + escapeHtml(detail) + '">' +
+  var extra = [
+    continuity.lightingLink || ''
+  ].filter(Boolean);
+  return '<div class="sb-continuity-bar" title="' + escapeHtml(detail + (extra.length ? ' | 光影:' + extra.join('') : '')) + '">' +
     '<span class="cont-transition">🔗 ' + escapeHtml(continuity.transition || '硬切') + '</span>' +
     '<span class="cont-detail">' + escapeHtml(detail) + '</span>' +
+    (extra.length ? '<span class="cont-light">💡' + escapeHtml(extra.join('')) + '</span>' : '') +
     '</div>';
 }
 
@@ -2681,6 +2691,8 @@ function openShotEditor(index) {
     document.getElementById('seActionLink').value = cont.actionLink || '';
     document.getElementById('seEmotionLink').value = cont.emotionLink || '';
     document.getElementById('seCameraLink').value = cont.cameraLink || '';
+    document.getElementById('seLightingLink').value = cont.lightingLink || '';
+    document.getElementById('seSpatialAnchor').value = cont.spatialAnchor || '';
   }
 
   // Delete button
@@ -2761,7 +2773,9 @@ function saveShot() {
       eyeLine: document.getElementById('seEyeLine').value.trim(),
       actionLink: document.getElementById('seActionLink').value.trim(),
       emotionLink: document.getElementById('seEmotionLink').value.trim(),
-      cameraLink: document.getElementById('seCameraLink').value.trim()
+      cameraLink: document.getElementById('seCameraLink').value.trim(),
+      lightingLink: document.getElementById('seLightingLink').value.trim(),
+      spatialAnchor: document.getElementById('seSpatialAnchor').value.trim()
     };
   }
 
@@ -2805,7 +2819,7 @@ function addShot() {
   };
   // Add continuity for new shot if not first
   if (sb.shots.length > 0) {
-    newShot.continuity = { transition: '硬切 cut', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '' };
+    newShot.continuity = { transition: '硬切 cut', carryOver: [], newElements: [], eyeLine: '', actionLink: '', emotionLink: '', cameraLink: '', lightingLink: '', spatialAnchor: '' };
   }
   sb.shots.push(newShot);
   rerenderBoard();
@@ -3699,6 +3713,7 @@ function setTopicDuration(val, el) {
   topicDuration = val;
   document.querySelectorAll('#topicDurationSegs .topic-seg').forEach(function(s) { s.classList.remove('active'); });
   if (el) el.classList.add('active');
+  clearDurationHint();
 }
 
 function buildSettingsSummary() {
@@ -3709,10 +3724,38 @@ function buildSettingsSummary() {
   var styleLabels = { normal: '常规', comedy: '搞笑反转', emotional: '情感共鸣' };
   var styleLabel = styleLabels[topicContentStyle] || '常规';
   var styleIcon = topicContentStyle === 'comedy' ? 'theater_comedy' : (topicContentStyle === 'emotional' ? 'favorite' : 'description');
+  var durHtml = '<span class="material-symbols-outlined">timer</span>' + topicDuration + 's';
+  if (suggestedDuration && suggestedDuration !== parseInt(topicDuration)) {
+    durHtml += ' <span style="font-size:.7rem;color:#8a8278">→ 建议 ' + suggestedDuration + 's</span>';
+  }
   return '<span class="setting-pill"><span class="material-symbols-outlined">' + angleIcon + '</span>' + angleLabel + '</span>' +
     '<span class="setting-pill"><span class="material-symbols-outlined">' + formatIcon + '</span>' + formatLabel + '</span>' +
-    '<span class="setting-pill"><span class="material-symbols-outlined">timer</span>' + topicDuration + 's</span>' +
+    '<span class="setting-pill">' + durHtml + '</span>' +
     '<span class="setting-pill"><span class="material-symbols-outlined">' + styleIcon + '</span>' + styleLabel + '</span>';
+}
+
+function updateDurationHint(calc) {
+  if (!calc) {
+    var hint = document.getElementById('topicDurationHint');
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+  var speedLabels = { comedy: '快速 10字/s', normal: '正常 6.7字/s', emotional: '慢速 5.0字/s' };
+  var html = 'AI 时长建议：<b>' + calc.suggestedRounded + 's</b> &nbsp;(' +
+    calc.wordCount + '字 ÷ ' + (speedLabels[topicContentStyle] || '6.7字/s') +
+    ' × 情绪系数' + calc.emotionCoef.toFixed(2) +
+    ' + 停顿' + calc.pauseComp.toFixed(0) + 's';
+  if (calc.visualAnim > 0) html += ' + 动画' + calc.visualAnim.toFixed(0) + 's';
+  html += ' → ' + calc.suggestedRaw.toFixed(0) + 's 取整)';
+  var hint = document.getElementById('topicDurationHint');
+  if (hint) { hint.innerHTML = html; hint.style.display = 'block'; }
+}
+
+function clearDurationHint() {
+  suggestedDuration = null;
+  updateDurationHint(null);
+  var summary = document.getElementById('topicSettingsSummary');
+  if (summary) summary.innerHTML = buildSettingsSummary();
 }
 
 function syncTopicSettingsToUI() {
@@ -4217,6 +4260,29 @@ function buildTopicContentPrompt(biz, analysis, topic) {
   return buildNormalContentPrompt(biz, analysis, topic);
 }
 
+// ============================================================
+// KNOWLEDGE MODULES — shared rule blocks, routed by content style
+// ============================================================
+
+function getCommonRules() {
+  return '### 可拿走性原则\n' +
+    '- 观众看完能拿走什么？"了解了X"不合格，"能判断X/能算出Y/能避开Z"合格\n\n' +
+    '### 内容温度模型\n' +
+    '- 有趣 + 有用 + 共鸣，至少满足两个\n\n' +
+    '### 七种观众心理钩子\n' +
+    '- 1想纠正你 2想看结果 3想证明自己 4想看你翻车 5想给你出招 6想看看真假 7想代入自己\n' +
+    '- 每篇内容至少触发一种，选题阶段就确定，生成后检查\n' +
+    '- 你这次的选题心理钩子是' + (selectedTopic && selectedTopic.psychology ? selectedTopic.psychology : '') + '，请围绕这个钩子设计脚本节奏\n\n';
+}
+
+function getOralScriptRules() {
+  return '### 口语化脚本规则\n' +
+    '- 每镜不超过 50 字（硬上限）\n' +
+    '- 每句话不超过 12 个字，用句号断开（呼吸单位）\n' +
+    '- 情绪写进脚本，不写进标注：用换行停顿、短句强调、单字反转\n' +
+    '- 念一遍才算是脚本，念不顺就删掉重写\n\n';
+}
+
 function buildNormalContentPrompt(biz, analysis, topic) {
   var formatInst = topicFormat === 'dual'
     ? '\n### 双人演绎要求\n' +
@@ -4234,18 +4300,8 @@ function buildNormalContentPrompt(biz, analysis, topic) {
     '心理钩子：' + (topic.psychology || '想代入自己') + '\n\n' +
     '## 时长控制\n' + durInst + '\n' +
     '## 写作规则（必须遵守）\n\n' +
-    '### 口语化脚本规则\n' +
-    '- 每镜不超过 50 字\n' +
-    '- 每句话不超过 12 个字，用句号断开（呼吸单位）\n' +
-    '- 情绪写进脚本，不写进标注：用换行停顿、短句强调、单字反转\n' +
-    '- 念一遍才算是脚本，念不顺就删掉重写\n\n' +
-    '### 可拿走性原则\n' +
-    '- 观众看完能拿走什么？"了解了X"不合格，"能判断X/能算出Y/能避开Z"合格\n\n' +
-    '### 内容温度模型\n' +
-    '- 有趣 + 有用 + 共鸣，至少满足两个\n\n' +
-    '### 七种观众心理钩子\n' +
-    '- 1想纠正你 2想看结果 3想证明自己 4想看你翻车 5想给你出招 6想看看真假 7想代入自己\n' +
-    '- 每篇内容至少触发一种，否则观众不会互动\n' +
+    getOralScriptRules() +
+    getCommonRules() +
     formatInst +
     '\n## 输出格式\n' +
     '输出完整短视频脚本，包含：\n' +
@@ -4265,6 +4321,55 @@ function getDurationInstructions() {
   if (d <= 30) return '视频时长 30 秒。3-4 镜，观点+展开+CTA，约 120-180 字。';
   if (d <= 45) return '视频时长 45 秒。4-6 镜，起承转合，约 200-280 字。';
   return '视频时长 60 秒。6-8 镜，完整叙事弧线，约 280-400 字。给足铺垫和展开的空间。';
+}
+
+var suggestedDuration = null; // AI-calculated suggestion, shown alongside manual pick
+
+function calculateSuggestedDuration(text, style) {
+  // Count Chinese characters (dialogue/spoken words only)
+  var wordCount = (text || '').replace(/[\s\n\r，。！？、；：""（）　]/g, '').length;
+
+  // Speed base (字/秒) by content style
+  var speedBase = { comedy: 10, normal: 6.7, emotional: 5.0 };
+  var baseSpeed = speedBase[style] || 6.7;
+
+  // Emotion coefficient: estimate from punctuation variance
+  var exclamations = (text.match(/[！!]/g) || []).length;
+  var questions = (text.match(/[？?]/g) || []).length;
+  var ellipsis = (text.match(/[……]/g) || []).length;
+  var emotionPeaks = exclamations + questions + ellipsis;
+  var emotionCoef;
+  if (emotionPeaks >= 8) emotionCoef = 1.10;
+  else if (emotionPeaks >= 3) emotionCoef = 1.05;
+  else emotionCoef = 1.0;
+
+  // Pause compensation
+  var lineBreaks = (text.match(/\n\n+/g) || []).length;
+  var criticalPauses = (text.match(/停[一一下秒]|停顿|pause/gi) || []).length;
+  var pauseComp = lineBreaks * 0.5 + criticalPauses * 1 + 1.5; // +1.5s ending pause
+
+  // 即梦文字动画估算 (for short-video style)
+  var hasVisualDesc = /(画面|镜头|场景|特写|近景|中景|全景)/.test(text);
+  var visualAnim = hasVisualDesc ? wordCount * 0.03 : 0; // ~0.03s per char for text animation
+
+  var pureSpeech = (wordCount / baseSpeed);
+  var suggested = Math.round(pureSpeech * emotionCoef + pauseComp + visualAnim);
+
+  // Round to nearest 15s step
+  var steps = [15, 30, 45, 60, 75, 90];
+  var nearest = steps.reduce(function(prev, curr) {
+    return Math.abs(curr - suggested) < Math.abs(prev - suggested) ? curr : prev;
+  });
+
+  return {
+    wordCount: wordCount,
+    pureSpeech: pureSpeech,
+    emotionCoef: emotionCoef,
+    pauseComp: pauseComp,
+    visualAnim: visualAnim,
+    suggestedRaw: suggested,
+    suggestedRounded: nearest
+  };
 }
 
 function buildComedyContentPrompt(biz, analysis, topic) {
@@ -4295,6 +4400,9 @@ function buildComedyContentPrompt(biz, analysis, topic) {
     '心理钩子：' + (topic.psychology || '想看你翻车') + '\n' +
     durInst + '\n' +
     dualInst +
+    '\n## 写作规则\n\n' +
+    getOralScriptRules() +
+    getCommonRules() +
     '\n## 第一步：设定卡\n' +
     '分析选题，确定：\n' +
     '- 钩子（前 2 秒）：用什么画面/台词瞬间抓住观众\n' +
@@ -4343,6 +4451,9 @@ function buildEmotionalContentPrompt(biz, analysis, topic) {
     '心理钩子：' + (topic.psychology || '想代入自己') + '\n' +
     '总时长：' + topicDuration + 's\n' +
     dualInst +
+    '\n## 写作规则\n\n' +
+    getOralScriptRules() +
+    getCommonRules() +
     '\n## 三段式结构\n' +
     '1. 压抑铺垫（前 ' + pct1 + 's）：设置初始冲突，展现关系背景，让观众代入\n' +
     '2. 矛盾爆发（中间 ' + pct2 + 's）：情绪化表达，关系降至冰点，制造共情高点\n' +
@@ -4467,6 +4578,8 @@ function selectTopicCard(idx) {
   document.getElementById('topicContentSection').style.display = 'flex';
   document.getElementById('topicContentResult').innerHTML = '';
   document.getElementById('topicContentActions').style.display = 'none';
+  var sc = document.getElementById('topicSelfCheck');
+  if (sc) sc.style.display = 'none';
 
   // Show meta
   document.getElementById('topicContentMeta').innerHTML =
@@ -4483,6 +4596,8 @@ async function generateTopicContent(topic) {
   document.getElementById('topicContentLoading').style.display = 'flex';
   document.getElementById('topicContentResult').innerHTML = '';
   document.getElementById('topicContentActions').style.display = 'none';
+  var sc = document.getElementById('topicSelfCheck');
+  if (sc) sc.style.display = 'none';
 
   try {
     var sysPrompts = {
@@ -4496,6 +4611,12 @@ async function generateTopicContent(topic) {
     if (topicContentText) {
       document.getElementById('topicContentResult').innerHTML = '<div style="white-space:pre-wrap;line-height:1.8">' + escapeHtml(topicContentText) + '</div>';
       document.getElementById('topicContentActions').style.display = 'flex';
+      // Calculate suggested duration
+      var calc = calculateSuggestedDuration(topicContentText, topicContentStyle);
+      suggestedDuration = calc.suggestedRounded;
+      updateDurationHint(calc);
+      // Render self-check
+      renderSelfCheck(topicContentText);
     } else {
       document.getElementById('topicContentResult').innerHTML = '<div style="color:#a09888;text-align:center;padding:30px">生成内容为空，请点击「重新生成」重试</div>';
       document.getElementById('topicContentActions').style.display = 'flex';
@@ -4508,6 +4629,132 @@ async function generateTopicContent(topic) {
   document.getElementById('topicContentLoading').style.display = 'none';
 }
 
+var selfCheckResults = []; // stored for AI optimize
+
+function renderSelfCheck(text) {
+  var checks = [];
+
+  // 1. Compliance — common AI phrases to avoid
+  var forbiddenWords = ['值得注意的是', '综上所述', '总而言之', '不容忽视', '由此可见', '毋庸置疑', '众所周知'];
+  var foundForbidden = forbiddenWords.filter(function(w) { return text.indexOf(w) >= 0; });
+  var hasAiTaste = (text.match(/值得注意的是|综上所述|总而言之|不容忽视/g) || []).length >= 2;
+
+  // 2. 可拿走性 — does the viewer get something actionable?
+  var hasTakeaway = /能判断|能算出|能避开|能省|能赚|能做出|自己试|试试看|下次你|你可以/.test(text);
+
+  // 3. 情绪线 — is there emotional variation?
+  var emotionMarkers = (text.match(/[！!？?……～~啊呀哇哎嘿哈]/g) || []).length;
+  var hasEmotionVariety = emotionMarkers >= 3;
+
+  // 4. 心理钩子 — is there a hook that triggers interaction?
+  var hookKeywords = {
+    '想纠正你': /错了|不对|不是|纠正|辟谣|其实|原来如此|真相/,
+    '想看结果': /接下来|结果|最后|终于|揭晓|答案/,
+    '想证明自己': /你能|你敢|你会吗|试试|挑战/,
+    '想看你翻车': /翻车|失败|搞砸|笑死|尴尬|出丑/,
+    '想给你出招': /怎么办|怎么选|帮我|求助|支招|建议/,
+    '想看看真假': /真的假的|揭秘|内幕|真相|实拍|实测/,
+    '想代入自己': /我也是|我也曾|你有没有|每个人|我们都/
+  };
+  var targetHook = (selectedTopic && selectedTopic.psychology) || '想代入自己';
+  var hookRegex = hookKeywords[targetHook];
+  var hookTriggered = hookRegex ? hookRegex.test(text) : true;
+
+  checks.push({
+    label: 'AI味检测',
+    pass: !hasAiTaste && foundForbidden.length === 0,
+    detail: foundForbidden.length > 0 ? '发现机器话：' + foundForbidden.join('、') : (hasAiTaste ? 'AI套话偏多' : '未发现明显AI套话')
+  });
+
+  checks.push({
+    label: '可拿走性',
+    pass: hasTakeaway,
+    detail: hasTakeaway ? '观众能获得可操作的信息' : '⚠ 观众看完只能"知道了"，建议增加判断标准/计算公式/操作步骤'
+  });
+
+  checks.push({
+    label: '情绪线',
+    pass: hasEmotionVariety,
+    detail: hasEmotionVariety ? '检测到 ' + emotionMarkers + ' 处情绪标记，有起伏' : '⚠ 情绪标记偏少，全程可能是平的，建议增加感叹/反问/停顿'
+  });
+
+  checks.push({
+    label: '心理钩子 (' + targetHook + ')',
+    pass: hookTriggered,
+    detail: hookTriggered ? '已触发目标心理钩子' : '⚠ 未检测到钩子相关表达，观众可能不会互动'
+  });
+
+  // 5. 字数/呼吸检查 (for normal style)
+  if (topicContentStyle === 'normal') {
+    var sentences = text.split(/[。！？\n]/).filter(function(s) { return s.trim().length > 0; });
+    var longSentences = sentences.filter(function(s) { return s.replace(/[\s，、：""（）　]/g, '').length > 20; });
+    checks.push({
+      label: '呼吸单位',
+      pass: longSentences.length <= 2,
+      detail: longSentences.length > 2 ? '⚠ ' + longSentences.length + ' 个句子超过20字，念起来会喘不过气' : '句子长度适合口播呼吸节奏'
+    });
+  }
+
+  // Render
+  selfCheckResults = checks;
+  var warnCount = checks.filter(function(c) { return !c.pass; }).length;
+  var html = '<div class="selfcheck-title">发布前自检' +
+    (warnCount === 0 ? ' <span style="color:#5a8475;font-weight:400">— 全部通过</span>' : ' <span style="color:#e8a040;font-weight:400">— ' + warnCount + ' 项建议优化</span>') +
+    '</div>';
+  checks.forEach(function(c) {
+    html += '<div class="selfcheck-item ' + (c.pass ? 'pass' : 'warn') + '">' +
+      '<span class="selfcheck-icon">' + (c.pass ? '✅' : '⚠️') + '</span>' +
+      '<div><b>' + escapeHtml(c.label) + '</b><br><span>' + escapeHtml(c.detail) + '</span></div>' +
+      '</div>';
+  });
+  if (warnCount > 0) {
+    html += '<button class="dialog-btn primary" onclick="optimizeTopicContent()" style="margin-top:10px;width:100%;font-size:.82rem;padding:10px"><span class="material-symbols-outlined">auto_fix</span> AI 一键优化</button>';
+  }
+
+  var el = document.getElementById('topicSelfCheck');
+  if (el) { el.innerHTML = html; el.style.display = 'block'; }
+}
+
+async function optimizeTopicContent() {
+  if (!settings.apiKey) { alert('请先配置 API Key'); return; }
+  if (!topicContentText) return;
+
+  // Collect failed checks as fix instructions
+  var fixes = selfCheckResults.filter(function(c) { return !c.pass; });
+  if (fixes.length === 0) { alert('没有需要优化的问题'); return; }
+
+  var fixList = fixes.map(function(f) { return '- ' + f.label + '：' + f.detail.replace(/^⚠ /, ''); }).join('\n');
+  console.log('[optimizeTopicContent] fixing', fixes.length, 'issues:', fixList);
+
+  // Show loading on button itself
+  var btn = document.querySelector('#topicSelfCheck .dialog-btn.primary');
+  var btnOrig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">progress_activity</span> AI 优化中…'; }
+
+  try {
+    var systemPrompt = '你是短视频脚本精修专家。按问题清单逐项修复脚本，输出修复后的完整脚本。只输出脚本，不解释。';
+    var userPrompt = '## 原始脚本\n\n' + topicContentText + '\n\n## 需要修复\n\n' + fixList + '\n\n输出修复后的完整脚本。';
+    console.log('[optimizeTopicContent] calling API, prompt length:', (systemPrompt + userPrompt).length);
+    var resultText = await doStoryboardApiCall(systemPrompt, userPrompt, { noJsonFormat: true, timeout: 60000 });
+    console.log('[optimizeTopicContent] API returned, length:', resultText ? resultText.length : 0);
+
+    if (resultText && resultText.trim()) {
+      topicContentText = resultText;
+      document.getElementById('topicContentResult').innerHTML = '<div style="white-space:pre-wrap;line-height:1.8">' + escapeHtml(resultText) + '</div>';
+      var calc = calculateSuggestedDuration(resultText, topicContentStyle);
+      suggestedDuration = calc.suggestedRounded;
+      updateDurationHint(calc);
+      renderSelfCheck(resultText);
+    } else {
+      alert('优化返回为空，请重试');
+    }
+  } catch(e) {
+    console.error('[optimizeTopicContent] error:', e);
+    alert('优化失败：' + (e.message || ''));
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = btnOrig; }
+}
+
 function regenerateTopicContent() {
   if (selectedTopic) generateTopicContent(selectedTopic);
 }
@@ -4518,6 +4765,8 @@ function backToTopicList() {
   showCalendarSection(true);
   selectedTopic = null;
   topicContentText = '';
+  var sc = document.getElementById('topicSelfCheck');
+  if (sc) sc.style.display = 'none';
 }
 
 function showCalendarSection(visible) {

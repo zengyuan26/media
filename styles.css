@@ -285,11 +285,9 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .da-label{display:block;font-size:.72rem;font-weight:700;color:#5b9a8b;margin-bottom:4px}
 .da-field p{font-size:.84rem;color:#2d2a26;line-height:1.7;margin:0}
 
-/* Director analysis cards — horizontal scroll */
-.sb-da-cards{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
-.sb-da-cards::-webkit-scrollbar{height:4px}
-.sb-da-cards::-webkit-scrollbar-thumb{background:#d8d2c8;border-radius:2px}
-.da-card{flex:0 0 180px;background:#faf8f5;border:1px solid #ede8e1;border-radius:12px;padding:14px;scroll-snap-align:start}
+/* Director analysis cards — vertical stack */
+.sb-da-cards{display:flex;flex-direction:column;gap:10px;padding:2px 0 6px}
+.da-card{background:#faf8f5;border:1px solid #ede8e1;border-radius:12px;padding:14px}
 .da-card-icon{font-size:1.2rem;color:#5b9a8b;margin-bottom:6px}
 .da-card-label{font-size:.68rem;font-weight:700;color:#8a8278;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
 .da-card-text{font-size:.8rem;color:#2d2a26;line-height:1.55}
@@ -577,6 +575,19 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
 .topic-setting-group { margin-bottom: 14px; }
 .topic-setting-label { font-size: .78rem; font-weight: 600; color: #2d2a26; margin-bottom: 6px; }
 .topic-setting-hint { font-size: .65rem; color: #8a8278; margin-top: 4px; }
+.topic-duration-hint { font-size: .68rem; color: #8a8278; margin-top: 6px; padding: 6px 10px; background: #fefcfa; border-radius: 8px; border: 1px solid #f0ece4; }
+.topic-duration-hint b { color: #5a8475; }
+
+/* self-check */
+.topic-selfcheck { margin-top: 12px; background: #fff; border-radius: 14px; padding: 16px; border: 1px solid #e8e3d8; }
+.selfcheck-title { font-size: .78rem; font-weight: 700; color: #4a443e; margin-bottom: 10px; }
+.selfcheck-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: .72rem; line-height: 1.5; }
+.selfcheck-item + .selfcheck-item { border-top: 1px solid #f5f2ed; }
+.selfcheck-item b { color: #4a443e; }
+.selfcheck-item span { color: #8a8278; }
+.selfcheck-item.pass .selfcheck-icon { filter: grayscale(0); opacity: 1; }
+.selfcheck-item.warn .selfcheck-icon { filter: grayscale(0); opacity: 1; }
+.selfcheck-icon { font-size: .85rem; flex-shrink: 0; }
 .topic-radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
 .topic-radio {
   display: flex; align-items: center; gap: 4px; font-size: .78rem; color: #4a4540;

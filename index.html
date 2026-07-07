@@ -190,6 +190,7 @@
           <button class="topic-seg" data-val="45" onclick="setTopicDuration('45', this)">45s</button>
           <button class="topic-seg" data-val="60" onclick="setTopicDuration('60', this)">60s</button>
         </div>
+        <div class="topic-duration-hint" id="topicDurationHint" style="display:none"></div>
       </div>
 
       <!-- 内容风格 -->
@@ -223,6 +224,7 @@
           <span>AI 正在生成内容…</span>
         </div>
         <div class="topic-content-result" id="topicContentResult"></div>
+        <div class="topic-selfcheck" id="topicSelfCheck" style="display:none"></div>
       </div>
       <div class="topic-content-actions" id="topicContentActions" style="display:none">
         <button class="dialog-btn primary" id="btnConfirmToStoryboard" onclick="confirmToStoryboard()" style="width:100%;font-size:.92rem;padding:12px"><span class="material-symbols-outlined">movie</span> 确认，进入故事板</button>
@@ -656,6 +658,10 @@
         <input class="me-input" id="seEmotionLink" placeholder="情绪强度/类型变化">
         <label>运镜衔接 (cameraLink)</label>
         <input class="me-input" id="seCameraLink" placeholder="运镜方式对比/过渡">
+        <label>光影衔接 (lightingLink)</label>
+        <input class="me-input" id="seLightingLink" placeholder="如：主光方向不变/柔光渐变硬/暖调转冷调">
+        <label>空间锚点 (spatialAnchor)</label>
+        <input class="me-input" id="seSpatialAnchor" placeholder="上一镜结束状态→本镜开始状态，如：手在半空→手放下">
       </div>
 
     </div>
@@ -667,7 +673,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260702"></script>
+<script src="app.js?v=20260707b"></script>
 <script>
 // Load Supabase async
 var script = document.createElement('script');
