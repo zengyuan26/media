@@ -206,6 +206,13 @@
 
     </div>
 
+    <!-- 自定义选题 -->
+    <div class="topic-custom-bar" id="topicCustomBar" style="display:none">
+      <div class="topic-custom-icon"><span class="material-symbols-outlined">edit_note</span></div>
+      <input type="text" class="topic-custom-input" id="topicCustomInput" placeholder="输入你的想法，AI 直接帮你做选题…" onkeydown="if(event.key==='Enter')generateCustomTopics()">
+      <button class="topic-custom-btn" id="btnCustomTopic" onclick="generateCustomTopics()"><span class="material-symbols-outlined">auto_awesome</span> 生成选题</button>
+    </div>
+
     <!-- 选题列表 -->
     <div class="topic-calendar-section" id="topicCalendarSection" style="display:none">
       <div class="topic-list" id="topicList"></div>
@@ -673,7 +680,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260707c"></script>
+<script src="app.js?v=20260711a"></script>
 <script>
 // Load Supabase async
 var script = document.createElement('script');
