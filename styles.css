@@ -468,27 +468,6 @@ body.login-visible .tab-content,body.login-visible .tab-bar,body.login-visible .
   padding: 30px 0; color: #8a8278; font-size: .82rem;
 }
 
-/* Custom topic input */
-.topic-custom-bar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; margin: 8px 12px;
-  background: #fff; border-radius: 12px; border: 1px solid #e8e3d8;
-}
-.topic-custom-icon { flex-shrink: 0; color: #5b9a8b; font-size: 1.1rem; }
-.topic-custom-input {
-  flex: 1; font-size: .78rem; border: none; padding: 8px 0;
-  background: transparent; outline: none; min-width: 0;
-}
-.topic-custom-input::placeholder { color: #c4bfb2; }
-.topic-custom-btn {
-  flex-shrink: 0; font-size: .76rem; font-weight: 600;
-  padding: 8px 14px; border-radius: 10px;
-  background: #5b9a8b; color: #fff; border: none; cursor: pointer;
-  display: flex; align-items: center; gap: 4px; white-space: nowrap;
-}
-.topic-custom-btn:hover { background: #4a8274; }
-.topic-custom-btn:disabled { opacity: .5; cursor: not-allowed; }
-
 .topic-calendar-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 4px 12px; margin-bottom: 4px;
