@@ -3830,6 +3830,7 @@ function toggleBizEdit() {
     bar.style.display = 'none';
     if (settingsBar) settingsBar.style.display = 'none';
     if (settingsEdit) settingsEdit.style.display = 'none';
+    document.getElementById('topicCustomBar').style.display = 'none';
     if (topicBizData && topicBizData.biz) {
       document.getElementById('topicBizInput').value = topicBizData.biz;
     }
@@ -3837,6 +3838,7 @@ function toggleBizEdit() {
     edit.style.display = 'none';
     if (topicBizData && topicBizData.analysis) {
       bar.style.display = 'flex';
+      document.getElementById('topicCustomBar').style.display = 'flex';
       if (selectedAudienceIndex >= 0 && topicBizData.audiences && topicBizData.audiences[selectedAudienceIndex]) {
         if (settingsBar) settingsBar.style.display = 'flex';
         showCalendarSection(true);
@@ -3888,7 +3890,8 @@ function initCreatePage() {
   var settingsEdit = document.getElementById('topicSettingsEdit');
 
   if (topicBizData && topicBizData.analysis) {
-    // Business already saved
+    // Business already saved — hide custom bar
+    document.getElementById('topicCustomBar').style.display = 'none';
     document.getElementById('topicBizEdit').style.display = 'none';
     if (settingsEdit) settingsEdit.style.display = 'none';
     document.getElementById('topicBizBar').style.display = 'flex';
@@ -3917,13 +3920,14 @@ function initCreatePage() {
     }
     document.getElementById('topicContentSection').style.display = 'none';
   } else {
-    // First time — show business input only
+    // First time — show business input + custom bar
     document.getElementById('topicBizEdit').style.display = 'block';
     document.getElementById('topicBizBar').style.display = 'none';
     if (settingsBar) settingsBar.style.display = 'none';
     if (audPanel) audPanel.style.display = 'none';
     if (settingsEdit) settingsEdit.style.display = 'none';
     showCalendarSection(false);
+    document.getElementById('topicCustomBar').style.display = 'flex';
     document.getElementById('topicContentSection').style.display = 'none';
     syncTopicSettingsToUI();
   }
@@ -4132,6 +4136,7 @@ async function confirmAudience() {
   // Hide audience panel and biz bar, show settings editor expanded
   if (audPanel) audPanel.style.display = 'none';
   document.getElementById('topicBizBar').style.display = 'none';
+  document.getElementById('topicCustomBar').style.display = 'none';
   if (settingsBar) settingsBar.style.display = 'none';
   if (settingsEdit) {
     settingsEdit.style.display = 'block';
@@ -4182,6 +4187,7 @@ function applySettingsAndClose() {
   var settingsBar = document.getElementById('topicSettingsBar');
   if (panel) panel.style.display = 'none';
   document.getElementById('topicBizBar').style.display = 'none';
+  document.getElementById('topicCustomBar').style.display = 'flex';
   if (settingsBar) {
     settingsBar.style.display = 'flex';
     document.getElementById('topicSettingsSummary').innerHTML = buildSettingsSummary();
@@ -4512,6 +4518,7 @@ async function saveBizAndAnalyze() {
     document.getElementById('topicBizBar').style.display = 'flex';
     document.getElementById('topicBizLabel').textContent = '业务：' + biz.slice(0, 40);
     if (audPanel) audPanel.style.display = 'block';
+    document.getElementById('topicCustomBar').style.display = 'none';
     renderAudiencePanel();
 
   } catch(e) {
@@ -4578,6 +4585,7 @@ function selectTopicCard(idx) {
   // Show content generation, hide settings
   showCalendarSection(false);
   document.getElementById('topicSettingsBar').style.display = 'none';
+  document.getElementById('topicCustomBar').style.display = 'none';
   document.getElementById('topicContentSection').style.display = 'flex';
   document.getElementById('topicContentResult').innerHTML = '';
   document.getElementById('topicContentActions').style.display = 'none';
@@ -4765,6 +4773,7 @@ function regenerateTopicContent() {
 function backToTopicList() {
   document.getElementById('topicContentSection').style.display = 'none';
   document.getElementById('topicSettingsBar').style.display = 'flex';
+  document.getElementById('topicCustomBar').style.display = 'flex';
   showCalendarSection(true);
   selectedTopic = null;
   topicContentText = '';
@@ -4782,6 +4791,7 @@ function backFromCalendar() {
   var settingsEdit = document.getElementById('topicSettingsEdit');
   showCalendarSection(false);
   document.getElementById('topicBizBar').style.display = 'none';
+  document.getElementById('topicCustomBar').style.display = 'none';
   if (settingsBar) settingsBar.style.display = 'none';
   if (settingsEdit) {
     settingsEdit.style.display = 'block';
@@ -4805,7 +4815,9 @@ function resetCreatePage() {
   if (audPanel) audPanel.style.display = 'none';
   var settingsEdit = document.getElementById('topicSettingsEdit');
   if (settingsEdit) settingsEdit.style.display = 'none';
+  document.getElementById('topicCustomBar').style.display = 'none';
   document.getElementById('topicBizInput').value = '';
+  document.getElementById('topicCustomInput').value = '';
   document.getElementById('topicList').innerHTML = '';
 }
 
@@ -4935,6 +4947,70 @@ function confirmToStoryboard() {
   pendingRecordSource = 'topic';
   switchTab('tabStoryboard');
   generateStoryboard();
+}
+
+async function generateCustomTopics() {
+  var input = document.getElementById('topicCustomInput');
+  var idea = input.value.trim();
+  if (!idea) { alert('请输入你的想法'); return; }
+  if (!settings.apiKey) { alert('请先在「我的」→ 设置 中配置 API Key'); return; }
+
+  var btn = document.getElementById('btnCustomTopic');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner" style="width:16px;height:16px;border-width:2px"></span> 生成中…';
+
+  // Build minimal biz data — skip business analysis and audience discovery
+  topicBizData = {
+    biz: idea,
+    analysis: {
+      industry: '',
+      currentPhase: '',
+      recommendedPurposes: [],
+      recentHotspots: [],
+      defaultNarrativePersona: '陪伴者'
+    },
+    audiences: [],
+    selectedAudienceIndex: -1,
+    topics: [],
+    savedAt: new Date().toISOString()
+  };
+  selectedAudienceIndex = -1;
+  topicAudiences = [];
+  saveTopicBiz();
+
+  // Hide biz edit / audience / custom bar, show calendar section
+  document.getElementById('topicBizEdit').style.display = 'none';
+  document.getElementById('topicBizBar').style.display = 'flex';
+  document.getElementById('topicBizLabel').textContent = '自定义：' + idea.slice(0, 40);
+  var audPanel = document.getElementById('topicAudiencePanel');
+  if (audPanel) audPanel.style.display = 'none';
+  var settingsEdit = document.getElementById('topicSettingsEdit');
+  if (settingsEdit) settingsEdit.style.display = 'none';
+  document.getElementById('topicCustomBar').style.display = 'none';
+  document.getElementById('topicSettingsBar').style.display = 'flex';
+  document.getElementById('topicSettingsSummary').innerHTML = buildSettingsSummary();
+  showCalendarSection(true);
+
+  // Show loading
+  var list = document.getElementById('topicList');
+  if (list) list.innerHTML = '<div style="text-align:center;padding:60px 20px"><div class="loading-spinner"></div><div style="font-size:.82rem;color:#8a8278;margin-top:12px">AI 正在为你生成选题…</div></div>';
+
+  try {
+    var systemPrompt = '你是一个短视频内容策划专家。根据用户的想法，用问题驱动的方式挖掘选题，推荐 5 个。';
+    var prompt = buildTopicListPrompt(idea, topicBizData.analysis, null);
+    var resultText = await doStoryboardApiCall(systemPrompt, prompt, { noJsonFormat: true, maxTokens: 32768, enableSearch: true });
+    topicBizData.topics = parseTopicListText(resultText || '');
+    if (!topicBizData.topics.length) throw new Error('未能解析选题列表，请重试');
+    saveTopicBiz();
+    renderTopicList();
+  } catch(e) {
+    console.error('[generateCustomTopics] error:', e);
+    alert('生成失败：' + (e.message || '未知错误'));
+    if (list) list.innerHTML = '<div style="text-align:center;color:#a09888;padding:20px;font-size:.76rem">生成失败，请重试</div>';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span> 生成选题';
 }
 
 async function refreshTopics() {
